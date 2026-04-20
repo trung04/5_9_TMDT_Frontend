@@ -143,7 +143,7 @@ export const useAuthStore = create<AuthState>()(
 
                         return {
                             success: false,
-                            error: "Không thể tạo phiên đăng nhập từ backend.",
+                            error: "Không thể xử lý thông tin đăng nhập. Vui lòng thử lại.",
                         };
                     }
 
@@ -164,7 +164,7 @@ export const useAuthStore = create<AuthState>()(
                         error:
                             error instanceof Error
                                 ? error.message
-                                : "Không thể kết nối backend để đăng nhập.",
+                                : "Xin lỗi, không thể đăng nhập. Vui lòng kiểm tra địa chỉ email và mật khẩu.",
                     };
                 }
             },
@@ -213,7 +213,7 @@ export const useAuthStore = create<AuthState>()(
                 if (get().authSource === "backend") {
                     return {
                         success: false,
-                        error: "Tính năng đổi mật khẩu backend chưa được tích hợp ở frontend này.",
+                        error: "Thay đổi mật khẩu đang được phát triển. Vui lòng quay lại sau.",
                     };
                 }
 

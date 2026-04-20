@@ -119,16 +119,15 @@ export function ProductCatalogPage() {
         <div className="mx-auto max-w-7xl px-6 pb-20 pt-24">
             <nav className="mb-8 flex items-center space-x-2 text-sm text-on-surface-variant">
                 <Link className="transition-colors hover:text-primary" to={routes.home}>
-                    Home
+                    Trang chủ
                 </Link>
                 <Icon name="chevron_right" className="text-sm" />
                 <Link className="transition-colors hover:text-primary" to={routes.products}>
-                    Shop
+                    Cửa hàng
                 </Link>
                 <Icon name="chevron_right" className="text-sm" />
-                <span className="font-medium text-primary">Storefront Backend</span>
+                <span className="font-medium text-primary">Danh mục</span>
             </nav>
-
             <div className="flex flex-col gap-12 lg:flex-row">
                 <aside className="w-full space-y-10 lg:w-1/4">
                     <div className="space-y-3">
@@ -266,10 +265,10 @@ export function ProductCatalogPage() {
                     <div className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                         <div>
                             <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
-                                Sản phẩm storefront
+                                Sản phẩm đặc sắc
                             </h1>
                             <p className="mt-1 text-sm text-on-surface-variant">
-                                {visibleProducts.length} sản phẩm từ backend phù hợp bộ lọc
+                                {visibleProducts.length} sản phẩm phù hợp bộ lọc
                             </p>
                         </div>
 
@@ -320,11 +319,11 @@ export function ProductCatalogPage() {
                     {visibleProducts.length === 0 ? (
                         <div className="rounded-xl bg-surface-container-lowest p-10 text-center">
                             <h2 className="font-headline text-2xl font-semibold">
-                                {isLoading ? "Đang tải catalog backend..." : "Chưa có sản phẩm phù hợp"}
+                                {isLoading ? "Đang tải sản phẩm..." : "Chưa có sản phẩm phù hợp"}
                             </h2>
                             <p className="mt-3 text-on-surface-variant">
                                 {isLoading
-                                    ? "Storefront đang chờ API trả dữ liệu sản phẩm, danh mục và nhà cung cấp."
+                                    ? "Đang chờ dữ liệu sản phẩm, danh mục và nhà cung cấp."
                                     : error ?? "Hãy thử nới rộng bộ lọc hoặc tải lại trang."}
                             </p>
                         </div>

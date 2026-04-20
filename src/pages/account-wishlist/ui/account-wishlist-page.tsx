@@ -34,8 +34,8 @@ export function AccountWishlistPage() {
                         Danh sách yêu thích
                     </h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Wishlist hiện chỉ hiển thị các sản phẩm còn tồn tại trong catalog backend.
-                        Những id demo cũ không còn map được sẽ tự bị bỏ qua.
+                        Wishlist chỉ hiển thị sản phẩm còn tồn tại trong cửa hàng. Các mục cũ không còn
+                        hợp lệ sẽ được bỏ qua.
                     </p>
                 </div>
 
@@ -56,7 +56,7 @@ export function AccountWishlistPage() {
                             Danh sách yêu thích đang trống
                         </h2>
                         <p className="text-on-surface-variant">
-                            Hãy lưu lại sản phẩm ngay từ catalog backend để chúng xuất hiện ở đây.
+                            Hãy lưu sản phẩm bạn thích để chúng xuất hiện ở đây.
                         </p>
                         <div className="flex justify-center">
                             <ButtonLink to={routes.products}>Khám phá sản phẩm</ButtonLink>
@@ -71,7 +71,7 @@ export function AccountWishlistPage() {
                                 Bạn có thể muốn lưu thêm
                             </h2>
                             <p className="mt-2 text-on-surface-variant">
-                                Các sản phẩm backend bạn vừa xem nhưng chưa thêm vào wishlist.
+                                Các sản phẩm bạn vừa xem nhưng chưa thêm vào wishlist.
                             </p>
                         </div>
                         <div className="grid gap-6 xl:grid-cols-3">

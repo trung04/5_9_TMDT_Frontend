@@ -245,7 +245,7 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
             },
             {
                 icon: "local_shipping",
-                text: product.stock_quantity > 0 ? "Có thể đặt hàng ngay trên backend." : "Tồn kho sẽ được cập nhật sau.",
+                text: product.stock_quantity > 0 ? "Sản phẩm có sẵn - Đặt hàng ngay." : "Tồn kho sẽ được cập nhật sau.",
             },
             {
                 icon: "sell",

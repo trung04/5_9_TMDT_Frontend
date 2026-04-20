@@ -118,10 +118,10 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.home);
 
-        expect(await screen.findByText(/Đang tải danh mục từ backend/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Đang tải danh mục/i)).toBeInTheDocument();
     });
 
-    it("shows a backend error on the catalog page when the API is unavailable", async () => {
+    it("shows a connection error on the catalog page when the API is unavailable", async () => {
         const fetchMock = vi.fn(async () => {
             throw new TypeError("Failed to fetch");
         });
@@ -130,10 +130,10 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.products);
 
-        expect(await screen.findByText(/Khong the ket noi backend/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Xin lỗi, không thể kết nối đến hệ thống/i)).toBeInTheDocument();
     });
 
-    it("shows a backend error on the product detail page when the API is unavailable", async () => {
+    it("shows a connection error on the product detail page when the API is unavailable", async () => {
         const slug = buildStorefrontSlug(101, "Tra huu co");
         const fetchMock = vi.fn(async () => {
             throw new TypeError("Failed to fetch");
@@ -143,7 +143,7 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.productDetail(slug));
 
-        expect(await screen.findByText(/Khong the ket noi backend/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Xin lỗi, không thể kết nối đến hệ thống/i)).toBeInTheDocument();
     });
 
     it("loads backend orders and reorders items back into the cart", async () => {

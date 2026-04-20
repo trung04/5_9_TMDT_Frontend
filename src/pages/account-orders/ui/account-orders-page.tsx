@@ -114,7 +114,7 @@ export function AccountOrdersPage() {
             <div className="mx-auto max-w-7xl px-6 pb-16 pt-24">
                 <div className="rounded-xl bg-surface-container-low p-10 text-center">
                     <h1 className="font-headline text-3xl font-bold tracking-tight">
-                        Khong the tai don hang backend
+                        Không thể tải đơn hàng
                     </h1>
                     <p className="mt-3 text-on-surface-variant">{error}</p>
                     <button
@@ -133,11 +133,10 @@ export function AccountOrdersPage() {
             <div className="mx-auto max-w-7xl px-6 pb-16 pt-24">
                 <div className="rounded-xl bg-surface-container-low p-10 text-center">
                     <h1 className="font-headline text-3xl font-bold tracking-tight">
-                        Chưa có đơn hàng backend
+                        Chưa có đơn hàng nào
                     </h1>
                     <p className="mt-3 text-on-surface-variant">
-                        Sau khi checkout thành công, đơn sẽ xuất hiện ở đây và được lấy trực tiếp từ API
-                        `/orders`.
+                        Sau khi checkout thành công, đơn sẽ xuất hiện tại đây và được cập nhật tự động.
                     </p>
                     <button
                         className="mt-6 rounded-full bg-primary px-6 py-3 font-semibold text-on-primary"
@@ -174,7 +173,7 @@ export function AccountOrdersPage() {
                     <div className="mt-8 space-y-2">
                         <div className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 font-semibold text-green-800 shadow-sm">
                             <Icon name="shopping_bag" />
-                            <span className="text-sm">Đơn hàng backend</span>
+                            <span className="text-sm">Đơn hàng</span>
                         </div>
                         <button
                             className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-zinc-600 transition-transform hover:translate-x-1 hover:bg-zinc-100"
@@ -219,7 +218,7 @@ export function AccountOrdersPage() {
                             Lịch sử đơn hàng
                         </h1>
                         <p className="mt-1 text-on-surface-variant">
-                            Theo dõi đơn hàng customer lấy trực tiếp từ backend Laravel.
+                            Theo dõi đơn hàng và nhận cập nhật trạng thái mới nhất.
                         </p>
                     </div>
                     <button
@@ -502,7 +501,7 @@ export function AccountOrdersPage() {
                                             ))
                                         ) : (
                                             <div className="rounded-xl bg-surface-container-lowest p-5 text-sm text-on-surface-variant">
-                                                Backend chưa trả về lịch sử trạng thái cho đơn này.
+                                                Chưa có lịch sử trạng thái cho đơn này.
                                             </div>
                                         )}
                                     </div>
@@ -521,8 +520,8 @@ export function AccountOrdersPage() {
                                         Khiếu nại & hỗ trợ
                                     </h2>
                                     <p className="mt-2 text-sm text-on-surface-variant">
-                                        Frontend đã cô lập form complaint vì backend hiện chưa có customer
-                                        complaint API tương thích cho flow thật.
+                                        Mục khiếu nại hiện chưa hỗ trợ gửi trực tiếp. Chúng tôi sẽ cập nhật
+                                        trong thời gian sớm nhất.
                                     </p>
                                 </div>
                                 <span className="rounded-full bg-tertiary/10 px-3 py-1 text-xs uppercase tracking-widest text-tertiary">
@@ -557,8 +556,8 @@ export function AccountOrdersPage() {
                             </div>
 
                             <div className="rounded-xl border border-dashed border-outline-variant/30 p-5 text-sm leading-7 text-on-surface-variant">
-                                Khi backend bổ sung API khiếu nại customer, khối này sẽ được mở lại để gửi
-                                complaint thật gắn với đơn hàng đang chọn.
+                                Khi có tính năng khiếu nại, khu vực này sẽ được mở để gửi yêu cầu trực tiếp
+                                cho đơn hàng đang chọn.
                             </div>
                         </div>
                     </div>

@@ -15,12 +15,29 @@ const emptyProductForm = {
     shortDescription: "",
     description: "",
     price: "0",
+    image: "",
 };
 
 const emptyCategoryForm = {
     name: "",
     description: "",
+    image: "",
 };
+
+function readFileAsDataUrl(file: File) {
+    return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === "string") {
+                resolve(reader.result);
+            } else {
+                reject(new Error("Không thể đọc file ảnh."));
+            }
+        };
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+    });
+}
 
 export function AdminRepositoryPage() {
     const [tab, setTab] = useState<RepositoryTab>("products");
@@ -70,6 +87,7 @@ export function AdminRepositoryPage() {
             shortDescription: activeProduct.shortDescription,
             description: activeProduct.description,
             price: String(activeProduct.price),
+            image: activeProduct.image,
         });
     }, [activeProduct]);
 
@@ -80,6 +98,7 @@ export function AdminRepositoryPage() {
         setCategoryForm({
             name: activeCategory.name,
             description: activeCategory.description,
+            image: activeCategory.image ?? "",
         });
     }, [activeCategory]);
 
@@ -91,7 +110,7 @@ export function AdminRepositoryPage() {
             tone: "primary" as const,
             icon: "inventory_2",
             delta: `${filteredProducts.length} sản phẩm đang hiển thị`,
-            helperText: "toàn bộ dữ liệu đang được quản trị trong runtime",
+            helperText: "Dữ liệu sản phẩm đang được quản lý trong admin.",
         },
         {
             id: "repository-categories",
@@ -100,7 +119,7 @@ export function AdminRepositoryPage() {
             tone: "secondary" as const,
             icon: "category",
             delta: `${regions.length} vùng nguồn gốc`,
-            helperText: "được dùng để nhóm catalog storefront",
+            helperText: "Dùng để phân loại sản phẩm trong cửa hàng.",
         },
         {
             id: "repository-lowstock",
@@ -108,8 +127,8 @@ export function AdminRepositoryPage() {
             value: `${products.filter((product) => product.stockStatus !== "in-stock").length}`,
             tone: "danger" as const,
             icon: "warning",
-            delta: "Theo trạng thái catalog",
-            helperText: "dựa trên nhãn stock status hiện tại",
+            delta: "Theo trạng thái tồn kho",
+            helperText: "Dựa trên nhãn tình trạng hàng tồn.",
         },
     ];
 
@@ -155,6 +174,7 @@ export function AdminRepositoryPage() {
             description: productForm.description,
             shortDescription: productForm.shortDescription,
             price: Number(productForm.price),
+            image: productForm.image.trim() || undefined,
         });
 
         setActiveProductId(createdProduct.id);
@@ -175,6 +195,7 @@ export function AdminRepositoryPage() {
             shortDescription: productForm.shortDescription.trim(),
             description: productForm.description.trim(),
             price: Number(productForm.price),
+            image: productForm.image.trim() || activeProduct.image,
         });
 
         pushToast({
@@ -204,7 +225,11 @@ export function AdminRepositoryPage() {
             return;
         }
 
-        const category = createCategory(categoryForm.name, categoryForm.description);
+        const category = createCategory(
+            categoryForm.name,
+            categoryForm.description,
+            categoryForm.image.trim(),
+        );
         setActiveCategoryId(category.id);
         pushToast({
             tone: "success",
@@ -218,6 +243,7 @@ export function AdminRepositoryPage() {
         updateCategory(activeCategory.id, {
             name: categoryForm.name.trim(),
             description: categoryForm.description.trim(),
+            image: categoryForm.image.trim() || undefined,
         });
         pushToast({
             tone: "success",
@@ -250,11 +276,10 @@ export function AdminRepositoryPage() {
         <div className="space-y-8">
             <section className="space-y-1">
                 <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Kho dữ liệu sản phẩm
+                    Bảng quản lý sản phẩm
                 </h2>
-                <p className="text-on-surface-variant">
-                    Tạo, cập nhật và xoá sản phẩm hoặc danh mục ngay trên runtime state của ứng
-                    dụng.
+                <p className="text-on-surface-variant max-w-3xl">
+                    Quản lý sản phẩm, danh mục và ảnh hiển thị trực tiếp trong khu admin. Giao diện này giúp tạo, sửa và xoá dữ liệu một cách rõ ràng và dễ dùng.
                 </p>
             </section>
 
@@ -295,12 +320,12 @@ export function AdminRepositoryPage() {
             />
 
             {tab === "products" ? (
-                <div className="grid gap-6 xl:grid-cols-[1fr_0.95fr]">
+                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <SurfaceCard className="space-y-4">
                         {filteredProducts.map((product) => (
                             <button
                                 key={product.id}
-                                className={`w-full rounded-3xl p-4 text-left transition ${
+                                className={`w-full rounded-3xl p-4 text-left transition min-w-0 ${
                                     product.id === activeProduct?.id
                                         ? "bg-primary/5"
                                         : "bg-surface-container-low hover:bg-surface-container"
@@ -313,7 +338,7 @@ export function AdminRepositoryPage() {
                                 <h3 className="mt-2 font-headline text-xl font-semibold">
                                     {product.name}
                                 </h3>
-                                <p className="mt-2 text-sm text-on-surface-variant">
+                                <p className="mt-2 text-sm text-on-surface-variant break-words">
                                     {product.shortDescription}
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -388,13 +413,43 @@ export function AdminRepositoryPage() {
                                 }
                             />
                             <textarea
-                                className="min-h-28 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
+                                className="min-h-28 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2 resize-none"
                                 placeholder="Mô tả đầy đủ"
                                 value={productForm.description}
                                 onChange={(event) =>
                                     updateProductField("description", event.target.value)
                                 }
                             />
+                            <label className="flex flex-col gap-2 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant w-full">
+                                <span>Ảnh sản phẩm</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-sm file:font-medium"
+                                    onChange={async (event) => {
+                                        const file = event.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                            const dataUrl = await readFileAsDataUrl(file);
+                                            updateProductField("image", dataUrl);
+                                        } catch {
+                                            pushToast({
+                                                tone: "danger",
+                                                message: "Không thể đọc file ảnh. Vui lòng thử lại.",
+                                            });
+                                        }
+                                    }}
+                                />
+                            </label>
+                            {productForm.image.trim().length > 0 ? (
+                                <div className="md:col-span-2 overflow-hidden rounded-3xl border border-surface-border">
+                                    <img
+                                        src={productForm.image}
+                                        alt={productForm.name || "Ảnh sản phẩm"}
+                                        className="w-full max-h-44 object-contain"
+                                    />
+                                </div>
+                            ) : null}
                             <input
                                 className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                                 placeholder="Giá bán"
@@ -428,7 +483,7 @@ export function AdminRepositoryPage() {
                     </SurfaceCard>
                 </div>
             ) : (
-                <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
+                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <SurfaceCard className="space-y-4">
                         {filteredCategories.map((category) => (
                             <button
@@ -457,17 +512,47 @@ export function AdminRepositoryPage() {
                         <div>
                             <h3 className="font-headline text-2xl font-bold">Biểu mẫu danh mục</h3>
                             <p className="mt-2 text-sm text-on-surface-variant">
-                                Cập nhật cấu trúc catalog hoặc tạo danh mục mới cho storefront.
+                                Cập nhật cấu trúc danh mục hoặc tạo danh mục mới cho trang cửa hàng.
                             </p>
                         </div>
                         <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
+                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 w-full"
                             placeholder="Tên danh mục"
                             value={categoryForm.name}
                             onChange={(event) => updateCategoryField("name", event.target.value)}
                         />
+                        <label className="flex flex-col gap-2 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant w-full">
+                            <span>Ảnh danh mục</span>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                className="file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-sm file:font-medium"
+                                onChange={async (event) => {
+                                    const file = event.target.files?.[0];
+                                    if (!file) return;
+                                    try {
+                                        const dataUrl = await readFileAsDataUrl(file);
+                                        updateCategoryField("image", dataUrl);
+                                    } catch {
+                                        pushToast({
+                                            tone: "danger",
+                                            message: "Không thể đọc file ảnh. Vui lòng thử lại.",
+                                        });
+                                    }
+                                }}
+                            />
+                        </label>
+                        {categoryForm.image.trim().length > 0 ? (
+                            <div className="overflow-hidden rounded-3xl border border-surface-border">
+                                <img
+                                    src={categoryForm.image.trim()}
+                                    alt={categoryForm.name || "Ảnh danh mục"}
+                                    className="w-full max-h-44 object-contain"
+                                />
+                            </div>
+                        ) : null}
                         <textarea
-                            className="min-h-28 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
+                            className="min-h-28 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 resize-none w-full"
                             placeholder="Mô tả danh mục"
                             value={categoryForm.description}
                             onChange={(event) =>

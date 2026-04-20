@@ -10,11 +10,10 @@ export function RegionsPage() {
             <section className="space-y-4">
                 <p className="text-xs uppercase tracking-widest text-primary">Khám phá vùng miền</p>
                 <h1 className="font-headline text-5xl font-bold tracking-tight text-on-surface">
-                    Khu nội dung vùng miền hiện vẫn giữ mode tĩnh.
+                    Khu nội dung vùng miền vẫn giữ chất kể chuyện.
                 </h1>
                 <p className="max-w-3xl text-lg leading-8 text-on-surface-variant">
-                    Customer shopping flow đã chuyển sang catalog backend, còn màn vùng miền tiếp tục giữ
-                    nội dung kể chuyện và dẫn người dùng trở lại storefront khi cần mua hàng.
+                    Tìm hiểu đặc sản vùng miền, câu chuyện nguồn gốc và những trải nghiệm mua sắm đặc sắc.
                 </p>
             </section>
 
@@ -55,7 +54,7 @@ export function RegionsPage() {
                                         </div>
                                     ) : null}
                                     <div className="flex flex-wrap gap-3">
-                                        <ButtonLink to={routes.products}>Mở catalog backend</ButtonLink>
+                                        <ButtonLink to={routes.products}>Khám phá sản phẩm</ButtonLink>
                                         <ButtonLink to={routes.story} variant="secondary">
                                             Xem câu chuyện thương hiệu
                                         </ButtonLink>
