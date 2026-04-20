@@ -1,0 +1,297 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { resetDemoState } from "@/shared/lib/store/reset-demo";
+import { useAccountStore } from "@/shared/lib/store/use-account-store";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
+import { useCartStore } from "@/shared/lib/store/use-cart-store";
+import { useCustomerOrdersStore } from "@/shared/lib/store/use-customer-orders-store";
+import {
+    createBackendUser,
+    createCartResponse,
+    createOrderDetail,
+    createOrdersResponse,
+    getRequestPath,
+    jsonResponse,
+} from "@/test/backend-test-utils";
+
+function setBackendCustomerSession() {
+    useAuthStore.setState({
+        session: {
+            user: {
+                id: "1",
+                name: "Nguyen Van A",
+                email: "customer@example.com",
+                role: "customer",
+            },
+            loggedInAt: "2026-04-20T08:00:00.000Z",
+        },
+        accessToken: "token-1",
+        authSource: "backend",
+    });
+}
+
+describe("customer commerce stores", () => {
+    beforeEach(() => {
+        localStorage.clear();
+        resetDemoState();
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+    });
+
+    it("logs in a customer with the backend", async () => {
+        const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/login")) {
+                return jsonResponse({
+                    message: "Logged in successfully.",
+                    access_token: "token-1",
+                    token_type: "Bearer",
+                    user: createBackendUser(),
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const result = await useAuthStore.getState().login("customer@example.com", "secret123");
+
+        expect(result).toEqual({ success: true });
+        expect(useAuthStore.getState().accessToken).toBe("token-1");
+        expect(useAuthStore.getState().authSource).toBe("backend");
+        expect(useAuthStore.getState().session?.user.role).toBe("customer");
+        expect(useAccountStore.getState().profile.email).toBe("customer@example.com");
+    });
+
+    it("reports login failures and clears expired backend sessions during hydrate", async () => {
+        const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/login")) {
+                return jsonResponse(
+                    {
+                        message: "Invalid credentials.",
+                    },
+                    { status: 401 },
+                );
+            }
+
+            if (path.endsWith("/api/me")) {
+                return jsonResponse(
+                    {
+                        message: "Unauthenticated.",
+                    },
+                    { status: 401 },
+                );
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const failedLogin = await useAuthStore.getState().login("customer@example.com", "bad-password");
+
+        expect(failedLogin.success).toBe(false);
+        expect(failedLogin.error).toMatch(/Invalid credentials/i);
+
+        setBackendCustomerSession();
+        useCartStore.setState({
+            guestItems: [{ productId: "guest-1", quantity: 1 }],
+            items: [{ productId: "101", quantity: 2 }],
+            cart: {
+                id: "77",
+                status: "ACTIVE",
+                itemCount: 1,
+                totalQuantity: 2,
+                subtotal: 240000,
+                items: [
+                    {
+                        id: "501",
+                        productId: "101",
+                        quantity: 2,
+                        unitPrice: 120000,
+                        lineTotal: 240000,
+                        product: {
+                            id: "101",
+                            slug: "tra-huu-co-101",
+                            name: "Tra huu co",
+                            detailTitle: "Tra huu co",
+                            subtitle: "Tra · Hop tac xa Moc",
+                            categoryId: "5",
+                            categoryName: "Tra",
+                            regionId: "8",
+                            regionName: "Hop tac xa Moc",
+                            description: "San pham backend cho customer commerce.",
+                            shortDescription: "San pham backend cho customer commerce.",
+                            price: 120000,
+                            rating: 0,
+                            reviewCount: 0,
+                            stockStatus: "in-stock",
+                            tag: "SKU-101",
+                            image: "https://example.com/product.jpg",
+                            gallery: [
+                                {
+                                    src: "https://example.com/product.jpg",
+                                    alt: "Tra huu co",
+                                },
+                            ],
+                            origin: "Thai Nguyen",
+                            weight: "500g",
+                            shelfLife: "30 ngay",
+                            certifications: ["Tra"],
+                            shippingNotice: {
+                                title: "San sang giao hang",
+                                description: "San pham dang co san tren backend.",
+                            },
+                            sourcing: {
+                                title: "Thong tin san pham",
+                                body: "San pham backend cho customer commerce.",
+                                certificationCards: [
+                                    {
+                                        icon: "inventory_2",
+                                        title: "SKU",
+                                        description: "SKU-101",
+                                    },
+                                ],
+                            },
+                            heritageCommitments: [
+                                {
+                                    icon: "verified",
+                                    text: "Cam ket tu backend",
+                                },
+                            ],
+                        },
+                    },
+                ],
+            },
+        });
+        useCustomerOrdersStore.setState({
+            orders: [
+                {
+                    id: "9001",
+                    orderNo: "ORD-9001",
+                    paymentMethod: "COD",
+                    status: "PENDING",
+                    subtotal: 360000,
+                    shippingFee: 0,
+                    discountAmount: 0,
+                    totalAmount: 360000,
+                    itemCount: 1,
+                    payment: null,
+                    createdAt: "2026-04-20T08:00:00.000000Z",
+                    updatedAt: "2026-04-20T08:00:00.000000Z",
+                },
+            ],
+        });
+
+        await useAuthStore.getState().hydrateSession();
+
+        expect(useAuthStore.getState().session).toBeNull();
+        expect(useAuthStore.getState().accessToken).toBeNull();
+        expect(useCartStore.getState().cart).toBeNull();
+        expect(useCartStore.getState().items).toEqual([{ productId: "guest-1", quantity: 1 }]);
+        expect(useCustomerOrdersStore.getState().orders).toEqual([]);
+    });
+
+    it("syncs the guest cart, then updates and removes backend cart items", async () => {
+        const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/cart/items") && init?.method === "POST") {
+                return jsonResponse(createCartResponse(2));
+            }
+
+            if (path.endsWith("/api/cart") && (!init?.method || init.method === "GET")) {
+                return jsonResponse(createCartResponse(2));
+            }
+
+            if (path.endsWith("/api/cart/items/501") && init?.method === "PATCH") {
+                return jsonResponse(createCartResponse(5));
+            }
+
+            if (path.endsWith("/api/cart/items/501") && init?.method === "DELETE") {
+                return jsonResponse(createCartResponse(0));
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        await useCartStore.getState().addItem("101", 2);
+        expect(useCartStore.getState().guestItems).toEqual([{ productId: "101", quantity: 2 }]);
+
+        setBackendCustomerSession();
+
+        const syncResult = await useCartStore.getState().syncGuestCart();
+        expect(syncResult.success).toBe(true);
+        expect(useCartStore.getState().guestItems).toEqual([]);
+        expect(useCartStore.getState().cart?.items[0]?.quantity).toBe(2);
+
+        const updateResult = await useCartStore.getState().setQuantity("101", 5);
+        expect(updateResult.success).toBe(true);
+        expect(useCartStore.getState().cart?.items[0]?.quantity).toBe(5);
+
+        const removeResult = await useCartStore.getState().removeItem("101");
+        expect(removeResult.success).toBe(true);
+        expect(useCartStore.getState().cart?.items).toHaveLength(0);
+    });
+
+    it("checks out, loads paginated orders, and loads order details from the backend", async () => {
+        const orderDetail = createOrderDetail();
+        const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/orders/checkout") && init?.method === "POST") {
+                return jsonResponse({
+                    message: "Order created successfully.",
+                    data: orderDetail,
+                });
+            }
+
+            if (path.endsWith("/api/orders") && (!init?.method || init.method === "GET")) {
+                return jsonResponse(createOrdersResponse(orderDetail));
+            }
+
+            if (path.endsWith("/api/orders/9001") && (!init?.method || init.method === "GET")) {
+                return jsonResponse({
+                    message: "Order retrieved successfully.",
+                    data: orderDetail,
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setBackendCustomerSession();
+
+        const checkoutResult = await useCustomerOrdersStore.getState().checkout({
+            recipient_name: "Nguyen Van A",
+            recipient_phone: "0909123456",
+            shipping_address: "123 Nguyen Trai, Ha Noi",
+            note: "Giao gio hanh chinh",
+        });
+
+        expect(checkoutResult.success).toBe(true);
+        expect(useCustomerOrdersStore.getState().orders[0]?.orderNo).toBe("ORD-9001");
+        expect(useCustomerOrdersStore.getState().orderDetails["9001"]?.recipientName).toBe(
+            "Nguyen Van A",
+        );
+
+        const ordersResult = await useCustomerOrdersStore.getState().loadOrders();
+        expect(ordersResult.success).toBe(true);
+        expect(useCustomerOrdersStore.getState().pagination?.total).toBe(1);
+
+        useCustomerOrdersStore.setState({
+            orderDetails: {},
+        });
+
+        const detailResult = await useCustomerOrdersStore.getState().loadOrder("9001");
+        expect(detailResult.success).toBe(true);
+        expect(useCustomerOrdersStore.getState().orderDetails["9001"]?.items[0]?.quantity).toBe(3);
+    });
+});

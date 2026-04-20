@@ -1,0 +1,24 @@
+export function formatCurrency(value: number) {
+    return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        maximumFractionDigits: 0,
+    }).format(value);
+}
+
+export function formatCompactCurrency(value: number) {
+    return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+        notation: "compact",
+        maximumFractionDigits: 1,
+    }).format(value);
+}
+
+export function formatDate(date: string) {
+    return new Intl.DateTimeFormat("vi-VN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    }).format(new Date(date));
+}
