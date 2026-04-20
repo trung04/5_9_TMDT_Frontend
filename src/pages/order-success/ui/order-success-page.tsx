@@ -35,7 +35,7 @@ export function OrderSuccessPage() {
         return (
             <div className="mx-auto max-w-5xl px-6 pb-16 pt-24">
                 <div className="rounded-3xl bg-surface-container-low p-8 text-center text-on-surface-variant">
-                    Đang tải chi tiết đơn hàng từ backend...
+                    Đang tải chi tiết đơn hàng...
                 </div>
             </div>
         );
@@ -54,8 +54,7 @@ export function OrderSuccessPage() {
                         Cảm ơn bạn, đơn {order.orderNo} đã được ghi nhận.
                     </h1>
                     <p className="mt-4 max-w-3xl text-lg leading-8 text-on-surface-variant">
-                        Frontend đã gọi checkout backend thành công, lưu đơn vào lịch sử customer và
-                        đồng bộ lại trạng thái giỏ hàng hiện tại từ server.
+                        Đơn hàng của bạn đã được ghi nhận. Chúng tôi sẽ xử lý đơn và cập nhật trạng thái sớm nhất.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-3">

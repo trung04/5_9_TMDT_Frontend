@@ -73,11 +73,11 @@ export function LoginPage() {
                             Đăng nhập hệ thống
                         </p>
                         <h1 className="mt-3 font-headline text-4xl font-bold">
-                            Customer dùng backend, portal còn lại giữ demo
+                            Đăng nhập khách hàng thực tế
                         </h1>
                         <p className="mt-4 text-sm leading-7 text-on-surface-variant">
-                            Form bên phải dùng API Laravel thật cho khách hàng. Các workspace quản trị,
-                            nhà cung cấp và kho vẫn có nút vào nhanh để giữ luồng demo hiện tại.
+                            Form bên phải dùng tài khoản khách hàng để đồng bộ giỏ hàng và tiếp tục mua sắm.
+                            Các workspace quản trị, nhà cung cấp và kho vẫn có lối vào nhanh cho demo.
                         </p>
                     </div>
 
@@ -121,8 +121,7 @@ export function LoginPage() {
                     <div>
                         <h2 className="font-headline text-2xl font-bold">Đăng nhập khách hàng</h2>
                         <p className="mt-2 text-sm text-on-surface-variant">
-                            Dùng email và mật khẩu thật từ backend Laravel. Sau khi đăng nhập, giỏ hàng
-                            guest trên frontend sẽ được đồng bộ sang server.
+                            Nhập email và mật khẩu khách hàng để đăng nhập và tiếp tục mua sắm cùng giỏ hàng của bạn.
                         </p>
                     </div>
 

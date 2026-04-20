@@ -1,6 +1,6 @@
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8000/api";
 const DEFAULT_NETWORK_ERROR_MESSAGE =
-    "Khong the ket noi backend. Kiem tra VITE_API_BASE_URL va Laravel server.";
+    "Xin lỗi, không thể kết nối đến hệ thống. Vui lòng kiểm tra kết nối mạng của bạn và thử lại."
 
 export interface ApiRequestOptions {
     method?: string;

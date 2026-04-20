@@ -18,6 +18,7 @@ interface ProductInput {
     description: string;
     shortDescription: string;
     price: number;
+    image?: string;
 }
 
 interface ReviewInput {
@@ -39,7 +40,7 @@ interface CatalogState {
     nextCategorySequence: number;
     nextReviewSequence: number;
     nextNewsletterSequence: number;
-    createCategory: (name: string, description: string) => Category;
+    createCategory: (name: string, description: string, image?: string) => Category;
     updateCategory: (categoryId: string, updates: Partial<Category>) => void;
     deleteCategory: (categoryId: string) => boolean;
     createProduct: (input: ProductInput) => Product;
@@ -106,11 +107,12 @@ export const useCatalogStore = create<CatalogState>()(
     persist(
         (set, get) => ({
             ...initialState,
-            createCategory: (name, description) => {
+            createCategory: (name, description, image) => {
                 const category: Category = {
                     id: `cat-custom-${get().nextCategorySequence}`,
                     name: name.trim(),
                     description: description.trim(),
+                    image: image?.trim() || undefined,
                 };
 
                 set((state) => ({
@@ -150,6 +152,8 @@ export const useCatalogStore = create<CatalogState>()(
                 const fallbackImage =
                     seedProducts[sequence % seedProducts.length]?.image ?? seedProducts[0].image;
 
+                const selectedImage = input.image?.trim() || fallbackImage;
+
                 const product: Product = {
                     id: `prod-custom-${sequence}`,
                     slug: slugify(input.name),
@@ -166,10 +170,10 @@ export const useCatalogStore = create<CatalogState>()(
                     rating: 0,
                     reviewCount: 0,
                     stockStatus: "in-stock",
-                    image: fallbackImage,
+                    image: selectedImage,
                     gallery: [
                         {
-                            src: fallbackImage,
+                            src: selectedImage,
                             alt: input.name.trim(),
                         },
                     ],

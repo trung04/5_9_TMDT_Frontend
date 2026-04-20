@@ -74,16 +74,16 @@ export function HomePage() {
                 <div className="relative z-10 mx-auto w-full max-w-7xl px-8">
                     <div className="max-w-2xl text-white">
                         <span className="mb-6 inline-block rounded-full bg-primary px-3 py-1 text-sm uppercase tracking-widest">
-                            Storefront online
+                            Đặc sản vùng miền
                         </span>
                         <h1 className="mb-6 font-headline text-6xl font-bold leading-tight">
-                            Danh mục sản phẩm
+                            Khám phá các sản phẩm
                             <br />
-                            đang đồng bộ từ backend
+                            đặc trưng từ khắp nơi Việt Nam
                         </h1>
                         <p className="mb-8 max-w-lg text-lg font-light leading-relaxed opacity-90">
-                            Customer flow hiện lấy dữ liệu trực tiếp từ Laravel API để bạn có thể thêm
-                            hàng, đồng bộ giỏ và checkout thật ngay trên storefront này.
+                            Chọn lựa quà tặng, nông sản và tinh hoa thủ công được tuyển chọn kỹ càng
+                            để đặt hàng nhanh chóng và giao tận nơi.
                         </p>
                         <div className="flex flex-wrap gap-4">
                             <Link
@@ -109,10 +109,10 @@ export function HomePage() {
                     <div className="mb-16 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
                         <div>
                             <p className="text-sm uppercase tracking-widest text-primary">
-                                Backend categories
+                                Khám phá
                             </p>
                             <h2 className="mt-3 font-headline text-4xl font-bold">
-                                Danh mục đang bán
+                                Danh mục đặc sản
                             </h2>
                         </div>
                         <Link
@@ -127,7 +127,7 @@ export function HomePage() {
                         <EmptyCatalogMessage
                             message={
                                 isCatalogLoading
-                                    ? "Đang tải danh mục từ backend..."
+                                ? "Đang tải danh mục..."
                                     : storefrontError ?? "Chưa có danh mục nào để hiển thị."
                             }
                         />
@@ -170,14 +170,14 @@ export function HomePage() {
                     <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                         <div>
                             <p className="text-sm uppercase tracking-widest text-primary">
-                                Đồng bộ sản phẩm
+                                Gợi ý hôm nay
                             </p>
                             <h2 className="mt-3 font-headline text-4xl font-bold">
                                 Mặt hàng nổi bật
                             </h2>
                         </div>
                         <div className="rounded-xl bg-surface-container px-4 py-2 text-sm text-on-surface-variant">
-                            {products.length} sản phẩm từ backend
+                            {products.length} sản phẩm đặc sắc
                         </div>
                     </div>
 
@@ -185,8 +185,8 @@ export function HomePage() {
                         <EmptyCatalogMessage
                             message={
                                 isCatalogLoading
-                                    ? "Đang tải sản phẩm từ backend..."
-                                    : storefrontError ?? "Backend chưa trả về sản phẩm khả dụng."
+                                    ? "Đang tải sản phẩm..."
+                                    : storefrontError ?? "Chưa có sản phẩm khả dụng."
                             }
                         />
                     ) : (
@@ -280,7 +280,7 @@ export function HomePage() {
                                         className="aspect-[4/3] w-full rounded-xl object-cover"
                                     />
                                     <p className="mt-5 text-xs uppercase tracking-widest text-primary">
-                                        Khu nội dung giữ nguyên mode demo
+                                        Đắm chìm trong câu chuyện vùng miền
                                     </p>
                                     <h3 className="mt-2 font-headline text-2xl font-semibold">
                                         {region.name}
@@ -310,7 +310,7 @@ export function HomePage() {
                         <EmptyCatalogMessage
                             message={
                                 isCatalogLoading
-                                    ? "Đang chờ backend tải thêm sản phẩm..."
+                                    ? "Đang chờ sản phẩm mới..."
                                     : "Chưa có sản phẩm mới để hiển thị."
                             }
                         />
@@ -352,11 +352,11 @@ export function HomePage() {
             <section className="relative overflow-hidden bg-primary py-20 text-white">
                 <div className="relative z-10 mx-auto max-w-4xl px-8 text-center">
                     <h2 className="mb-4 font-headline text-3xl font-bold">
-                        Gia nhập cộng đồng storefront
+                        Gia nhập cộng đồng Heritage Harvest
                     </h2>
                     <p className="mb-10 opacity-80">
-                        Nhận thông tin về các đợt cập nhật catalog mới nhất trong khi customer flow đang
-                        được chạy trực tiếp trên backend.
+                        Nhận tin về mùa vụ, ưu đãi quà tặng và câu chuyện vùng miền khi bộ sưu tập được
+                        cập nhật.
                     </p>
                     <form
                         className="mx-auto flex max-w-lg flex-col gap-4 sm:flex-row"

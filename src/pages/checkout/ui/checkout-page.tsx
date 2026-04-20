@@ -94,7 +94,7 @@ export function CheckoutPage() {
         if (!result.success || !result.data) {
             pushToast({
                 tone: "warning",
-                message: result.error ?? "Không thể hoàn tất đơn hàng trên backend.",
+                message: result.error ?? "Không thể hoàn tất đơn hàng.",
             });
             return;
         }
@@ -107,7 +107,7 @@ export function CheckoutPage() {
         await loadCart();
         pushToast({
             tone: "success",
-            message: `Đã tạo đơn ${result.data.orderNo} trên backend.`,
+            message: `Đã tạo đơn ${result.data.orderNo}.`,
         });
         void navigate(routes.orderSuccess(result.data.id));
     }
@@ -131,7 +131,7 @@ export function CheckoutPage() {
                                 <div className="rounded-xl bg-surface-container-lowest p-10 text-center">
                                     <p className="text-on-surface-variant">
                                         {isCartLoading
-                                            ? "Đang tải giỏ hàng từ backend..."
+                                            ? "Đang tải giỏ hàng..."
                                             : cartError ?? "Chưa có sản phẩm nào trong giỏ."}
                                     </p>
                                     <Link
@@ -203,7 +203,7 @@ export function CheckoutPage() {
                                                     </button>
                                                 </div>
                                                 <span className="rounded-full bg-secondary-fixed px-3 py-1 text-xs text-secondary">
-                                                    Đồng bộ server
+                                                    Cập nhật đơn
                                                 </span>
                                             </div>
                                         </div>
@@ -220,8 +220,7 @@ export function CheckoutPage() {
                                     Thông tin nhận hàng
                                 </h2>
                                 <p className="mt-2 text-sm text-on-surface-variant">
-                                    Form này map trực tiếp vào payload backend checkout:
-                                    recipient_name, recipient_phone, shipping_address và note.
+                                    Vui lòng điền thông tin nhận hàng chính xác để chúng tôi giao đơn đúng địa chỉ.
                                 </p>
                             </div>
                             <Link
@@ -312,8 +311,7 @@ export function CheckoutPage() {
                         <div className="mt-6 rounded-xl bg-surface-container-low p-5 text-sm">
                             <p className="font-semibold">Thanh toán khi nhận hàng (COD)</p>
                             <p className="mt-2 text-on-surface-variant">
-                                Phiên bản backend hiện tại cố định payment_method = COD, shipping_fee = 0
-                                và discount_amount = 0 khi checkout.
+                                Hiện tại hệ thống chỉ hỗ trợ thanh toán khi nhận hàng và miễn phí vận chuyển.
                             </p>
                         </div>
 
@@ -331,9 +329,9 @@ export function CheckoutPage() {
                         <h2 className="font-headline text-xl font-semibold">Lưu ý</h2>
                         <div className="mt-6 space-y-3">
                             {[
-                                "Giỏ hàng customer đang được lấy trực tiếp từ API /cart.",
-                                "Checkout chỉ tạo đơn từ active cart hiện tại trên backend.",
-                                "Sau khi checkout xong, frontend sẽ tải lại giỏ hàng mới từ server.",
+                                "Giỏ hàng của bạn được cập nhật liên tục khi thay đổi số lượng.",
+                                "Thanh toán sẽ tạo đơn hàng dựa trên giỏ hiện tại.",
+                                "Sau khi đặt hàng, giỏ sẽ được làm mới để bắt đầu đơn mới.",
                             ].map((helper) => (
                                 <div
                                     key={helper}

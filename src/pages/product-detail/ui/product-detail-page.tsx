@@ -64,7 +64,7 @@ export function ProductDetailPage() {
         return (
             <div className="mx-auto max-w-6xl px-6 pb-16 pt-24">
                 <div className="rounded-2xl bg-surface-container-low p-10 text-center text-on-surface-variant">
-                    {error ?? "Khong the tai chi tiet san pham tu backend."}
+                    {error ?? "Không thể tải chi tiết sản phẩm."}
                 </div>
             </div>
         );
@@ -74,7 +74,7 @@ export function ProductDetailPage() {
         return (
             <div className="mx-auto max-w-6xl px-6 pb-16 pt-24">
                 <div className="rounded-2xl bg-surface-container-low p-10 text-center text-on-surface-variant">
-                    Đang tải chi tiết sản phẩm từ backend...
+                    Đang tải chi tiết sản phẩm...
                 </div>
             </div>
         );
@@ -148,7 +148,7 @@ export function ProductDetailPage() {
                     <header className="space-y-3">
                         <div className="flex items-center gap-3">
                             <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
-                                {product.badge ?? "Storefront"}
+                                {product.badge ?? "Đặc sản"}
                             </span>
                             <button
                                 className={cn(
@@ -180,7 +180,7 @@ export function ProductDetailPage() {
                                     <Icon key={index} name="star" className="text-sm" fill />
                                 ))}
                                 <span className="ml-2 text-sm font-medium text-on-surface-variant">
-                                    {product.rating.toFixed(1)} ({product.reviewCount} đánh giá demo)
+                                    {product.rating.toFixed(1)} ({product.reviewCount} đánh giá)
                                 </span>
                             </div>
                         </div>
@@ -320,8 +320,7 @@ export function ProductDetailPage() {
                                             Đánh giá khách hàng
                                         </h3>
                                         <p className="text-on-surface-variant">
-                                            Backend hiện chưa cung cấp API tạo và đọc review storefront
-                                            đầy đủ, nên tab này đang ở chế độ chỉ đọc thông báo.
+                                            Hiện chưa có đánh giá chi tiết từ khách hàng để hiển thị tại đây.
                                         </p>
                                     </div>
                                     <button
@@ -333,8 +332,8 @@ export function ProductDetailPage() {
                                 </div>
 
                                 <div className="rounded-2xl bg-surface-container-low p-6 text-sm leading-7 text-on-surface-variant">
-                                    Khi backend bổ sung review API, màn này sẽ hiển thị danh sách đánh giá
-                                    thật và cho phép khách hàng đã mua gửi nhận xét trực tiếp từ frontend.
+                                    Khi có đánh giá khách hàng, tab này sẽ hiển thị phản hồi thật và cho phép
+                                    khách hàng gửi nhận xét về sản phẩm.
                                 </div>
                             </div>
                         ) : null}
@@ -348,15 +347,15 @@ export function ProductDetailPage() {
                                     {[
                                         {
                                             title: "Kiểm tra mô tả",
-                                            body: `Đọc kỹ phần mô tả và thông tin ${product.categoryName.toLowerCase()} để hiểu đúng cấu hình hiện có trên backend.`,
+                                            body: `Đọc kỹ phần mô tả sản phẩm để chọn lựa đúng loại đặc sản phù hợp nhu cầu.`,
                                         },
                                         {
                                             title: "Thêm vào giỏ",
-                                            body: "Chọn số lượng phù hợp rồi thêm sản phẩm vào giỏ. Nếu đang đăng nhập khách hàng, dữ liệu sẽ được ghi trực tiếp lên server.",
+                                            body: "Chọn số lượng phù hợp rồi thêm sản phẩm vào giỏ để chuẩn bị thanh toán.",
                                         },
                                         {
                                             title: "Checkout COD",
-                                            body: "Đơn customer hiện checkout theo phương thức COD và được lưu vào lịch sử đơn hàng ngay sau khi xác nhận.",
+                                            body: "Đơn hàng sẽ được xác nhận và lưu vào lịch sử đặt hàng của bạn.",
                                         },
                                     ].map((step) => (
                                         <div
@@ -378,7 +377,7 @@ export function ProductDetailPage() {
 
                     <div className="space-y-8">
                         <div className="space-y-6 rounded-2xl bg-surface-container-high p-8">
-                            <h4 className="font-headline text-xl font-bold">Cam kết storefront</h4>
+                            <h4 className="font-headline text-xl font-bold">Cam kết chất lượng</h4>
                             <ul className="space-y-4">
                                 {product.heritageCommitments.map((item) => (
                                     <li key={item.text} className="flex items-start gap-3">
