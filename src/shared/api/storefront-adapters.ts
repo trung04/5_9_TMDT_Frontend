@@ -1,9 +1,22 @@
 import type { Product, ProductStockStatus } from "@/entities/product/model/types";
-import type { AuthSession, AuthUser, UserRole } from "@/entities/user/model/types";
 import type {
+    AccountComplaint,
+    AccountNotification,
+    AuthSession,
+    AuthUser,
+    RewardRedemption,
+    RewardSnapshot,
+    UserAddress,
+    UserProfile,
+    UserRole,
+} from "@/entities/user/model/types";
+import type {
+    BackendAccountProfile,
     BackendCart,
     BackendCartItem,
     BackendCategory,
+    BackendComplaint,
+    BackendNotification,
     BackendOrderDetail,
     BackendOrderItem,
     BackendOrderStatusHistory,
@@ -163,6 +176,93 @@ export function adaptBackendCategory(category: BackendCategory) {
         id: String(category.id),
         name: category.name,
         description: category.description,
+    };
+}
+
+export function adaptBackendUserAddress(address: BackendAccountProfile["addresses"][number]): UserAddress {
+    return {
+        id: String(address.id),
+        label: address.label,
+        recipient: address.recipient,
+        phone: address.phone,
+        line1: address.line1,
+        city: address.city,
+        note: address.note ?? "",
+        isDefault: address.is_default,
+    };
+}
+
+export function adaptBackendRewardSnapshot(snapshot: BackendAccountProfile["reward_snapshot"]): RewardSnapshot {
+    return {
+        tier: snapshot.tier,
+        points: snapshot.points,
+        nextTierPoints: snapshot.next_tier_points,
+        perks: snapshot.perks,
+    };
+}
+
+export function adaptBackendRewardRedemption(
+    item: BackendAccountProfile["reward_history"][number],
+): RewardRedemption {
+    return {
+        id: String(item.id),
+        title: item.title,
+        pointsUsed: item.points_used,
+        createdAt: item.created_at,
+        status: item.status,
+    };
+}
+
+export function adaptBackendAccountProfile(profile: BackendAccountProfile): UserProfile {
+    return {
+        id: String(profile.id),
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address ?? "",
+        city: profile.city ?? "",
+        favoriteRegion: profile.favorite_region ?? "",
+        avatar: profile.avatar ?? "",
+        memberSince: profile.member_since,
+        newsletter: profile.newsletter,
+        smsAlerts: profile.sms_alerts,
+        orderEmail: profile.order_email,
+        securityAlerts: profile.security_alerts,
+        addresses: profile.addresses.map(adaptBackendUserAddress),
+        rewardHistory: profile.reward_history.map(adaptBackendRewardRedemption),
+    };
+}
+
+export function adaptBackendNotification(notification: BackendNotification): AccountNotification {
+    return {
+        id: String(notification.id),
+        title: notification.title,
+        message: notification.message,
+        channel: notification.channel,
+        status: notification.status,
+        sentAt: notification.sent_at ?? "",
+        readAt: notification.read_at ?? "",
+        createdAt: notification.created_at ?? "",
+    };
+}
+
+export function adaptBackendComplaint(complaint: BackendComplaint): AccountComplaint {
+    return {
+        id: String(complaint.id),
+        reason: complaint.reason,
+        content: complaint.content,
+        imageUrl: complaint.image_url ?? "",
+        status: complaint.status,
+        resolutionNote: complaint.resolution_note ?? "",
+        createdAt: complaint.created_at,
+        orderId: complaint.order ? String(complaint.order.id) : "",
+        orderNo: complaint.order?.order_no ?? "",
+        orderStatus: complaint.order?.status ?? "",
+        orderTotalAmount: numberValue(complaint.order?.total_amount ?? 0),
+        productId: complaint.product ? String(complaint.product.id) : "",
+        productName: complaint.product?.name ?? "",
+        productSku: complaint.product?.sku ?? "",
+        resolverName: complaint.resolver?.full_name ?? "",
     };
 }
 

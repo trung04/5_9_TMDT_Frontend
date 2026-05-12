@@ -16,6 +16,10 @@ export function formatCompactCurrency(value: number) {
 }
 
 export function formatDate(date: string) {
+    if (!date || Number.isNaN(Date.parse(date))) {
+        return "--";
+    }
+
     return new Intl.DateTimeFormat("vi-VN", {
         day: "2-digit",
         month: "short",

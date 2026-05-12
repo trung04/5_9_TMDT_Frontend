@@ -12,13 +12,6 @@ export function WarehouseSupplierOrdersPage() {
     return (
         <div className="space-y-8">
             <section>
-                <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Đơn theo đầu mối nhà cung cấp
-                </h2>
-                <p className="mt-1 text-on-surface-variant">
-                    Tập trung theo dõi các đơn cần phối hợp với supplier trước khi chuyển qua hàng
-                    đợi fulfillment.
-                </p>
             </section>
 
             <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">

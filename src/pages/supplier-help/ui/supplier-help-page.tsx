@@ -19,12 +19,6 @@ export function SupplierHelpPage() {
     return (
         <div className="space-y-8">
             <section>
-                <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Trung tâm hỗ trợ nhà cung cấp
-                </h2>
-                <p className="mt-1 text-on-surface-variant">
-                    Gửi ticket nội bộ khi cần điều phối ETA, xác nhận đối soát hoặc hỗ trợ vận hành.
-                </p>
             </section>
 
             <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">

@@ -21,6 +21,7 @@ interface StorefrontCatalogState {
     categories: Category[];
     suppliers: StorefrontSupplierOption[];
     products: Product[];
+    productDetails: Record<string, Product>;
     status: "idle" | "loading" | "ready" | "error";
     error: string | null;
     loadCatalog: (force?: boolean) => Promise<void>;
@@ -32,6 +33,7 @@ const initialState = {
     categories: [] as Category[],
     suppliers: [] as StorefrontSupplierOption[],
     products: [] as Product[],
+    productDetails: {} as Record<string, Product>,
     status: "idle" as const,
     error: null as string | null,
 };
@@ -73,6 +75,10 @@ export const useStorefrontCatalogStore = create<StorefrontCatalogState>()((set, 
                 categories,
                 suppliers,
                 products,
+                productDetails: products.reduce<Record<string, Product>>((accumulator, product) => {
+                    accumulator[product.id] = product;
+                    return accumulator;
+                }, {}),
                 status: "ready",
                 error: null,
             });
@@ -89,11 +95,15 @@ export const useStorefrontCatalogStore = create<StorefrontCatalogState>()((set, 
             const nextProduct = adaptBackendProduct(response.data);
 
             set((state) => ({
-                products: state.products.some((product) => product.id === nextProduct.id)
-                    ? state.products.map((product) =>
-                          product.id === nextProduct.id ? nextProduct : product,
-                      )
-                    : [nextProduct, ...state.products],
+                productDetails: {
+                    ...state.productDetails,
+                    [nextProduct.id]: {
+                        ...(state.products.find((product) => product.id === nextProduct.id) ??
+                            state.productDetails[nextProduct.id] ??
+                            {}),
+                        ...nextProduct,
+                    },
+                },
             }));
 
             return nextProduct;

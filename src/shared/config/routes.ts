@@ -44,6 +44,7 @@ export const routes = {
     accountRewards: "/account/rewards",
     accountDisputes: "/account/disputes",
     accountOrders: "/account/orders",
+    accountOrderDetail: (orderId = ":orderId") => `/account/orders/${orderId}`,
     accountWishlist: "/account/wishlist",
     adminDashboard: "/admin/dashboard",
     adminCommunity: "/admin/community",

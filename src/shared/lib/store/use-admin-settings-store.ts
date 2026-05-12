@@ -1,0 +1,201 @@
+import { create } from "zustand";
+
+import type { BackendAdminSettings, BackendAdminSettingsResponse } from "@/shared/api/backend-types";
+import { apiRequest, isUnauthorizedApiError } from "@/shared/api/backend-client";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
+import { registerProtectedSessionCleanup } from "@/shared/lib/store/protected-session";
+
+interface AsyncResult<T = void> {
+    success: boolean;
+    data?: T;
+    error?: string;
+}
+
+export interface AdminSettingsForm {
+    storeName: string;
+    supportEmail: string;
+    supportPhone: string;
+    lowStockThreshold: number;
+    dashboardRefreshSeconds: number;
+    orderAutoConfirm: boolean;
+    sendDailySummary: boolean;
+    maintenanceMode: boolean;
+    notes: string;
+    updatedAt: string | null;
+}
+
+interface AdminSettingsState {
+    settings: AdminSettingsForm;
+    isLoading: boolean;
+    isSaving: boolean;
+    error: string | null;
+    loadSettings: () => Promise<AsyncResult<AdminSettingsForm>>;
+    saveSettings: (payload: AdminSettingsForm) => Promise<AsyncResult<AdminSettingsForm>>;
+    reset: () => void;
+}
+
+const initialSettings: AdminSettingsForm = {
+    storeName: "Heritage Harvest",
+    supportEmail: "",
+    supportPhone: "",
+    lowStockThreshold: 5,
+    dashboardRefreshSeconds: 60,
+    orderAutoConfirm: false,
+    sendDailySummary: true,
+    maintenanceMode: false,
+    notes: "",
+    updatedAt: null,
+};
+
+const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+
+function adaptSettings(settings: BackendAdminSettings): AdminSettingsForm {
+    return {
+        storeName: settings.store_name,
+        supportEmail: settings.support_email ?? "",
+        supportPhone: settings.support_phone ?? "",
+        lowStockThreshold: settings.low_stock_threshold,
+        dashboardRefreshSeconds: settings.dashboard_refresh_seconds,
+        orderAutoConfirm: settings.order_auto_confirm,
+        sendDailySummary: settings.send_daily_summary,
+        maintenanceMode: settings.maintenance_mode,
+        notes: settings.notes ?? "",
+        updatedAt: settings.updated_at,
+    };
+}
+
+export const useAdminSettingsStore = create<AdminSettingsState>()((set) => ({
+    settings: initialSettings,
+    isLoading: false,
+    isSaving: false,
+    error: null,
+    loadSettings: async () => {
+        const token = useAuthStore.getState().accessToken;
+
+        if (!token) {
+            return {
+                success: false,
+                error: "Ban can dang nhap admin de tai cau hinh.",
+            };
+        }
+
+        set({
+            isLoading: true,
+            error: null,
+        });
+
+        try {
+            const response = await apiRequest<BackendAdminSettingsResponse>("/admin/settings", {
+                token,
+            });
+            const settings = adaptSettings(response.data);
+
+            set({
+                settings,
+                isLoading: false,
+                error: null,
+            });
+
+            return {
+                success: true,
+                data: settings,
+            };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                return {
+                    success: false,
+                    error: SESSION_EXPIRED_MESSAGE,
+                };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the tai cau hinh admin.";
+
+            set({
+                isLoading: false,
+                error: message,
+            });
+
+            return {
+                success: false,
+                error: message,
+            };
+        }
+    },
+    saveSettings: async (payload) => {
+        const token = useAuthStore.getState().accessToken;
+
+        if (!token) {
+            return {
+                success: false,
+                error: "Ban can dang nhap admin de luu cau hinh.",
+            };
+        }
+
+        set({
+            isSaving: true,
+            error: null,
+        });
+
+        try {
+            const response = await apiRequest<BackendAdminSettingsResponse>("/admin/settings", {
+                method: "PUT",
+                token,
+                body: {
+                    store_name: payload.storeName.trim(),
+                    support_email: payload.supportEmail.trim() || null,
+                    support_phone: payload.supportPhone.trim() || null,
+                    low_stock_threshold: payload.lowStockThreshold,
+                    dashboard_refresh_seconds: payload.dashboardRefreshSeconds,
+                    order_auto_confirm: payload.orderAutoConfirm,
+                    send_daily_summary: payload.sendDailySummary,
+                    maintenance_mode: payload.maintenanceMode,
+                    notes: payload.notes.trim() || null,
+                },
+            });
+            const settings = adaptSettings(response.data);
+
+            set({
+                settings,
+                isSaving: false,
+                error: null,
+            });
+
+            return {
+                success: true,
+                data: settings,
+            };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                return {
+                    success: false,
+                    error: SESSION_EXPIRED_MESSAGE,
+                };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the luu cau hinh admin.";
+
+            set({
+                isSaving: false,
+                error: message,
+            });
+
+            return {
+                success: false,
+                error: message,
+            };
+        }
+    },
+    reset: () =>
+        set({
+            settings: initialSettings,
+            isLoading: false,
+            isSaving: false,
+            error: null,
+        }),
+}));
+
+registerProtectedSessionCleanup(() => {
+    useAdminSettingsStore.getState().reset();
+});

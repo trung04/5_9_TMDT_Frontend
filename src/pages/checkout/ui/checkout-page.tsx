@@ -6,7 +6,6 @@ import { formatCurrency } from "@/shared/lib/format";
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
 import { useCustomerOrdersStore } from "@/shared/lib/store/use-customer-orders-store";
-import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Icon } from "@/shared/ui";
 
 type CheckoutForm = {
@@ -15,6 +14,33 @@ type CheckoutForm = {
     shippingAddress: string;
     note: string;
 };
+
+type CheckoutPaymentMethod = "COD" | "BANK_TRANSFER" | "E_WALLET";
+
+const paymentOptions: Array<{
+    id: CheckoutPaymentMethod;
+    label: string;
+    description: string;
+    defaultGateway?: string;
+}> = [
+    {
+        id: "COD",
+        label: "Thanh toan khi nhan hang",
+        description: "Thanh toan tien mat cho shipper khi don den noi.",
+    },
+    {
+        id: "BANK_TRANSFER",
+        label: "Chuyen khoan ngan hang",
+        description: "Nhan thong tin chuyen khoan va cho admin xac nhan giao dich.",
+        defaultGateway: "Vietcombank",
+    },
+    {
+        id: "E_WALLET",
+        label: "Vi dien tu",
+        description: "Mo phong thanh toan qua cong vi nhu MoMo hoac ZaloPay.",
+        defaultGateway: "MoMo",
+    },
+];
 
 function getDefaultAddress(profile: ReturnType<typeof useAccountStore.getState>["profile"]) {
     return profile.addresses.find((address) => address.isDefault) ?? profile.addresses[0];
@@ -45,8 +71,10 @@ export function CheckoutPage() {
     const cartError = useCartStore((state) => state.error);
     const checkout = useCustomerOrdersStore((state) => state.checkout);
     const isSubmitting = useCustomerOrdersStore((state) => state.isSubmitting);
-    const pushToast = useFeedbackStore((state) => state.pushToast);
     const [form, setForm] = useState<CheckoutForm>(() => buildForm(profile));
+    const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("COD");
+    const [paymentGateway, setPaymentGateway] = useState("Vietcombank");
+    const [submitError, setSubmitError] = useState("");
 
     useEffect(() => {
         void loadCart();
@@ -70,6 +98,7 @@ export function CheckoutPage() {
     }
 
     async function handlePlaceOrder() {
+        setSubmitError("");
         const requiredFields: Array<keyof CheckoutForm> = [
             "recipientName",
             "recipientPhone",
@@ -77,10 +106,7 @@ export function CheckoutPage() {
         ];
 
         if (requiredFields.some((field) => form[field].trim().length === 0)) {
-            pushToast({
-                tone: "warning",
-                message: "Vui lòng hoàn tất đầy đủ thông tin nhận hàng trước khi đặt đơn.",
-            });
+            setSubmitError("Vui long hoan tat day du thong tin nhan hang truoc khi dat don.");
             return;
         }
 
@@ -89,13 +115,12 @@ export function CheckoutPage() {
             recipient_phone: form.recipientPhone.trim(),
             shipping_address: form.shippingAddress.trim(),
             note: form.note.trim(),
+            payment_method: paymentMethod,
+            payment_gateway: paymentMethod === "COD" ? undefined : paymentGateway.trim(),
         });
 
         if (!result.success || !result.data) {
-            pushToast({
-                tone: "warning",
-                message: result.error ?? "Không thể hoàn tất đơn hàng.",
-            });
+            setSubmitError(result.error ?? "Khong the hoan tat don hang.");
             return;
         }
 
@@ -105,10 +130,6 @@ export function CheckoutPage() {
             address: form.shippingAddress.trim(),
         });
         await loadCart();
-        pushToast({
-            tone: "success",
-            message: `Đã tạo đơn ${result.data.orderNo}.`,
-        });
         void navigate(routes.orderSuccess(result.data.id));
     }
 
@@ -118,11 +139,11 @@ export function CheckoutPage() {
                 <div className="space-y-12 lg:col-span-7">
                     <section>
                         <div className="mb-8 flex items-baseline justify-between">
-                            <h1 className="font-headline text-3xl font-medium tracking-tight">
-                                Giỏ hàng của bạn
+                            <h1 className="font-headline text-2xl font-semibold tracking-tight">
+                                Gio hang cua ban
                             </h1>
                             <span className="text-sm text-zinc-500">
-                                {cart?.itemCount ?? 0} mặt hàng
+                                {cart?.itemCount ?? 0} mat hang
                             </span>
                         </div>
 
@@ -131,14 +152,14 @@ export function CheckoutPage() {
                                 <div className="rounded-xl bg-surface-container-lowest p-10 text-center">
                                     <p className="text-on-surface-variant">
                                         {isCartLoading
-                                            ? "Đang tải giỏ hàng..."
-                                            : cartError ?? "Chưa có sản phẩm nào trong giỏ."}
+                                            ? "Dang tai gio hang..."
+                                            : cartError ?? "Chua co san pham nao trong gio."}
                                     </p>
                                     <Link
                                         className="mt-4 inline-block text-primary hover:underline"
                                         to={routes.products}
                                     >
-                                        Quay lại mua sắm
+                                        Quay lai mua sam
                                     </Link>
                                 </div>
                             ) : (
@@ -167,7 +188,7 @@ export function CheckoutPage() {
                                                 <button
                                                     className="text-zinc-400 transition-colors hover:text-error"
                                                     onClick={() => void removeItem(item.productId)}
-                                                    aria-label={`Xóa ${item.product.name}`}
+                                                    aria-label={`Xoa ${item.product.name}`}
                                                 >
                                                     <Icon name="delete" />
                                                 </button>
@@ -182,7 +203,7 @@ export function CheckoutPage() {
                                                                 Math.max(1, item.quantity - 1),
                                                             )
                                                         }
-                                                        aria-label={`Giảm số lượng ${item.product.name}`}
+                                                        aria-label={`Giam so luong ${item.product.name}`}
                                                     >
                                                         <Icon name="remove" className="text-sm" />
                                                     </button>
@@ -197,13 +218,13 @@ export function CheckoutPage() {
                                                                 item.quantity + 1,
                                                             )
                                                         }
-                                                        aria-label={`Tăng số lượng ${item.product.name}`}
+                                                        aria-label={`Tang so luong ${item.product.name}`}
                                                     >
                                                         <Icon name="add" className="text-sm" />
                                                     </button>
                                                 </div>
                                                 <span className="rounded-full bg-secondary-fixed px-3 py-1 text-xs text-secondary">
-                                                    Cập nhật đơn
+                                                    Cap nhat don
                                                 </span>
                                             </div>
                                         </div>
@@ -217,17 +238,17 @@ export function CheckoutPage() {
                         <div className="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <h2 className="font-headline text-2xl font-semibold">
-                                    Thông tin nhận hàng
+                                    Thong tin nhan hang
                                 </h2>
                                 <p className="mt-2 text-sm text-on-surface-variant">
-                                    Vui lòng điền thông tin nhận hàng chính xác để chúng tôi giao đơn đúng địa chỉ.
+                                    Vui long dien thong tin nhan hang chinh xac de chung toi giao don dung dia chi.
                                 </p>
                             </div>
                             <Link
                                 className="text-sm font-medium text-primary hover:underline"
                                 to={routes.accountAddresses}
                             >
-                                Sổ địa chỉ local
+                                So dia chi local
                             </Link>
                         </div>
 
@@ -235,7 +256,7 @@ export function CheckoutPage() {
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                        Người nhận
+                                        Nguoi nhan
                                     </label>
                                     <input
                                         className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -247,7 +268,7 @@ export function CheckoutPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                        Số điện thoại
+                                        So dien thoai
                                     </label>
                                     <input
                                         className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -260,7 +281,7 @@ export function CheckoutPage() {
                             </div>
                             <div className="mt-6 space-y-2">
                                 <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Địa chỉ giao hàng
+                                    Dia chi giao hang
                                 </label>
                                 <textarea
                                     className="min-h-28 w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -272,7 +293,7 @@ export function CheckoutPage() {
                             </div>
                             <div className="mt-6 space-y-2">
                                 <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Ghi chú
+                                    Ghi chu
                                 </label>
                                 <textarea
                                     className="min-h-24 w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -280,58 +301,132 @@ export function CheckoutPage() {
                                     onChange={(event) => updateField("note", event.target.value)}
                                 />
                             </div>
+
+                            <div className="mt-8 space-y-4">
+                                <div>
+                                    <h3 className="font-headline text-xl font-semibold">
+                                        Phuong thuc thanh toan
+                                    </h3>
+                                    <p className="mt-2 text-sm text-on-surface-variant">
+                                        Chon cach thanh toan phu hop truoc khi tao don hang.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {paymentOptions.map((option) => (
+                                        <label
+                                            key={option.id}
+                                            className={`block cursor-pointer rounded-xl border px-4 py-4 transition ${
+                                                paymentMethod === option.id
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-outline-variant/20 bg-surface-container-low"
+                                            }`}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <input
+                                                    type="radio"
+                                                    name="paymentMethod"
+                                                    checked={paymentMethod === option.id}
+                                                    onChange={() => {
+                                                        setPaymentMethod(option.id);
+                                                        setPaymentGateway(option.defaultGateway ?? "");
+                                                    }}
+                                                    className="mt-1"
+                                                />
+                                                <div>
+                                                    <p className="font-semibold text-on-surface">
+                                                        {option.label}
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-on-surface-variant">
+                                                        {option.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {paymentMethod !== "COD" ? (
+                                    <div className="space-y-2">
+                                        <label className="text-xs uppercase tracking-widest text-on-surface-variant">
+                                            Cong thanh toan
+                                        </label>
+                                        <input
+                                            className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
+                                            value={paymentGateway}
+                                            onChange={(event) => setPaymentGateway(event.target.value)}
+                                            placeholder={
+                                                paymentMethod === "BANK_TRANSFER"
+                                                    ? "Vietcombank"
+                                                    : "MoMo"
+                                            }
+                                        />
+                                    </div>
+                                ) : null}
+                            </div>
                         </div>
                     </section>
                 </div>
 
                 <div className="space-y-8 lg:col-span-5">
                     <section className="rounded-xl bg-surface-container-lowest p-8">
-                        <h2 className="font-headline text-2xl font-semibold">Tóm tắt đơn hàng</h2>
+                        <h2 className="font-headline text-2xl font-semibold">Tom tat don hang</h2>
 
                         <div className="mt-6 space-y-4 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-on-surface-variant">Tạm tính</span>
+                                <span className="text-on-surface-variant">Tam tinh</span>
                                 <span>{formatCurrency(subtotal)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-on-surface-variant">Vận chuyển</span>
+                                <span className="text-on-surface-variant">Van chuyen</span>
                                 <span>{formatCurrency(shippingFee)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-on-surface-variant">Giảm giá</span>
+                                <span className="text-on-surface-variant">Giam gia</span>
                                 <span>-{formatCurrency(discount)}</span>
                             </div>
                             <div className="h-px bg-outline-variant/20" />
                             <div className="flex justify-between font-headline text-2xl font-bold">
-                                <span>Tổng cộng</span>
+                                <span>Tong cong</span>
                                 <span>{formatCurrency(total)}</span>
                             </div>
                         </div>
 
                         <div className="mt-6 rounded-xl bg-surface-container-low p-5 text-sm">
-                            <p className="font-semibold">Thanh toán khi nhận hàng (COD)</p>
+                            <p className="font-semibold">
+                                {paymentOptions.find((option) => option.id === paymentMethod)?.label}
+                            </p>
                             <p className="mt-2 text-on-surface-variant">
-                                Hiện tại hệ thống chỉ hỗ trợ thanh toán khi nhận hàng và miễn phí vận chuyển.
+                                {paymentMethod === "COD"
+                                    ? "Ban se thanh toan cho shipper khi don duoc giao thanh cong."
+                                    : paymentMethod === "BANK_TRANSFER"
+                                      ? `Don hang se tao o trang thai cho xac nhan thanh toan qua ${paymentGateway || "ngan hang"}.`
+                                      : `Don hang se tao o trang thai cho xac nhan thanh toan qua ${paymentGateway || "vi dien tu"}.`}
                             </p>
                         </div>
+                        {submitError ? (
+                            <div className="mt-4 rounded-xl border border-error/20 bg-error-container/60 px-4 py-3 text-sm text-error">
+                                {submitError}
+                            </div>
+                        ) : null}
 
                         <button
                             className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-4 font-semibold text-on-primary transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                             disabled={cartItems.length === 0 || isSubmitting}
                             onClick={() => void handlePlaceOrder()}
                         >
-                            <span>{isSubmitting ? "Đang đặt hàng..." : "Đặt hàng"}</span>
+                            <span>{isSubmitting ? "Dang dat hang..." : "Dat hang"}</span>
                             <Icon name="arrow_forward" />
                         </button>
                     </section>
 
                     <section className="rounded-xl bg-surface-container-lowest p-8">
-                        <h2 className="font-headline text-xl font-semibold">Lưu ý</h2>
+                        <h2 className="font-headline text-xl font-semibold">Luu y</h2>
                         <div className="mt-6 space-y-3">
                             {[
-                                "Giỏ hàng của bạn được cập nhật liên tục khi thay đổi số lượng.",
-                                "Thanh toán sẽ tạo đơn hàng dựa trên giỏ hiện tại.",
-                                "Sau khi đặt hàng, giỏ sẽ được làm mới để bắt đầu đơn mới.",
+                                "Gio hang cua ban duoc cap nhat lien tuc khi thay doi so luong.",
+                                "Don hang se luu dung phuong thuc thanh toan ma ban vua chon.",
+                                "Neu chon chuyen khoan hoac vi dien tu, admin co the xac nhan trang thai thanh toan sau.",
                             ].map((helper) => (
                                 <div
                                     key={helper}

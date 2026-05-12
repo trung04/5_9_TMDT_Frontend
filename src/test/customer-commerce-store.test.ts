@@ -274,6 +274,8 @@ describe("customer commerce stores", () => {
             recipient_phone: "0909123456",
             shipping_address: "123 Nguyen Trai, Ha Noi",
             note: "Giao gio hanh chinh",
+            payment_method: "BANK_TRANSFER",
+            payment_gateway: "Vietcombank",
         });
 
         expect(checkoutResult.success).toBe(true);

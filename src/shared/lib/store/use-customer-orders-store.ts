@@ -23,6 +23,8 @@ interface CheckoutInput {
     recipient_phone: string;
     shipping_address: string;
     note?: string;
+    payment_method: "COD" | "BANK_TRANSFER" | "E_WALLET";
+    payment_gateway?: string;
 }
 
 interface AsyncResult<T = void> {
@@ -108,6 +110,10 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
             };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
+                set({
+                    isLoading: false,
+                    error: SESSION_EXPIRED_MESSAGE,
+                });
                 useAuthStore.getState().clearSession();
 
                 return {
@@ -172,6 +178,10 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
             };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
+                set({
+                    isLoading: false,
+                    error: SESSION_EXPIRED_MESSAGE,
+                });
                 useAuthStore.getState().clearSession();
 
                 return {
@@ -230,6 +240,10 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
             };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
+                set({
+                    isSubmitting: false,
+                    error: SESSION_EXPIRED_MESSAGE,
+                });
                 useAuthStore.getState().clearSession();
 
                 return {

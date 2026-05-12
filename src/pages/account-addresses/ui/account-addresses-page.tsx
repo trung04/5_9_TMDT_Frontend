@@ -1,8 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { updateProfileAddressFromDefault } from "@/shared/lib/workflows";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 const emptyForm = {
@@ -16,38 +15,47 @@ const emptyForm = {
 
 export function AccountAddressesPage() {
     const profile = useAccountStore((state) => state.profile);
+    const loadProfile = useAccountStore((state) => state.loadProfile);
     const addAddress = useAccountStore((state) => state.addAddress);
     const updateAddress = useAccountStore((state) => state.updateAddress);
     const removeAddress = useAccountStore((state) => state.removeAddress);
     const setDefaultAddress = useAccountStore((state) => state.setDefaultAddress);
+    const isSaving = useAccountStore((state) => state.isSaving);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState("");
     const [message, setMessage] = useState("");
+
+    useEffect(() => {
+        void loadProfile();
+    }, [loadProfile]);
+
     const editingAddress = useMemo(
         () => profile.addresses.find((address) => address.id === editingId),
         [editingId, profile.addresses],
     );
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (!form.label || !form.recipient || !form.phone || !form.line1 || !form.city) {
-            setMessage("Vui lòng điền đầy đủ thông tin địa chỉ.");
+            setMessage("Vui long dien day du thong tin dia chi.");
             return;
         }
 
-        if (editingAddress) {
-            updateAddress(editingAddress.id, form);
-            setMessage("Đã cập nhật địa chỉ.");
-        } else {
-            addAddress(form);
-            setMessage("Đã thêm địa chỉ mới.");
+        const result = editingAddress
+            ? await updateAddress(editingAddress.id, form)
+            : await addAddress(form);
+
+        if (!result.success) {
+            setMessage(result.error ?? "Khong the luu dia chi.");
+            return;
         }
 
+        setMessage(editingAddress ? "Da cap nhat dia chi." : "Da them dia chi moi.");
         setForm(emptyForm);
         setEditingId("");
         pushToast({
             tone: "success",
-            message: "Danh bạ địa chỉ đã được lưu.",
+            message: "So dia chi da duoc luu.",
         });
     }
 
@@ -56,27 +64,22 @@ export function AccountAddressesPage() {
             <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
                 <SurfaceCard className="space-y-5">
                     <div>
-                        <h1 className="font-headline text-4xl font-bold">Sổ địa chỉ nhận hàng</h1>
+                        <h1 className="font-headline text-2xl font-bold">So dia chi nhan hang</h1>
                         <p className="mt-2 text-on-surface-variant">
-                            Quản lý nhiều địa chỉ giao nhận và chọn địa chỉ mặc định cho checkout.
+                            Quan ly nhieu dia chi giao nhan va chon dia chi mac dinh cho checkout.
                         </p>
                     </div>
 
                     <div className="space-y-4">
                         {profile.addresses.map((address) => (
-                            <div
-                                key={address.id}
-                                className="rounded-3xl bg-surface-container-low p-5"
-                            >
+                            <div key={address.id} className="rounded-3xl bg-surface-container-low p-5">
                                 <div className="flex flex-wrap items-start justify-between gap-4">
                                     <div>
                                         <p className="text-xs uppercase tracking-widest text-primary">
                                             {address.label}
                                         </p>
                                         <p className="mt-2 font-semibold">{address.recipient}</p>
-                                        <p className="text-sm text-on-surface-variant">
-                                            {address.phone}
-                                        </p>
+                                        <p className="text-sm text-on-surface-variant">{address.phone}</p>
                                         <p className="mt-2 text-sm text-on-surface-variant">
                                             {address.line1}, {address.city}
                                         </p>
@@ -88,7 +91,7 @@ export function AccountAddressesPage() {
                                     </div>
                                     {address.isDefault ? (
                                         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-                                            Mặc định
+                                            Mac dinh
                                         </span>
                                     ) : null}
                                 </div>
@@ -108,24 +111,41 @@ export function AccountAddressesPage() {
                                             });
                                         }}
                                     >
-                                        Chỉnh sửa
+                                        Chinh sua
                                     </Button>
                                     <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => {
-                                            setDefaultAddress(address.id);
-                                            updateProfileAddressFromDefault();
+                                        disabled={isSaving}
+                                        onClick={async () => {
+                                            const result = await setDefaultAddress(address.id);
+
+                                            pushToast({
+                                                tone: result.success ? "success" : "warning",
+                                                message: result.success
+                                                    ? "Da cap nhat dia chi mac dinh."
+                                                    : (result.error ?? "Khong the dat dia chi mac dinh."),
+                                            });
                                         }}
                                     >
-                                        Đặt làm mặc định
+                                        Dat lam mac dinh
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => removeAddress(address.id)}
+                                        disabled={isSaving}
+                                        onClick={async () => {
+                                            const result = await removeAddress(address.id);
+
+                                            pushToast({
+                                                tone: result.success ? "success" : "warning",
+                                                message: result.success
+                                                    ? "Da xoa dia chi."
+                                                    : (result.error ?? "Khong the xoa dia chi."),
+                                            });
+                                        }}
                                     >
-                                        Xóa
+                                        Xoa
                                     </Button>
                                 </div>
                             </div>
@@ -135,14 +155,14 @@ export function AccountAddressesPage() {
 
                 <SurfaceCard tone="low" className="space-y-4">
                     <h2 className="font-headline text-2xl font-bold">
-                        {editingAddress ? "Chỉnh sửa địa chỉ" : "Thêm địa chỉ mới"}
+                        {editingAddress ? "Chinh sua dia chi" : "Them dia chi moi"}
                     </h2>
                     {[
-                        ["label", "Nhãn gợi nhớ"],
-                        ["recipient", "Người nhận"],
-                        ["phone", "Số điện thoại"],
-                        ["line1", "Địa chỉ"],
-                        ["city", "Thành phố"],
+                        ["label", "Nhan goi nho"],
+                        ["recipient", "Nguoi nhan"],
+                        ["phone", "So dien thoai"],
+                        ["line1", "Dia chi"],
+                        ["city", "Thanh pho"],
                     ].map(([key, label]) => (
                         <label key={key} className="block space-y-2 text-sm">
                             <span className="font-medium">{label}</span>
@@ -159,7 +179,7 @@ export function AccountAddressesPage() {
                         </label>
                     ))}
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Ghi chú</span>
+                        <span className="font-medium">Ghi chu</span>
                         <textarea
                             className="min-h-28 w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             value={form.note}
@@ -173,8 +193,12 @@ export function AccountAddressesPage() {
                     </label>
                     {message ? <p className="text-sm text-primary">{message}</p> : null}
                     <div className="flex flex-wrap gap-3">
-                        <Button onClick={handleSubmit}>
-                            {editingAddress ? "Lưu địa chỉ" : "Thêm địa chỉ"}
+                        <Button onClick={() => void handleSubmit()} disabled={isSaving}>
+                            {isSaving
+                                ? "Dang luu..."
+                                : editingAddress
+                                  ? "Luu dia chi"
+                                  : "Them dia chi"}
                         </Button>
                         {editingAddress ? (
                             <Button
@@ -184,7 +208,7 @@ export function AccountAddressesPage() {
                                     setForm(emptyForm);
                                 }}
                             >
-                                Hủy chỉnh sửa
+                                Huy chinh sua
                             </Button>
                         ) : null}
                     </div>

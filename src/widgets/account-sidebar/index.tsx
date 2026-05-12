@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 import type { RewardSnapshot, UserProfile } from "@/entities/user/model/types";
 import { routes } from "@/shared/config/routes";
@@ -24,14 +24,20 @@ export function AccountSidebar({ profile, rewards }: ProfileSidebarProps) {
             <div className="rounded-3xl bg-surface-container-low p-4">
                 <nav className="flex flex-col gap-2">
                     <NavLink className={itemClasses} to={routes.accountProfile}>
-                        Thông tin cá nhân
+                        Thong tin ca nhan
                     </NavLink>
                     <NavLink className={itemClasses} to={routes.accountWishlist}>
-                        Danh sách yêu thích
+                        Danh sach yeu thich
                     </NavLink>
                     <NavLink className={itemClasses} to={routes.accountOrders}>
-                        Lịch sử đơn hàng
+                        Lich su don hang
                     </NavLink>
+                    <Link
+                        className="block rounded-full px-4 py-2.5 text-sm font-medium text-error transition hover:bg-surface-container hover:text-error"
+                        to={routes.logout}
+                    >
+                        Dang xuat
+                    </Link>
                 </nav>
             </div>
         </aside>

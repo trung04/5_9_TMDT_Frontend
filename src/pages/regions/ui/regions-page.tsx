@@ -9,7 +9,7 @@ export function RegionsPage() {
         <div className="mx-auto max-w-7xl px-6 pb-10 pt-24">
             <section className="space-y-4">
                 <p className="text-xs uppercase tracking-widest text-primary">Khám phá vùng miền</p>
-                <h1 className="font-headline text-5xl font-bold tracking-tight text-on-surface">
+                <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
                     Khu nội dung vùng miền vẫn giữ chất kể chuyện.
                 </h1>
                 <p className="max-w-3xl text-lg leading-8 text-on-surface-variant">

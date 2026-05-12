@@ -10,7 +10,6 @@ import { routes } from "@/shared/config/routes";
 import { resetDemoState } from "@/shared/lib/store/reset-demo";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { FeedbackToaster } from "@/widgets/feedback-toaster";
 import {
     createBackendProduct,
     createBackendUser,
@@ -27,7 +26,6 @@ function renderApp(route: string) {
         <MemoryRouter initialEntries={[route]}>
             <AppBootstrap />
             <AppRoutes />
-            <FeedbackToaster />
         </MemoryRouter>,
     );
 }
@@ -44,6 +42,7 @@ function setBackendCustomerSession() {
             loggedInAt: "2026-04-20T08:00:00.000Z",
         },
         accessToken: "token-1",
+        accessTokenExpiresAt: "2026-12-31T10:00:00.000Z",
         authSource: "backend",
     });
 }
@@ -65,6 +64,7 @@ describe("customer commerce routes", () => {
                     message: "Logged in successfully.",
                     access_token: "token-1",
                     token_type: "Bearer",
+                    expires_at: "2026-04-20T10:00:00.000Z",
                     user: createBackendUser(),
                 });
             }
@@ -89,15 +89,13 @@ describe("customer commerce routes", () => {
         const user = userEvent.setup();
         renderApp(routes.checkout);
 
-        expect(
-            await screen.findByRole("heading", { name: /Đăng nhập khách hàng/i }),
-        ).toBeInTheDocument();
+        expect(await screen.findByText(/Dang nhap he thong/i)).toBeInTheDocument();
 
         await user.type(screen.getByLabelText(/Email/i), "customer@example.com");
-        await user.type(screen.getByLabelText(/Mật khẩu/i), "secret123");
-        await user.click(screen.getByRole("button", { name: /Đăng nhập khách hàng/i }));
+        await user.type(screen.getByLabelText(/Mat khau/i), "secret123");
+        await user.click(screen.getByRole("button", { name: /^Dang nhap$/i }));
 
-        expect(await screen.findByText(/Tóm tắt đơn hàng/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
 
         const syncCall = fetchMock.mock.calls.find(([input, init]) => {
             return (
@@ -130,7 +128,7 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.products);
 
-        expect(await screen.findByText(/Xin lỗi, không thể kết nối đến hệ thống/i)).toBeInTheDocument();
+        expect(await screen.findByText(/không thể kết nối đến hệ thống/i)).toBeInTheDocument();
     });
 
     it("shows a connection error on the product detail page when the API is unavailable", async () => {
@@ -143,7 +141,7 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.productDetail(slug));
 
-        expect(await screen.findByText(/Xin lỗi, không thể kết nối đến hệ thống/i)).toBeInTheDocument();
+        expect(await screen.findByText(/không thể kết nối đến hệ thống/i)).toBeInTheDocument();
     });
 
     it("loads backend orders and reorders items back into the cart", async () => {
@@ -193,7 +191,7 @@ describe("customer commerce routes", () => {
 
         expect(await screen.findByText(/Tra huu co/i)).toBeInTheDocument();
 
-        await user.click(screen.getByRole("button", { name: /Thêm lại vào giỏ/i }));
+        await user.click(screen.getByRole("button", { name: /Them lai vao gio/i }));
 
         await waitFor(() => {
             const reorderCall = fetchMock.mock.calls.find(([input, init]) => {

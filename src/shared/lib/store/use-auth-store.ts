@@ -7,18 +7,19 @@ import type {
     DemoCredential,
     UserRole,
 } from "@/entities/user/model/types";
-import type { BackendAuthResponse, BackendMeResponse, BackendUser } from "@/shared/api/backend-types";
+import type { BackendAuthResponse, BackendMeResponse } from "@/shared/api/backend-types";
 import { apiRequest, isUnauthorizedApiError } from "@/shared/api/backend-client";
-import { adaptBackendUserToSession, normalizeUserRole } from "@/shared/api/storefront-adapters";
+import { adaptBackendUserToSession } from "@/shared/api/storefront-adapters";
 import { routes } from "@/shared/config/routes";
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
+import { useShopStore } from "@/shared/lib/store/use-shop-store";
 import { runProtectedSessionCleanup } from "@/shared/lib/store/protected-session";
 
 const demoCredentials: DemoCredential[] = [
     {
         id: "demo-admin",
         role: "admin",
-        displayName: "Quản trị demo",
+        displayName: "Quan tri demo",
         email: "admin@heritage.local",
         password: "123456",
         redirectTo: routes.adminDashboard,
@@ -26,7 +27,7 @@ const demoCredentials: DemoCredential[] = [
     {
         id: "demo-supplier",
         role: "supplier",
-        displayName: "Nhà cung cấp demo",
+        displayName: "Nha cung cap demo",
         email: "supplier@heritage.local",
         password: "123456",
         redirectTo: routes.supplierOrders,
@@ -50,6 +51,7 @@ interface AuthState {
     credentials: DemoCredential[];
     session: AuthSession | null;
     accessToken: string | null;
+    accessTokenExpiresAt: string | null;
     authSource: AuthSource | null;
     isHydrating: boolean;
     isSubmitting: boolean;
@@ -74,18 +76,17 @@ function createDemoSession(credential: DemoCredential): AuthSession {
     };
 }
 
-function syncProfile(user: BackendUser) {
-    useAccountStore.getState().updateProfile({
-        name: user.full_name,
-        email: user.email,
-        phone: user.phone,
-    });
+function isExpired(expiresAt: string | null) {
+    if (!expiresAt) return false;
+
+    return Date.parse(expiresAt) <= Date.now();
 }
 
 const initialState = {
     credentials: demoCredentials,
     session: null as AuthSession | null,
     accessToken: null as string | null,
+    accessTokenExpiresAt: null as string | null,
     authSource: null as AuthSource | null,
     isHydrating: false,
     isSubmitting: false,
@@ -95,6 +96,7 @@ function clearAuthState(set: (payload: Partial<AuthState>) => void) {
     set({
         session: null,
         accessToken: null,
+        accessTokenExpiresAt: null,
         authSource: null,
         isHydrating: false,
         isSubmitting: false,
@@ -104,10 +106,11 @@ function clearAuthState(set: (payload: Partial<AuthState>) => void) {
 
 export function redirectForRole(role: UserRole) {
     if (role === "customer") return routes.accountProfile;
+    if (role === "admin") return routes.adminDashboard;
+    if (role === "supplier") return routes.supplierOrders;
+    if (role === "warehouse") return routes.warehouseInventory;
 
-    return (
-        demoCredentials.find((credential) => credential.role === role)?.redirectTo ?? routes.home
-    );
+    return routes.home;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -125,35 +128,28 @@ export const useAuthStore = create<AuthState>()(
                             password,
                         },
                     });
-                    const normalizedRole = normalizeUserRole(response.user.role);
-
-                    if (normalizedRole !== "customer") {
-                        set({ isSubmitting: false });
-
-                        return {
-                            success: false,
-                            error: "Form đăng nhập này hiện chỉ hỗ trợ tài khoản khách hàng.",
-                        };
-                    }
-
                     const session = adaptBackendUserToSession(response.user);
 
                     if (!session) {
                         set({ isSubmitting: false });
-
                         return {
                             success: false,
-                            error: "Không thể xử lý thông tin đăng nhập. Vui lòng thử lại.",
+                            error: "Khong the xu ly thong tin dang nhap. Vui long thu lai.",
                         };
                     }
 
-                    syncProfile(response.user);
                     set({
                         session,
                         accessToken: response.access_token,
+                        accessTokenExpiresAt: response.expires_at ?? null,
                         authSource: "backend",
                         isSubmitting: false,
                     });
+
+                    if (session.user.role === "customer") {
+                        await useAccountStore.getState().loadProfile();
+                        await useShopStore.getState().loadWishlist();
+                    }
 
                     return { success: true };
                 } catch (error) {
@@ -164,7 +160,7 @@ export const useAuthStore = create<AuthState>()(
                         error:
                             error instanceof Error
                                 ? error.message
-                                : "Xin lỗi, không thể đăng nhập. Vui lòng kiểm tra địa chỉ email và mật khẩu.",
+                                : "Xin loi, khong the dang nhap. Vui long kiem tra email va mat khau.",
                     };
                 }
             },
@@ -174,30 +170,35 @@ export const useAuthStore = create<AuthState>()(
                 if (!credential) {
                     return {
                         success: false,
-                        error: "Không có tài khoản demo cho vai trò này.",
+                        error: "Khong co tai khoan demo cho vai tro nay.",
                     };
                 }
 
                 set({
                     session: createDemoSession(credential),
                     accessToken: null,
+                    accessTokenExpiresAt: null,
                     authSource: "demo",
                 });
 
                 return { success: true };
             },
             logout: async () => {
-                const token = get().accessToken;
+                const currentToken = get().accessToken;
                 const authSource = get().authSource;
 
-                if (authSource === "backend" && token) {
+                if (authSource === "backend" && isExpired(get().accessTokenExpiresAt)) {
+                    clearAuthState(set);
+                    return;
+                }
+
+                if (authSource === "backend" && currentToken) {
                     try {
                         await apiRequest("/logout", {
                             method: "POST",
-                            token,
+                            token: currentToken,
                         });
                     } catch {
-                        // Ignore transport errors and always clear local auth state.
                     }
                 }
 
@@ -207,13 +208,13 @@ export const useAuthStore = create<AuthState>()(
                 const session = get().session;
 
                 if (!session) {
-                    return { success: false, error: "Bạn cần đăng nhập trước." };
+                    return { success: false, error: "Ban can dang nhap truoc." };
                 }
 
                 if (get().authSource === "backend") {
                     return {
                         success: false,
-                        error: "Thay đổi mật khẩu đang được phát triển. Vui lòng quay lại sau.",
+                        error: "Tinh nang doi mat khau backend dang duoc phat trien.",
                     };
                 }
 
@@ -224,14 +225,14 @@ export const useAuthStore = create<AuthState>()(
                 if (!matchedCredential || matchedCredential.password !== currentPassword) {
                     return {
                         success: false,
-                        error: "Mật khẩu hiện tại chưa chính xác.",
+                        error: "Mat khau hien tai chua chinh xac.",
                     };
                 }
 
                 if (nextPassword.trim().length < 6) {
                     return {
                         success: false,
-                        error: "Mật khẩu mới phải có ít nhất 6 ký tự.",
+                        error: "Mat khau moi phai co it nhat 6 ky tu.",
                     };
                 }
 
@@ -246,10 +247,15 @@ export const useAuthStore = create<AuthState>()(
                 return { success: true };
             },
             hydrateSession: async () => {
-                const token = get().accessToken;
+                const currentToken = get().accessToken;
                 const authSource = get().authSource;
 
-                if (!token || authSource !== "backend") {
+                if (authSource === "backend" && isExpired(get().accessTokenExpiresAt)) {
+                    clearAuthState(set);
+                    return;
+                }
+
+                if (!currentToken || authSource !== "backend") {
                     set({ isHydrating: false });
                     return;
                 }
@@ -258,7 +264,7 @@ export const useAuthStore = create<AuthState>()(
 
                 try {
                     const response = await apiRequest<BackendMeResponse>("/me", {
-                        token,
+                        token: currentToken,
                     });
                     const session = adaptBackendUserToSession(response.user);
 
@@ -267,21 +273,24 @@ export const useAuthStore = create<AuthState>()(
                         return;
                     }
 
-                    syncProfile(response.user);
                     set({
                         session,
+                        accessTokenExpiresAt: response.expires_at ?? get().accessTokenExpiresAt,
                         authSource: "backend",
                         isHydrating: false,
                     });
+
+                    if (session.user.role === "customer") {
+                        await useAccountStore.getState().loadProfile();
+                        await useShopStore.getState().loadWishlist();
+                    }
                 } catch (error) {
                     if (isUnauthorizedApiError(error)) {
                         clearAuthState(set);
                         return;
                     }
 
-                    set({
-                        isHydrating: false,
-                    });
+                    set({ isHydrating: false });
                 }
             },
             clearSession: () => clearAuthState(set),
@@ -294,6 +303,7 @@ export const useAuthStore = create<AuthState>()(
                 credentials: state.credentials,
                 session: state.session,
                 accessToken: state.accessToken,
+                accessTokenExpiresAt: state.accessTokenExpiresAt,
                 authSource: state.authSource,
             }),
         },

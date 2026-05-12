@@ -2,10 +2,8 @@ import { useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import { canAccessRoute } from "@/shared/lib/auth";
-import { routes } from "@/shared/config/routes";
 import { redirectForRole, useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 export function LoginPage() {
@@ -17,7 +15,6 @@ export function LoginPage() {
     const loginAsRole = useAuthStore((state) => state.loginAsRole);
     const isSubmitting = useAuthStore((state) => state.isSubmitting);
     const syncGuestCart = useCartStore((state) => state.syncGuestCart);
-    const pushToast = useFeedbackStore((state) => state.pushToast);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -46,22 +43,28 @@ export function LoginPage() {
         const result = await login(email, password);
 
         if (!result.success) {
-            setError(result.error ?? "Đăng nhập thất bại.");
+            setError(result.error ?? "Dang nhap that bai.");
             return;
         }
 
-        const syncResult = await syncGuestCart();
+        const nextSession = useAuthStore.getState().session;
+        const role = nextSession?.user.role;
 
-        if (!syncResult.success) {
-            setError(syncResult.error ?? "Không thể đồng bộ giỏ hàng sau đăng nhập.");
+        if (!role) {
+            setError("Khong xac dinh duoc vai tro sau khi dang nhap.");
             return;
         }
 
-        pushToast({
-            tone: "success",
-            message: "Đăng nhập khách hàng thành công và đã đồng bộ giỏ hàng.",
-        });
-        void navigate(resolveRedirect("customer"), { replace: true });
+        if (role === "customer") {
+            const syncResult = await syncGuestCart();
+
+            if (!syncResult.success) {
+                setError(syncResult.error ?? "Khong the dong bo gio hang sau dang nhap.");
+                return;
+            }
+        }
+
+        void navigate(resolveRedirect(role), { replace: true });
     }
 
     return (
@@ -69,16 +72,7 @@ export function LoginPage() {
             <div className="grid w-full gap-8 lg:grid-cols-[1fr_0.95fr]">
                 <SurfaceCard className="space-y-6">
                     <div>
-                        <p className="text-xs uppercase tracking-widest text-primary">
-                            Đăng nhập hệ thống
-                        </p>
-                        <h1 className="mt-3 font-headline text-4xl font-bold">
-                            Đăng nhập khách hàng thực tế
-                        </h1>
-                        <p className="mt-4 text-sm leading-7 text-on-surface-variant">
-                            Form bên phải dùng tài khoản khách hàng để đồng bộ giỏ hàng và tiếp tục mua sắm.
-                            Các workspace quản trị, nhà cung cấp và kho vẫn có lối vào nhanh cho demo.
-                        </p>
+                        <p className="text-xs uppercase tracking-widest text-primary">Dang nhap he thong</p>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -90,41 +84,22 @@ export function LoginPage() {
                                     const result = loginAsRole(credential.role);
 
                                     if (!result.success) {
-                                        setError(result.error ?? "Không thể đăng nhập nhanh.");
+                                        setError(result.error ?? "Khong the dang nhap nhanh.");
                                         return;
                                     }
 
-                                    pushToast({
-                                        tone: "success",
-                                        message: `Đã vào workspace ${credential.displayName.toLowerCase()}.`,
-                                    });
-                                    void navigate(resolveRedirect(credential.role), {
-                                        replace: true,
-                                    });
+                                    void navigate(resolveRedirect(credential.role), { replace: true });
                                 }}
                             >
-                                <p className="text-xs uppercase tracking-widest text-primary">
-                                    {credential.role}
-                                </p>
-                                <p className="mt-2 font-headline text-xl font-semibold">
-                                    {credential.displayName}
-                                </p>
-                                <p className="mt-2 text-sm text-on-surface-variant">
-                                    {credential.email}
-                                </p>
+                                <p className="text-xs uppercase tracking-widest text-primary">{credential.role}</p>
+                                <p className="mt-2 font-headline text-xl font-semibold">{credential.displayName}</p>
+                                <p className="mt-2 text-sm text-on-surface-variant">{credential.email}</p>
                             </button>
                         ))}
                     </div>
                 </SurfaceCard>
 
                 <SurfaceCard tone="low" className="space-y-6">
-                    <div>
-                        <h2 className="font-headline text-2xl font-bold">Đăng nhập khách hàng</h2>
-                        <p className="mt-2 text-sm text-on-surface-variant">
-                            Nhập email và mật khẩu khách hàng để đăng nhập và tiếp tục mua sắm cùng giỏ hàng của bạn.
-                        </p>
-                    </div>
-
                     <div className="space-y-4">
                         <label className="block space-y-2 text-sm">
                             <span className="font-medium text-on-surface">Email</span>
@@ -132,29 +107,23 @@ export function LoginPage() {
                                 className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                                 value={email}
                                 onChange={(event) => setEmail(event.target.value)}
-                                placeholder="customer1@shop.local"
+                                placeholder="admin@shop.local"
                             />
                         </label>
                         <label className="block space-y-2 text-sm">
-                            <span className="font-medium text-on-surface">Mật khẩu</span>
+                            <span className="font-medium text-on-surface">Mat khau</span>
                             <input
                                 className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                                 type="password"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
-                                placeholder="••••••••"
+                                placeholder="password123"
                             />
                         </label>
                         {error ? <p className="text-sm text-error">{error}</p> : null}
                         <Button className="w-full" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-                            {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập khách hàng"}
+                            {isSubmitting ? "Dang dang nhap..." : "Dang nhap"}
                         </Button>
-                    </div>
-
-                    <div className="rounded-3xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                        Nếu bạn được chuyển từ route bảo vệ như <strong>/checkout</strong> hoặc{" "}
-                        <strong>/account/orders</strong>, hệ thống sẽ quay lại đúng màn hình sau khi
-                        đăng nhập hợp lệ.
                     </div>
                 </SurfaceCard>
             </div>

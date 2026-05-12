@@ -1,30 +1,259 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import type { BackendWishlistResponse } from "@/shared/api/backend-types";
+import { apiRequest, isUnauthorizedApiError } from "@/shared/api/backend-client";
+import { adaptBackendProduct } from "@/shared/api/storefront-adapters";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
+import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
+import { registerProtectedSessionCleanup } from "@/shared/lib/store/protected-session";
+
+interface AsyncResult<T = void> {
+    success: boolean;
+    data?: T;
+    error?: string;
+}
+
 interface ShopState {
     wishlistIds: string[];
     recentlyViewedIds: string[];
-    toggleWishlist: (productId: string) => void;
+    isWishlistLoading: boolean;
+    isWishlistSaving: boolean;
+    error: string | null;
+    loadWishlist: () => Promise<AsyncResult<string[]>>;
+    toggleWishlist: (productId: string) => Promise<AsyncResult<string[]>>;
     addRecentlyViewed: (productId: string) => void;
     pruneProductReferences: (validProductIds: string[]) => void;
+    resetServerState: () => void;
     reset: () => void;
 }
 
 const initialState = {
     wishlistIds: [] as string[],
     recentlyViewedIds: [] as string[],
+    isWishlistLoading: false,
+    isWishlistSaving: false,
+    error: null as string | null,
 };
+
+const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+
+function authState() {
+    return useAuthStore.getState();
+}
+
+function isBackendCustomerSession() {
+    const state = authState();
+
+    return state.authSource === "backend" && state.session?.user.role === "customer";
+}
+
+function numericProductId(productId: string) {
+    const parsed = Number(productId);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function syncCatalogFromWishlist(response: BackendWishlistResponse) {
+    const nextProducts = response.data.products.map((product, index) => adaptBackendProduct(product, index));
+    useStorefrontCatalogStore.setState((state) => {
+        const productDetails = { ...state.productDetails };
+
+        for (const product of nextProducts) {
+            productDetails[product.id] = product;
+        }
+
+        return {
+            ...state,
+            status: state.status === "idle" ? "ready" : state.status,
+            productDetails,
+            products: state.products.map((product) => productDetails[product.id] ?? product),
+        };
+    });
+}
 
 export const useShopStore = create<ShopState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             ...initialState,
-            toggleWishlist: (productId) =>
-                set((state) => ({
-                    wishlistIds: state.wishlistIds.includes(productId)
-                        ? state.wishlistIds.filter((item) => item !== productId)
-                        : [productId, ...state.wishlistIds],
-                })),
+            loadWishlist: async () => {
+                if (!isBackendCustomerSession()) {
+                    return {
+                        success: true,
+                        data: get().wishlistIds,
+                    };
+                }
+
+                const token = authState().accessToken;
+
+                if (!token) {
+                    return {
+                        success: false,
+                        error: "Ban can dang nhap lai de tai wishlist.",
+                    };
+                }
+
+                set({
+                    isWishlistLoading: true,
+                    error: null,
+                });
+
+                try {
+                    let response = await apiRequest<BackendWishlistResponse>("/account/wishlist", {
+                        token,
+                    });
+                    const localWishlist = get().wishlistIds;
+                    const serverIds = response.data.product_ids.map(String);
+                    const localOnlyIds = localWishlist.filter((productId) => !serverIds.includes(productId));
+
+                    if (localOnlyIds.length > 0) {
+                        for (const productId of localOnlyIds) {
+                            const parsedProductId = numericProductId(productId);
+
+                            if (!parsedProductId) {
+                                continue;
+                            }
+
+                            response = await apiRequest<BackendWishlistResponse>("/account/wishlist/items", {
+                                method: "POST",
+                                token,
+                                body: {
+                                    product_id: parsedProductId,
+                                },
+                            });
+                        }
+                    }
+
+                    syncCatalogFromWishlist(response);
+
+                    const wishlistIds = response.data.product_ids.map(String);
+
+                    set({
+                        wishlistIds,
+                        isWishlistLoading: false,
+                        error: null,
+                    });
+
+                    return {
+                        success: true,
+                        data: wishlistIds,
+                    };
+                } catch (error) {
+                    if (isUnauthorizedApiError(error)) {
+                        useAuthStore.getState().clearSession();
+                        set({
+                            wishlistIds: [],
+                            isWishlistLoading: false,
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
+
+                        return {
+                            success: false,
+                            error: SESSION_EXPIRED_MESSAGE,
+                        };
+                    }
+
+                    const message = error instanceof Error ? error.message : "Khong the tai wishlist.";
+
+                    set({
+                        isWishlistLoading: false,
+                        error: message,
+                    });
+
+                    return {
+                        success: false,
+                        error: message,
+                    };
+                }
+            },
+            toggleWishlist: async (productId) => {
+                if (!isBackendCustomerSession()) {
+                    const nextWishlistIds = get().wishlistIds.includes(productId)
+                        ? get().wishlistIds.filter((item) => item !== productId)
+                        : [productId, ...get().wishlistIds];
+
+                    set({
+                        wishlistIds: nextWishlistIds,
+                        error: null,
+                    });
+
+                    return {
+                        success: true,
+                        data: nextWishlistIds,
+                    };
+                }
+
+                const token = authState().accessToken;
+                const parsedProductId = numericProductId(productId);
+
+                if (!token || !parsedProductId) {
+                    return {
+                        success: false,
+                        error: "San pham khong hop le de cap nhat wishlist.",
+                    };
+                }
+
+                set({
+                    isWishlistSaving: true,
+                    error: null,
+                });
+
+                try {
+                    const isWishlisted = get().wishlistIds.includes(productId);
+                    const response = isWishlisted
+                        ? await apiRequest<BackendWishlistResponse>(`/account/wishlist/items/${parsedProductId}`, {
+                              method: "DELETE",
+                              token,
+                          })
+                        : await apiRequest<BackendWishlistResponse>("/account/wishlist/items", {
+                              method: "POST",
+                              token,
+                              body: {
+                                  product_id: parsedProductId,
+                              },
+                          });
+
+                    syncCatalogFromWishlist(response);
+
+                    const wishlistIds = response.data.product_ids.map(String);
+
+                    set({
+                        wishlistIds,
+                        isWishlistSaving: false,
+                        error: null,
+                    });
+
+                    return {
+                        success: true,
+                        data: wishlistIds,
+                    };
+                } catch (error) {
+                    if (isUnauthorizedApiError(error)) {
+                        useAuthStore.getState().clearSession();
+                        set({
+                            wishlistIds: [],
+                            isWishlistSaving: false,
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
+
+                        return {
+                            success: false,
+                            error: SESSION_EXPIRED_MESSAGE,
+                        };
+                    }
+
+                    const message = error instanceof Error ? error.message : "Khong the cap nhat wishlist.";
+
+                    set({
+                        isWishlistSaving: false,
+                        error: message,
+                    });
+
+                    return {
+                        success: false,
+                        error: message,
+                    };
+                }
+            },
             addRecentlyViewed: (productId) =>
                 set((state) => ({
                     recentlyViewedIds: [
@@ -39,6 +268,14 @@ export const useShopStore = create<ShopState>()(
                         validProductIds.includes(item),
                     ),
                 })),
+            resetServerState: () =>
+                set((state) => ({
+                    wishlistIds: [],
+                    recentlyViewedIds: state.recentlyViewedIds,
+                    isWishlistLoading: false,
+                    isWishlistSaving: false,
+                    error: null,
+                })),
             reset: () => set(initialState),
         }),
         {
@@ -47,3 +284,7 @@ export const useShopStore = create<ShopState>()(
         },
     ),
 );
+
+registerProtectedSessionCleanup(() => {
+    useShopStore.getState().resetServerState();
+});

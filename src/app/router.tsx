@@ -88,6 +88,7 @@ export function AppRoutes() {
                 <Route path={appRoutes.accountDisputes} element={<AccountDisputesPage />} />
                 <Route path={appRoutes.accountWishlist} element={<AccountWishlistPage />} />
                 <Route path={appRoutes.accountOrders} element={<AccountOrdersPage />} />
+                <Route path={appRoutes.accountOrderDetail()} element={<AccountOrdersPage />} />
             </Route>
 
             <Route

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { stockStatusLabels } from "@/shared/lib/labels";
-import { useCatalogStore } from "@/shared/lib/store/use-catalog-store";
+import { formatCurrency } from "@/shared/lib/format";
+import { useAdminCatalogStore } from "@/shared/lib/store/use-admin-catalog-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, StatCard, SurfaceCard } from "@/shared/ui";
 
@@ -9,35 +9,19 @@ type RepositoryTab = "products" | "categories";
 
 const emptyProductForm = {
     name: "",
-    detailTitle: "",
+    sku: "",
     categoryId: "",
-    regionId: "",
-    shortDescription: "",
+    supplierId: "",
     description: "",
-    price: "0",
-    image: "",
+    salePrice: "0",
+    stockQuantity: "0",
+    isActive: true,
 };
 
 const emptyCategoryForm = {
     name: "",
     description: "",
-    image: "",
 };
-
-function readFileAsDataUrl(file: File) {
-    return new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-            if (typeof reader.result === "string") {
-                resolve(reader.result);
-            } else {
-                reject(new Error("Không thể đọc file ảnh."));
-            }
-        };
-        reader.onerror = () => reject(reader.error);
-        reader.readAsDataURL(file);
-    });
-}
 
 export function AdminRepositoryPage() {
     const [tab, setTab] = useState<RepositoryTab>("products");
@@ -46,243 +30,230 @@ export function AdminRepositoryPage() {
     const [activeCategoryId, setActiveCategoryId] = useState("");
     const [productForm, setProductForm] = useState(emptyProductForm);
     const [categoryForm, setCategoryForm] = useState(emptyCategoryForm);
-    const products = useCatalogStore((state) => state.products);
-    const categories = useCatalogStore((state) => state.categories);
-    const regions = useCatalogStore((state) => state.regions);
-    const createCategory = useCatalogStore((state) => state.createCategory);
-    const updateCategory = useCatalogStore((state) => state.updateCategory);
-    const deleteCategory = useCatalogStore((state) => state.deleteCategory);
-    const createProduct = useCatalogStore((state) => state.createProduct);
-    const updateProduct = useCatalogStore((state) => state.updateProduct);
-    const deleteProduct = useCatalogStore((state) => state.deleteProduct);
+    const products = useAdminCatalogStore((state) => state.products);
+    const categories = useAdminCatalogStore((state) => state.categories);
+    const suppliers = useAdminCatalogStore((state) => state.suppliers);
+    const isLoading = useAdminCatalogStore((state) => state.isLoading);
+    const isSaving = useAdminCatalogStore((state) => state.isSaving);
+    const error = useAdminCatalogStore((state) => state.error);
+    const loadData = useAdminCatalogStore((state) => state.loadData);
+    const createProduct = useAdminCatalogStore((state) => state.createProduct);
+    const updateProduct = useAdminCatalogStore((state) => state.updateProduct);
+    const deleteProduct = useAdminCatalogStore((state) => state.deleteProduct);
+    const createCategory = useAdminCatalogStore((state) => state.createCategory);
+    const updateCategory = useAdminCatalogStore((state) => state.updateCategory);
+    const deleteCategory = useAdminCatalogStore((state) => state.deleteCategory);
     const pushToast = useFeedbackStore((state) => state.pushToast);
 
-    const filteredProducts = useMemo(
-        () =>
-            products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase())),
-        [products, query],
-    );
-    const filteredCategories = useMemo(
-        () =>
-            categories.filter((category) =>
-                category.name.toLowerCase().includes(query.toLowerCase()),
-            ),
-        [categories, query],
-    );
+    useEffect(() => {
+        void loadData();
+    }, [loadData]);
+
+    const filteredProducts = useMemo(() => {
+        const keyword = query.trim().toLowerCase();
+
+        return products.filter((product) => {
+            if (keyword.length === 0) return true;
+
+            return [product.name, product.sku, product.category?.name, product.supplier?.name]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase()
+                .includes(keyword);
+        });
+    }, [products, query]);
+
+    const filteredCategories = useMemo(() => {
+        const keyword = query.trim().toLowerCase();
+
+        return categories.filter((category) => {
+            if (keyword.length === 0) return true;
+            return [category.name, category.description].join(" ").toLowerCase().includes(keyword);
+        });
+    }, [categories, query]);
+
     const activeProduct =
-        filteredProducts.find((product) => product.id === activeProductId) ?? filteredProducts[0];
+        filteredProducts.find((product) => String(product.id) === activeProductId) ?? filteredProducts[0];
     const activeCategory =
-        filteredCategories.find((category) => category.id === activeCategoryId) ??
-        filteredCategories[0];
+        filteredCategories.find((category) => String(category.id) === activeCategoryId) ?? filteredCategories[0];
 
     useEffect(() => {
         if (!activeProduct) return;
 
-        setActiveProductId(activeProduct.id);
+        setActiveProductId(String(activeProduct.id));
         setProductForm({
             name: activeProduct.name,
-            detailTitle: activeProduct.detailTitle,
-            categoryId: activeProduct.categoryId,
-            regionId: activeProduct.regionId,
-            shortDescription: activeProduct.shortDescription,
-            description: activeProduct.description,
-            price: String(activeProduct.price),
-            image: activeProduct.image,
+            sku: activeProduct.sku,
+            categoryId: String(activeProduct.category_id),
+            supplierId: activeProduct.supplier_id ? String(activeProduct.supplier_id) : "",
+            description: activeProduct.description ?? "",
+            salePrice: String(activeProduct.sale_price),
+            stockQuantity: String(activeProduct.stock_quantity),
+            isActive: activeProduct.is_active,
         });
     }, [activeProduct]);
 
     useEffect(() => {
         if (!activeCategory) return;
 
-        setActiveCategoryId(activeCategory.id);
+        setActiveCategoryId(String(activeCategory.id));
         setCategoryForm({
             name: activeCategory.name,
-            description: activeCategory.description,
-            image: activeCategory.image ?? "",
+            description: activeCategory.description ?? "",
         });
     }, [activeCategory]);
 
     const stats = [
         {
             id: "repository-products",
-            label: "Tổng sản phẩm",
+            label: "Tong san pham",
             value: `${products.length}`,
             tone: "primary" as const,
             icon: "inventory_2",
-            delta: `${filteredProducts.length} sản phẩm đang hiển thị`,
-            helperText: "Dữ liệu sản phẩm đang được quản lý trong admin.",
+            delta: `${filteredProducts.length} san pham dang hien thi`,
+            
         },
         {
             id: "repository-categories",
-            label: "Danh mục hoạt động",
+            label: "Danh muc storefront",
             value: `${categories.length}`,
             tone: "secondary" as const,
             icon: "category",
-            delta: `${regions.length} vùng nguồn gốc`,
-            helperText: "Dùng để phân loại sản phẩm trong cửa hàng.",
+            delta: `${suppliers.length} nha cung cap dang hoat dong`,
+            
         },
         {
-            id: "repository-lowstock",
-            label: "SKU cần theo dõi",
-            value: `${products.filter((product) => product.stockStatus !== "in-stock").length}`,
+            id: "repository-inactive",
+            label: "San pham tam an",
+            value: `${products.filter((product) => !product.is_active).length}`,
             tone: "danger" as const,
-            icon: "warning",
-            delta: "Theo trạng thái tồn kho",
-            helperText: "Dựa trên nhãn tình trạng hàng tồn.",
+            icon: "visibility_off",
+            delta: "Khach hang se khong thay cac san pham nay",
+            
         },
     ];
 
-    function updateProductField<K extends keyof typeof emptyProductForm>(
-        key: K,
-        value: (typeof emptyProductForm)[K],
-    ) {
-        setProductForm((current) => ({
-            ...current,
-            [key]: value,
-        }));
-    }
+    async function handleCreateProduct() {
+        const salePrice = Number(productForm.salePrice);
+        const stockQuantity = Number(productForm.stockQuantity);
 
-    function updateCategoryField<K extends keyof typeof emptyCategoryForm>(
-        key: K,
-        value: (typeof emptyCategoryForm)[K],
-    ) {
-        setCategoryForm((current) => ({
-            ...current,
-            [key]: value,
-        }));
-    }
-
-    function handleCreateProduct() {
-        if (
-            productForm.name.trim().length === 0 ||
-            productForm.detailTitle.trim().length === 0 ||
-            productForm.categoryId.length === 0 ||
-            productForm.regionId.length === 0
-        ) {
-            pushToast({
-                tone: "warning",
-                message: "Vui lòng nhập đủ tên, tiêu đề chi tiết, danh mục và vùng.",
-            });
+        if (!productForm.name.trim() || !productForm.sku.trim() || !productForm.categoryId) {
+            pushToast({ tone: "warning", message: "Can nhap ten, SKU va danh muc cho san pham." });
             return;
         }
 
-        const createdProduct = createProduct({
-            name: productForm.name,
-            detailTitle: productForm.detailTitle,
-            categoryId: productForm.categoryId,
-            regionId: productForm.regionId,
-            description: productForm.description,
-            shortDescription: productForm.shortDescription,
-            price: Number(productForm.price),
-            image: productForm.image.trim() || undefined,
-        });
-
-        setActiveProductId(createdProduct.id);
-        pushToast({
-            tone: "success",
-            message: `Đã tạo sản phẩm ${createdProduct.name}.`,
-        });
-    }
-
-    function handleUpdateProduct() {
-        if (!activeProduct) return;
-
-        updateProduct(activeProduct.id, {
+        const result = await createProduct({
+            category_id: Number(productForm.categoryId),
+            supplier_id: productForm.supplierId ? Number(productForm.supplierId) : null,
+            sku: productForm.sku.trim(),
             name: productForm.name.trim(),
-            detailTitle: productForm.detailTitle.trim(),
-            categoryId: productForm.categoryId,
-            regionId: productForm.regionId,
-            shortDescription: productForm.shortDescription.trim(),
             description: productForm.description.trim(),
-            price: Number(productForm.price),
-            image: productForm.image.trim() || activeProduct.image,
+            sale_price: Number.isFinite(salePrice) ? salePrice : 0,
+            stock_quantity: Number.isFinite(stockQuantity) ? stockQuantity : 0,
+            is_active: productForm.isActive,
         });
 
-        pushToast({
-            tone: "success",
-            message: `Đã cập nhật sản phẩm ${productForm.name.trim()}.`,
-        });
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the tao san pham." });
+            return;
+        }
+
+        setActiveProductId(String(result.data.id));
+        pushToast({ tone: "success", message: `Da tao san pham ${result.data.name}.` });
     }
 
-    function handleDeleteProduct() {
+    async function handleUpdateProduct() {
         if (!activeProduct) return;
 
-        deleteProduct(activeProduct.id);
+        const result = await updateProduct(activeProduct.id, {
+            category_id: Number(productForm.categoryId),
+            supplier_id: productForm.supplierId ? Number(productForm.supplierId) : null,
+            sku: productForm.sku.trim(),
+            name: productForm.name.trim(),
+            description: productForm.description.trim(),
+            sale_price: Number(productForm.salePrice),
+            stock_quantity: Number(productForm.stockQuantity),
+            is_active: productForm.isActive,
+        });
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat san pham." });
+            return;
+        }
+
+        pushToast({ tone: "success", message: `Da cap nhat san pham ${result.data.name}.` });
+    }
+
+    async function handleDeleteProduct() {
+        if (!activeProduct) return;
+
+        const result = await deleteProduct(activeProduct.id);
+
+        if (!result.success) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the xoa san pham." });
+            return;
+        }
+
         setActiveProductId("");
         setProductForm(emptyProductForm);
-        pushToast({
-            tone: "warning",
-            message: `Đã xoá sản phẩm ${activeProduct.name}.`,
-        });
+        pushToast({ tone: "success", message: `Da xoa san pham ${activeProduct.name}.` });
     }
 
-    function handleCreateCategory() {
-        if (categoryForm.name.trim().length === 0 || categoryForm.description.trim().length === 0) {
-            pushToast({
-                tone: "warning",
-                message: "Vui lòng nhập tên và mô tả danh mục.",
-            });
+    async function handleCreateCategory() {
+        if (!categoryForm.name.trim()) {
+            pushToast({ tone: "warning", message: "Can nhap ten danh muc." });
             return;
         }
 
-        const category = createCategory(
-            categoryForm.name,
-            categoryForm.description,
-            categoryForm.image.trim(),
-        );
-        setActiveCategoryId(category.id);
-        pushToast({
-            tone: "success",
-            message: `Đã tạo danh mục ${category.name}.`,
-        });
-    }
-
-    function handleUpdateCategory() {
-        if (!activeCategory) return;
-
-        updateCategory(activeCategory.id, {
+        const result = await createCategory({
             name: categoryForm.name.trim(),
             description: categoryForm.description.trim(),
-            image: categoryForm.image.trim() || undefined,
+            is_active: true,
         });
-        pushToast({
-            tone: "success",
-            message: `Đã cập nhật danh mục ${categoryForm.name.trim()}.`,
-        });
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the tao danh muc." });
+            return;
+        }
+
+        setActiveCategoryId(String(result.data.id));
+        pushToast({ tone: "success", message: `Da tao danh muc ${result.data.name}.` });
     }
 
-    function handleDeleteCategory() {
+    async function handleUpdateCategory() {
         if (!activeCategory) return;
 
-        const deleted = deleteCategory(activeCategory.id);
+        const result = await updateCategory(activeCategory.id, {
+            name: categoryForm.name.trim(),
+            description: categoryForm.description.trim(),
+            is_active: true,
+        });
 
-        if (!deleted) {
-            pushToast({
-                tone: "warning",
-                message: "Không thể xoá danh mục đang còn sản phẩm liên kết.",
-            });
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat danh muc." });
+            return;
+        }
+
+        pushToast({ tone: "success", message: `Da cap nhat danh muc ${result.data.name}.` });
+    }
+
+    async function handleDeleteCategory() {
+        if (!activeCategory) return;
+
+        const result = await deleteCategory(activeCategory.id);
+
+        if (!result.success) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the xoa danh muc." });
             return;
         }
 
         setActiveCategoryId("");
         setCategoryForm(emptyCategoryForm);
-        pushToast({
-            tone: "warning",
-            message: `Đã xoá danh mục ${activeCategory.name}.`,
-        });
+        pushToast({ tone: "success", message: `Da an danh muc ${activeCategory.name}.` });
     }
 
     return (
         <div className="space-y-8">
-            <section className="space-y-1">
-                <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Bảng quản lý sản phẩm
-                </h2>
-                <p className="text-on-surface-variant max-w-3xl">
-                    Quản lý sản phẩm, danh mục và ảnh hiển thị trực tiếp trong khu admin. Giao diện này giúp tạo, sửa và xoá dữ liệu một cách rõ ràng và dễ dùng.
-                </p>
-            </section>
-
             <section className="grid gap-6 xl:grid-cols-3">
                 {stats.map((stat) => (
                     <StatCard key={stat.id} metric={stat} />
@@ -290,293 +261,80 @@ export function AdminRepositoryPage() {
             </section>
 
             <div className="flex gap-3">
-                <button
-                    className={`rounded-full px-4 py-2 text-sm font-medium ${
-                        tab === "products"
-                            ? "bg-primary text-on-primary"
-                            : "bg-surface-container-low text-on-surface-variant"
-                    }`}
-                    onClick={() => setTab("products")}
-                >
-                    Sản phẩm
-                </button>
-                <button
-                    className={`rounded-full px-4 py-2 text-sm font-medium ${
-                        tab === "categories"
-                            ? "bg-primary text-on-primary"
-                            : "bg-surface-container-low text-on-surface-variant"
-                    }`}
-                    onClick={() => setTab("categories")}
-                >
-                    Danh mục
-                </button>
+                <button className={`rounded-full px-4 py-2 text-sm font-medium ${tab === "products" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"}`} onClick={() => setTab("products")}>San pham</button>
+                <button className={`rounded-full px-4 py-2 text-sm font-medium ${tab === "categories" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"}`} onClick={() => setTab("categories")}>Danh muc</button>
             </div>
 
-            <input
-                className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                placeholder="Lọc trong kho dữ liệu..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-            />
+            <input className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15" placeholder="Loc theo ten, SKU, danh muc hoac nha cung cap..." value={query} onChange={(event) => setQuery(event.target.value)} />
+
+            {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
 
             {tab === "products" ? (
                 <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <SurfaceCard className="space-y-4">
+                        {isLoading ? <p className="text-sm text-on-surface-variant">Dang tai san pham...</p> : null}
+                        {!isLoading && filteredProducts.length === 0 ? <p className="text-sm text-on-surface-variant">Khong co san pham phu hop bo loc hien tai.</p> : null}
                         {filteredProducts.map((product) => (
-                            <button
-                                key={product.id}
-                                className={`w-full rounded-3xl p-4 text-left transition min-w-0 ${
-                                    product.id === activeProduct?.id
-                                        ? "bg-primary/5"
-                                        : "bg-surface-container-low hover:bg-surface-container"
-                                }`}
-                                onClick={() => setActiveProductId(product.id)}
-                            >
-                                <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    {product.regionName}
-                                </p>
-                                <h3 className="mt-2 font-headline text-xl font-semibold">
-                                    {product.name}
-                                </h3>
-                                <p className="mt-2 text-sm text-on-surface-variant break-words">
-                                    {product.shortDescription}
-                                </p>
-                                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                                    <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
-                                        {product.categoryName}
-                                    </span>
-                                    <span className="rounded-full bg-surface-container-highest px-3 py-1 text-on-surface-variant">
-                                        {stockStatusLabels[product.stockStatus]}
-                                    </span>
+                            <button key={product.id} className={`w-full rounded-3xl p-4 text-left transition ${product.id === activeProduct?.id ? "bg-primary/5" : "bg-surface-container-low hover:bg-surface-container"}`} onClick={() => setActiveProductId(String(product.id))}>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-xs uppercase tracking-widest text-on-surface-variant">{product.sku}</p>
+                                    <span className="rounded-full bg-surface-container-highest px-3 py-1 text-xs text-on-surface-variant">{product.is_active ? "Dang ban" : "Tam an"}</span>
                                 </div>
+                                <h3 className="mt-2 font-headline text-xl font-semibold">{product.name}</h3>
+                                <p className="mt-2 text-sm text-on-surface-variant">{product.category?.name ?? `Danh muc #${product.category_id}`} - {product.supplier?.name ?? "Chua gan nha cung cap"}</p>
+                                <p className="mt-3 text-sm font-semibold text-primary">{formatCurrency(Number(product.sale_price))}</p>
+                                <p className="mt-1 text-sm text-on-surface-variant">Ton kho: {product.stock_quantity}</p>
                             </button>
                         ))}
                     </SurfaceCard>
 
                     <SurfaceCard className="space-y-4">
                         <div>
-                            <h3 className="font-headline text-2xl font-bold">Biểu mẫu sản phẩm</h3>
-                            <p className="mt-2 text-sm text-on-surface-variant">
-                                Chỉnh sửa sản phẩm đang chọn hoặc nhập dữ liệu mới để tạo bản ghi
-                                mới.
-                            </p>
+                            <h3 className="font-headline text-2xl font-bold">Nội dung sản phẩm</h3>
+                            
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
-                            <input
-                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                                placeholder="Tên sản phẩm"
-                                value={productForm.name}
-                                onChange={(event) => updateProductField("name", event.target.value)}
-                            />
-                            <input
-                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                                placeholder="Tiêu đề chi tiết"
-                                value={productForm.detailTitle}
-                                onChange={(event) =>
-                                    updateProductField("detailTitle", event.target.value)
-                                }
-                            />
-                            <select
-                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
-                                value={productForm.categoryId}
-                                onChange={(event) =>
-                                    updateProductField("categoryId", event.target.value)
-                                }
-                            >
-                                <option value="">Chọn danh mục</option>
-                                {categories.map((category) => (
-                                    <option key={category.id} value={category.id}>
-                                        {category.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
-                                value={productForm.regionId}
-                                onChange={(event) =>
-                                    updateProductField("regionId", event.target.value)
-                                }
-                            >
-                                <option value="">Chọn vùng</option>
-                                {regions.map((region) => (
-                                    <option key={region.id} value={region.id}>
-                                        {region.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <input
-                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
-                                placeholder="Mô tả ngắn"
-                                value={productForm.shortDescription}
-                                onChange={(event) =>
-                                    updateProductField("shortDescription", event.target.value)
-                                }
-                            />
-                            <textarea
-                                className="min-h-28 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2 resize-none"
-                                placeholder="Mô tả đầy đủ"
-                                value={productForm.description}
-                                onChange={(event) =>
-                                    updateProductField("description", event.target.value)
-                                }
-                            />
-                            <label className="flex flex-col gap-2 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant w-full">
-                                <span>Ảnh sản phẩm</span>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-sm file:font-medium"
-                                    onChange={async (event) => {
-                                        const file = event.target.files?.[0];
-                                        if (!file) return;
-                                        try {
-                                            const dataUrl = await readFileAsDataUrl(file);
-                                            updateProductField("image", dataUrl);
-                                        } catch {
-                                            pushToast({
-                                                tone: "danger",
-                                                message: "Không thể đọc file ảnh. Vui lòng thử lại.",
-                                            });
-                                        }
-                                    }}
-                                />
-                            </label>
-                            {productForm.image.trim().length > 0 ? (
-                                <div className="md:col-span-2 overflow-hidden rounded-3xl border border-surface-border">
-                                    <img
-                                        src={productForm.image}
-                                        alt={productForm.name || "Ảnh sản phẩm"}
-                                        className="w-full max-h-44 object-contain"
-                                    />
-                                </div>
-                            ) : null}
-                            <input
-                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                                placeholder="Giá bán"
-                                type="number"
-                                min={0}
-                                value={productForm.price}
-                                onChange={(event) =>
-                                    updateProductField("price", event.target.value)
-                                }
-                            />
+                            <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Ten san pham" value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} />
+                            <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="SKU" value={productForm.sku} onChange={(event) => setProductForm((current) => ({ ...current, sku: event.target.value }))} />
+                            <select className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none" value={productForm.categoryId} onChange={(event) => setProductForm((current) => ({ ...current, categoryId: event.target.value }))}><option value="">Chon danh muc</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
+                            <select className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none" value={productForm.supplierId} onChange={(event) => setProductForm((current) => ({ ...current, supplierId: event.target.value }))}><option value="">Khong gan nha cung cap</option>{suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}</select>
+                            <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Gia ban" type="number" min={0} value={productForm.salePrice} onChange={(event) => setProductForm((current) => ({ ...current, salePrice: event.target.value }))} />
+                            <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="So luong ton" type="number" min={0} value={productForm.stockQuantity} onChange={(event) => setProductForm((current) => ({ ...current, stockQuantity: event.target.value }))} />
+                            <textarea className="min-h-28 resize-none rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2" placeholder="Mo ta san pham" value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} />
+                            <label className="md:col-span-2 flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant"><input type="checkbox" checked={productForm.isActive} onChange={(event) => setProductForm((current) => ({ ...current, isActive: event.target.checked }))} />San pham dang hoat dong tren storefront</label>
                         </div>
                         <div className="flex flex-wrap justify-end gap-3">
-                            <Button variant="secondary" onClick={handleCreateProduct}>
-                                Tạo sản phẩm
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleUpdateProduct}
-                                disabled={!activeProduct}
-                            >
-                                Lưu chỉnh sửa
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                onClick={handleDeleteProduct}
-                                disabled={!activeProduct}
-                            >
-                                Xoá sản phẩm
-                            </Button>
+                            <Button variant="secondary" onClick={() => void handleCreateProduct()} disabled={isSaving}>Tao san pham</Button>
+                            <Button variant="outline" onClick={() => void handleUpdateProduct()} disabled={!activeProduct || isSaving}>Luu chinh sua</Button>
+                            <Button variant="ghost" onClick={() => void handleDeleteProduct()} disabled={!activeProduct || isSaving}>Xoa san pham</Button>
                         </div>
                     </SurfaceCard>
                 </div>
             ) : (
                 <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <SurfaceCard className="space-y-4">
+                        {isLoading ? <p className="text-sm text-on-surface-variant">Dang tai danh muc...</p> : null}
+                        {!isLoading && filteredCategories.length === 0 ? <p className="text-sm text-on-surface-variant">Khong co danh muc phu hop bo loc hien tai.</p> : null}
                         {filteredCategories.map((category) => (
-                            <button
-                                key={category.id}
-                                className={`w-full rounded-3xl p-4 text-left transition ${
-                                    category.id === activeCategory?.id
-                                        ? "bg-primary/5"
-                                        : "bg-surface-container-low hover:bg-surface-container"
-                                }`}
-                                onClick={() => setActiveCategoryId(category.id)}
-                            >
-                                <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Danh mục
-                                </p>
-                                <h3 className="mt-2 font-headline text-xl font-semibold">
-                                    {category.name}
-                                </h3>
-                                <p className="mt-2 text-sm text-on-surface-variant">
-                                    {category.description}
-                                </p>
+                            <button key={category.id} className={`w-full rounded-3xl p-4 text-left transition ${category.id === activeCategory?.id ? "bg-primary/5" : "bg-surface-container-low hover:bg-surface-container"}`} onClick={() => setActiveCategoryId(String(category.id))}>
+                                <p className="text-xs uppercase tracking-widest text-on-surface-variant">Danh muc</p>
+                                <h3 className="mt-2 font-headline text-xl font-semibold">{category.name}</h3>
+                                <p className="mt-2 text-sm text-on-surface-variant">{category.description}</p>
                             </button>
                         ))}
                     </SurfaceCard>
 
                     <SurfaceCard className="space-y-4">
                         <div>
-                            <h3 className="font-headline text-2xl font-bold">Biểu mẫu danh mục</h3>
-                            <p className="mt-2 text-sm text-on-surface-variant">
-                                Cập nhật cấu trúc danh mục hoặc tạo danh mục mới cho trang cửa hàng.
-                            </p>
+                            <h3 className="font-headline text-2xl font-bold">Nội dung danh mục</h3>
+                            
                         </div>
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 w-full"
-                            placeholder="Tên danh mục"
-                            value={categoryForm.name}
-                            onChange={(event) => updateCategoryField("name", event.target.value)}
-                        />
-                        <label className="flex flex-col gap-2 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant w-full">
-                            <span>Ảnh danh mục</span>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                className="file:border-0 file:bg-primary/10 file:px-3 file:py-2 file:text-sm file:font-medium"
-                                onChange={async (event) => {
-                                    const file = event.target.files?.[0];
-                                    if (!file) return;
-                                    try {
-                                        const dataUrl = await readFileAsDataUrl(file);
-                                        updateCategoryField("image", dataUrl);
-                                    } catch {
-                                        pushToast({
-                                            tone: "danger",
-                                            message: "Không thể đọc file ảnh. Vui lòng thử lại.",
-                                        });
-                                    }
-                                }}
-                            />
-                        </label>
-                        {categoryForm.image.trim().length > 0 ? (
-                            <div className="overflow-hidden rounded-3xl border border-surface-border">
-                                <img
-                                    src={categoryForm.image.trim()}
-                                    alt={categoryForm.name || "Ảnh danh mục"}
-                                    className="w-full max-h-44 object-contain"
-                                />
-                            </div>
-                        ) : null}
-                        <textarea
-                            className="min-h-28 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 resize-none w-full"
-                            placeholder="Mô tả danh mục"
-                            value={categoryForm.description}
-                            onChange={(event) =>
-                                updateCategoryField("description", event.target.value)
-                            }
-                        />
+                        <input className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Ten danh muc" value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} />
+                        <textarea className="min-h-28 w-full resize-none rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Mo ta danh muc" value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} />
                         <div className="flex flex-wrap justify-end gap-3">
-                            <Button variant="secondary" onClick={handleCreateCategory}>
-                                Tạo danh mục
-                            </Button>
-                            <Button
-                                variant="outline"
-                                onClick={handleUpdateCategory}
-                                disabled={!activeCategory}
-                            >
-                                Lưu chỉnh sửa
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                onClick={handleDeleteCategory}
-                                disabled={!activeCategory}
-                            >
-                                Xoá danh mục
-                            </Button>
+                            <Button variant="secondary" onClick={() => void handleCreateCategory()} disabled={isSaving}>Tao danh muc</Button>
+                            <Button variant="outline" onClick={() => void handleUpdateCategory()} disabled={!activeCategory || isSaving}>Luu chinh sua</Button>
+                            <Button variant="ghost" onClick={() => void handleDeleteCategory()} disabled={!activeCategory || isSaving}>An danh muc</Button>
                         </div>
                     </SurfaceCard>
                 </div>

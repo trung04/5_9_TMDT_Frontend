@@ -27,19 +27,21 @@ export function StorefrontHeader() {
     const [search, setSearch] = useState("");
     const variant = getVariant(location.pathname);
     const accountTarget = session ? redirectForRole(session.user.role) : routes.login;
+    const isCustomerSession = session?.user.role === "customer";
+    const canUseStorefrontActions = !session || isCustomerSession;
 
     const navItems =
         variant === "catalog"
             ? [
-                  { label: "Cửa hàng", to: routes.products },
-                  { label: "Câu chuyện", to: routes.story },
-                  { label: "Vùng miền", to: routes.regions },
-                  { label: "Đăng nhập", to: routes.login },
+                  { label: "Cua hang", to: routes.products },
+                  { label: "Cau chuyen", to: routes.story },
+                  { label: "Vung mien", to: routes.regions },
+                  { label: "Dang nhap", to: routes.login },
               ]
             : [
-                  { label: "Cửa hàng", to: routes.products },
-                  { label: "Câu chuyện", to: routes.story },
-                  { label: "Vùng miền", to: routes.regions },
+                  { label: "Cua hang", to: routes.products },
+                  { label: "Cau chuyen", to: routes.story },
+                  { label: "Vung mien", to: routes.regions },
               ];
 
     const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
@@ -65,10 +67,7 @@ export function StorefrontHeader() {
                         : "max-w-7xl",
                 )}
             >
-                <Link
-                    to={routes.home}
-                    className="text-xl font-bold tracking-tighter text-green-900"
-                >
+                <Link to={routes.home} className="text-xl font-bold tracking-tighter text-green-900">
                     Heritage Harvest
                 </Link>
 
@@ -94,7 +93,7 @@ export function StorefrontHeader() {
                             <Icon name="search" className="text-lg text-on-surface-variant" />
                             <input
                                 className="w-40 border-none bg-transparent text-sm outline-none placeholder:text-on-surface-variant"
-                                placeholder="Tìm kiếm sản phẩm..."
+                                placeholder="Tim kiem san pham..."
                                 value={search}
                                 onChange={(event) => setSearch(event.target.value)}
                             />
@@ -102,25 +101,27 @@ export function StorefrontHeader() {
                     ) : variant === "catalog" ? (
                         <button
                             className="text-zinc-600 transition hover:text-primary"
-                            aria-label="Tìm kiếm sản phẩm"
+                            aria-label="Tim kiem san pham"
                             onClick={() => void navigate(routes.products)}
                         >
                             <Icon name="search" />
                         </button>
                     ) : null}
 
-                    <Link
-                        to={routes.checkout}
-                        className="relative rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary"
-                        aria-label="Giỏ hàng"
-                    >
-                        <Icon name="shopping_cart" />
-                        {cartCount > 0 && variant === "catalog" ? (
-                            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-tertiary text-[10px] font-bold text-on-tertiary">
-                                {cartCount}
-                            </span>
-                        ) : null}
-                    </Link>
+                    {canUseStorefrontActions ? (
+                        <Link
+                            to={routes.checkout}
+                            className="relative rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary"
+                            aria-label="Gio hang"
+                        >
+                            <Icon name="shopping_cart" />
+                            {cartCount > 0 && variant === "catalog" ? (
+                                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-tertiary text-[10px] font-bold text-on-tertiary">
+                                    {cartCount}
+                                </span>
+                            ) : null}
+                        </Link>
+                    ) : null}
 
                     <Link
                         to={accountTarget}
@@ -132,10 +133,20 @@ export function StorefrontHeader() {
                                 location.pathname.startsWith("/warehouse")) &&
                                 "border-b-2 border-green-800 pb-1 text-green-800",
                         )}
-                        aria-label={session ? "Khu vực tài khoản" : "Đăng nhập"}
+                        aria-label={session ? "Khu vuc tai khoan" : "Dang nhap"}
                     >
                         <Icon name="person" />
                     </Link>
+
+                    {session ? (
+                        <Link
+                            to={routes.logout}
+                            className="rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary"
+                            aria-label="Dang xuat"
+                        >
+                            <Icon name="logout" />
+                        </Link>
+                    ) : null}
                 </div>
             </div>
         </nav>

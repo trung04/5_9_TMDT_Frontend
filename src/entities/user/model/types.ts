@@ -43,7 +43,36 @@ export interface RewardRedemption {
     title: string;
     pointsUsed: number;
     createdAt: string;
-    status: "completed" | "pending";
+    status: string;
+}
+
+export interface AccountNotification {
+    id: string;
+    title: string;
+    message: string;
+    channel: string;
+    status: string;
+    sentAt: string;
+    readAt: string;
+    createdAt: string;
+}
+
+export interface AccountComplaint {
+    id: string;
+    reason: string;
+    content: string;
+    imageUrl: string;
+    status: string;
+    resolutionNote: string;
+    createdAt: string;
+    orderId: string;
+    orderNo: string;
+    orderStatus: string;
+    orderTotalAmount: number;
+    productId: string;
+    productName: string;
+    productSku: string;
+    resolverName: string;
 }
 
 export interface NewsletterSubscription {
