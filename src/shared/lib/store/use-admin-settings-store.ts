@@ -47,7 +47,7 @@ const initialSettings: AdminSettingsForm = {
     updatedAt: null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function adaptSettings(settings: BackendAdminSettings): AdminSettingsForm {
     return {
@@ -75,7 +75,7 @@ export const useAdminSettingsStore = create<AdminSettingsState>()((set) => ({
         if (!token) {
             return {
                 success: false,
-                error: "Ban can dang nhap admin de tai cau hinh.",
+                error: "Bạn cần đăng nhập admin để tải cấu hình.",
             };
         }
 
@@ -109,7 +109,7 @@ export const useAdminSettingsStore = create<AdminSettingsState>()((set) => ({
                 };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tai cau hinh admin.";
+            const message = error instanceof Error ? error.message : "Không thể tải cấu hình admin.";
 
             set({
                 isLoading: false,
@@ -128,7 +128,7 @@ export const useAdminSettingsStore = create<AdminSettingsState>()((set) => ({
         if (!token) {
             return {
                 success: false,
-                error: "Ban can dang nhap admin de luu cau hinh.",
+                error: "Bạn cần đăng nhập admin để lưu cấu hình.",
             };
         }
 
@@ -174,7 +174,7 @@ export const useAdminSettingsStore = create<AdminSettingsState>()((set) => ({
                 };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the luu cau hinh admin.";
+            const message = error instanceof Error ? error.message : "Không thể lưu cấu hình admin.";
 
             set({
                 isSaving: false,

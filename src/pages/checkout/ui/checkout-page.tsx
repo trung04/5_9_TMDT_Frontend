@@ -25,19 +25,19 @@ const paymentOptions: Array<{
 }> = [
     {
         id: "COD",
-        label: "Thanh toan khi nhan hang",
-        description: "Thanh toan tien mat cho shipper khi don den noi.",
+        label: "Thanh toán khi nhận hàng",
+        description: "Thanh toán tiền mặt cho shipper khi đơn đến nơi.",
     },
     {
         id: "BANK_TRANSFER",
-        label: "Chuyen khoan ngan hang",
-        description: "Nhan thong tin chuyen khoan va cho admin xac nhan giao dich.",
+        label: "Chuyển khoản ngân hàng",
+        description: "Nhận thông tin chuyển khoản và chờ admin xác nhận giao dịch.",
         defaultGateway: "Vietcombank",
     },
     {
         id: "E_WALLET",
-        label: "Vi dien tu",
-        description: "Mo phong thanh toan qua cong vi nhu MoMo hoac ZaloPay.",
+        label: "Ví điện tử",
+        description: "Mô phỏng thanh toán qua cổng ví như MoMo hoặc ZaloPay.",
         defaultGateway: "MoMo",
     },
 ];
@@ -106,7 +106,7 @@ export function CheckoutPage() {
         ];
 
         if (requiredFields.some((field) => form[field].trim().length === 0)) {
-            setSubmitError("Vui long hoan tat day du thong tin nhan hang truoc khi dat don.");
+            setSubmitError("Vui lòng hoàn tất đầy đủ thông tin nhận hàng trước khi đặt đơn.");
             return;
         }
 
@@ -120,7 +120,7 @@ export function CheckoutPage() {
         });
 
         if (!result.success || !result.data) {
-            setSubmitError(result.error ?? "Khong the hoan tat don hang.");
+            setSubmitError(result.error ?? "Không thể hoàn tất đơn hàng.");
             return;
         }
 
@@ -140,10 +140,10 @@ export function CheckoutPage() {
                     <section>
                         <div className="mb-8 flex items-baseline justify-between">
                             <h1 className="font-headline text-2xl font-semibold tracking-tight">
-                                Gio hang cua ban
+                                Giỏ hàng của bạn
                             </h1>
                             <span className="text-sm text-zinc-500">
-                                {cart?.itemCount ?? 0} mat hang
+                                {cart?.itemCount ?? 0} mặt hàng
                             </span>
                         </div>
 
@@ -152,14 +152,14 @@ export function CheckoutPage() {
                                 <div className="rounded-xl bg-surface-container-lowest p-10 text-center">
                                     <p className="text-on-surface-variant">
                                         {isCartLoading
-                                            ? "Dang tai gio hang..."
-                                            : cartError ?? "Chua co san pham nao trong gio."}
+                                            ? "Đang tải giỏ hàng..."
+                                            : cartError ?? "Chưa có sản phẩm nào trong giỏ."}
                                     </p>
                                     <Link
                                         className="mt-4 inline-block text-primary hover:underline"
                                         to={routes.products}
                                     >
-                                        Quay lai mua sam
+                                        Quay lại mua sắm
                                     </Link>
                                 </div>
                             ) : (
@@ -188,7 +188,7 @@ export function CheckoutPage() {
                                                 <button
                                                     className="text-zinc-400 transition-colors hover:text-error"
                                                     onClick={() => void removeItem(item.productId)}
-                                                    aria-label={`Xoa ${item.product.name}`}
+                                                    aria-label={`Xóa ${item.product.name}`}
                                                 >
                                                     <Icon name="delete" />
                                                 </button>
@@ -203,7 +203,7 @@ export function CheckoutPage() {
                                                                 Math.max(1, item.quantity - 1),
                                                             )
                                                         }
-                                                        aria-label={`Giam so luong ${item.product.name}`}
+                                                        aria-label={`Giảm số lượng ${item.product.name}`}
                                                     >
                                                         <Icon name="remove" className="text-sm" />
                                                     </button>
@@ -218,13 +218,13 @@ export function CheckoutPage() {
                                                                 item.quantity + 1,
                                                             )
                                                         }
-                                                        aria-label={`Tang so luong ${item.product.name}`}
+                                                        aria-label={`Tăng số lượng ${item.product.name}`}
                                                     >
                                                         <Icon name="add" className="text-sm" />
                                                     </button>
                                                 </div>
                                                 <span className="rounded-full bg-secondary-fixed px-3 py-1 text-xs text-secondary">
-                                                    Cap nhat don
+                                                    Cập nhật đơn
                                                 </span>
                                             </div>
                                         </div>
@@ -238,17 +238,17 @@ export function CheckoutPage() {
                         <div className="flex flex-wrap items-end justify-between gap-4">
                             <div>
                                 <h2 className="font-headline text-2xl font-semibold">
-                                    Thong tin nhan hang
+                                    Thông tin nhận hàng
                                 </h2>
                                 <p className="mt-2 text-sm text-on-surface-variant">
-                                    Vui long dien thong tin nhan hang chinh xac de chung toi giao don dung dia chi.
+                                    Vui lòng điền thông tin nhận hàng chính xác để chúng tôi giao đơn đúng địa chỉ.
                                 </p>
                             </div>
                             <Link
                                 className="text-sm font-medium text-primary hover:underline"
                                 to={routes.accountAddresses}
                             >
-                                So dia chi local
+                                Sổ địa chỉ local
                             </Link>
                         </div>
 
@@ -256,7 +256,7 @@ export function CheckoutPage() {
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <div className="space-y-2">
                                     <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                        Nguoi nhan
+                                        Người nhận
                                     </label>
                                     <input
                                         className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -268,7 +268,7 @@ export function CheckoutPage() {
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                        So dien thoai
+                                        Số điện thoại
                                     </label>
                                     <input
                                         className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -281,7 +281,7 @@ export function CheckoutPage() {
                             </div>
                             <div className="mt-6 space-y-2">
                                 <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Dia chi giao hang
+                                    Địa chỉ giao hàng
                                 </label>
                                 <textarea
                                     className="min-h-28 w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -293,7 +293,7 @@ export function CheckoutPage() {
                             </div>
                             <div className="mt-6 space-y-2">
                                 <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Ghi chu
+                                    Ghi chú
                                 </label>
                                 <textarea
                                     className="min-h-24 w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -305,10 +305,10 @@ export function CheckoutPage() {
                             <div className="mt-8 space-y-4">
                                 <div>
                                     <h3 className="font-headline text-xl font-semibold">
-                                        Phuong thuc thanh toan
+                                        Phương thức thanh toán
                                     </h3>
                                     <p className="mt-2 text-sm text-on-surface-variant">
-                                        Chon cach thanh toan phu hop truoc khi tao don hang.
+                                        Chọn cách thanh toán phù hợp trước khi tạo đơn hàng.
                                     </p>
                                 </div>
 
@@ -349,7 +349,7 @@ export function CheckoutPage() {
                                 {paymentMethod !== "COD" ? (
                                     <div className="space-y-2">
                                         <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                            Cong thanh toan
+                                            Cổng thanh toán
                                         </label>
                                         <input
                                             className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
@@ -370,24 +370,24 @@ export function CheckoutPage() {
 
                 <div className="space-y-8 lg:col-span-5">
                     <section className="rounded-xl bg-surface-container-lowest p-8">
-                        <h2 className="font-headline text-2xl font-semibold">Tom tat don hang</h2>
+                        <h2 className="font-headline text-2xl font-semibold">Tóm tắt đơn hàng</h2>
 
                         <div className="mt-6 space-y-4 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-on-surface-variant">Tam tinh</span>
+                                <span className="text-on-surface-variant">Tạm tính</span>
                                 <span>{formatCurrency(subtotal)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-on-surface-variant">Van chuyen</span>
+                                <span className="text-on-surface-variant">Vận chuyển</span>
                                 <span>{formatCurrency(shippingFee)}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-on-surface-variant">Giam gia</span>
+                                <span className="text-on-surface-variant">Giảm giá</span>
                                 <span>-{formatCurrency(discount)}</span>
                             </div>
                             <div className="h-px bg-outline-variant/20" />
                             <div className="flex justify-between font-headline text-2xl font-bold">
-                                <span>Tong cong</span>
+                                <span>Tổng cộng</span>
                                 <span>{formatCurrency(total)}</span>
                             </div>
                         </div>
@@ -398,10 +398,10 @@ export function CheckoutPage() {
                             </p>
                             <p className="mt-2 text-on-surface-variant">
                                 {paymentMethod === "COD"
-                                    ? "Ban se thanh toan cho shipper khi don duoc giao thanh cong."
+                                    ? "Bạn sẽ thanh toán cho shipper khi đơn được giao thành công."
                                     : paymentMethod === "BANK_TRANSFER"
-                                      ? `Don hang se tao o trang thai cho xac nhan thanh toan qua ${paymentGateway || "ngan hang"}.`
-                                      : `Don hang se tao o trang thai cho xac nhan thanh toan qua ${paymentGateway || "vi dien tu"}.`}
+                                      ? `Đơn hàng sẽ tạo ở trạng thái chờ xác nhận thanh toán qua ${paymentGateway || "ngân hàng"}.`
+                                      : `Đơn hàng sẽ tạo ở trạng thái chờ xác nhận thanh toán qua ${paymentGateway || "ví điện tử"}.`}
                             </p>
                         </div>
                         {submitError ? (
@@ -415,18 +415,18 @@ export function CheckoutPage() {
                             disabled={cartItems.length === 0 || isSubmitting}
                             onClick={() => void handlePlaceOrder()}
                         >
-                            <span>{isSubmitting ? "Dang dat hang..." : "Dat hang"}</span>
+                            <span>{isSubmitting ? "Đang đặt hàng..." : "Đặt hàng"}</span>
                             <Icon name="arrow_forward" />
                         </button>
                     </section>
 
                     <section className="rounded-xl bg-surface-container-lowest p-8">
-                        <h2 className="font-headline text-xl font-semibold">Luu y</h2>
+                        <h2 className="font-headline text-xl font-semibold">Lưu ý</h2>
                         <div className="mt-6 space-y-3">
                             {[
-                                "Gio hang cua ban duoc cap nhat lien tuc khi thay doi so luong.",
-                                "Don hang se luu dung phuong thuc thanh toan ma ban vua chon.",
-                                "Neu chon chuyen khoan hoac vi dien tu, admin co the xac nhan trang thai thanh toan sau.",
+                                "Giỏ hàng của bạn được cập nhật liên tục khi thay đổi số lượng.",
+                                "Đơn hàng sẽ lưu đúng phương thức thanh toán mà bạn vừa chọn.",
+                                "Nếu chọn chuyển khoản hoặc ví điện tử, admin có thể xác nhận trạng thái thanh toán sau.",
                             ].map((helper) => (
                                 <div
                                     key={helper}

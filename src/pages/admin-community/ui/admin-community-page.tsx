@@ -74,7 +74,7 @@ export function AdminCommunityPage() {
     useEffect(() => {
         if (!accessToken) {
             setIsLoading(false);
-            setError("Ban can dang nhap admin de xem du lieu cong dong.");
+            setError("Bạn cần đăng nhập admin để xem dữ liệu cộng đồng.");
             return;
         }
 
@@ -102,7 +102,9 @@ export function AdminCommunityPage() {
                     return;
                 }
 
-                setError(nextError instanceof Error ? nextError.message : "Khong the tai du lieu cong dong.");
+                setError(
+                    nextError instanceof Error ? nextError.message : "Không thể tải dữ liệu cộng đồng.",
+                );
                 setIsLoading(false);
             }
         }
@@ -130,7 +132,10 @@ export function AdminCommunityPage() {
         const keyword = query.trim().toLowerCase();
 
         return customers.filter((customer) =>
-            [customer.full_name, customer.email, customer.phone].join(" ").toLowerCase().includes(keyword),
+            [customer.full_name, customer.email, customer.phone]
+                .join(" ")
+                .toLowerCase()
+                .includes(keyword),
         );
     }, [customers, query]);
 
@@ -162,7 +167,7 @@ export function AdminCommunityPage() {
         ) {
             pushToast({
                 tone: "warning",
-                message: "Vui long nhap day du ten don vi, nguoi lien he va email.",
+                message: "Vui lòng nhập đầy đủ tên đơn vị, người liên hệ và email.",
             });
             return;
         }
@@ -170,7 +175,7 @@ export function AdminCommunityPage() {
         if (!accessToken) {
             pushToast({
                 tone: "warning",
-                message: "Ban can dang nhap admin de gui loi moi.",
+                message: "Bạn cần đăng nhập admin để gửi lời mời.",
             });
             return;
         }
@@ -202,13 +207,13 @@ export function AdminCommunityPage() {
             setIsSaving(false);
             pushToast({
                 tone: "success",
-                message: `Da tao loi moi ${response.data.id} cho ${response.data.supplier_name}.`,
+                message: `Đã tạo lời mời ${response.data.id} cho ${response.data.supplier_name}.`,
             });
         } catch (nextError) {
             setIsSaving(false);
             pushToast({
                 tone: "warning",
-                message: nextError instanceof Error ? nextError.message : "Khong the gui loi moi.",
+                message: nextError instanceof Error ? nextError.message : "Không thể gửi lời mời.",
             });
         }
     }
@@ -228,41 +233,43 @@ export function AdminCommunityPage() {
                             );
                             pushToast({
                                 tone: "success",
-                                message: "Da xuat du lieu cong dong va doi tac.",
+                                message: "Đã xuất dữ liệu cộng đồng và đối tác.",
                             });
                         }}
                     >
-                        Xuat du lieu
+                        Xuất dữ liệu
                     </Button>
-                    <Button onClick={() => setInviteOpen((current) => !current)}>Moi nha cung cap</Button>
+                    <Button onClick={() => setInviteOpen((current) => !current)}>
+                        Mời nhà cung cấp
+                    </Button>
                 </div>
             </section>
 
             {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
             {isLoading ? (
                 <SurfaceCard className="text-sm text-on-surface-variant">
-                    Dang tai du lieu cong dong...
+                    Đang tải dữ liệu cộng đồng...
                 </SurfaceCard>
             ) : null}
 
             {inviteOpen ? (
                 <SurfaceCard className="space-y-4">
                     <div>
-                        <h3 className="font-headline text-2xl font-bold">Tao loi moi doi tac</h3>
+                        <h3 className="font-headline text-2xl font-bold">Tạo lời mời đối tác</h3>
                         <p className="mt-2 text-sm text-on-surface-variant">
-                            Thong tin se duoc gui vao backend va hien trong danh sach loi moi.
+                            Thông tin sẽ được gửi vào backend và hiện trong danh sách lời mời.
                         </p>
                     </div>
                     <div className="grid gap-4 md:grid-cols-2">
                         <input
                             className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Ten don vi"
+                            placeholder="Tên đơn vị"
                             value={inviteForm.supplierName}
                             onChange={(event) => updateInviteField("supplierName", event.target.value)}
                         />
                         <input
                             className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Nguoi lien he"
+                            placeholder="Người liên hệ"
                             value={inviteForm.contactName}
                             onChange={(event) => updateInviteField("contactName", event.target.value)}
                         />
@@ -274,23 +281,23 @@ export function AdminCommunityPage() {
                         />
                         <input
                             className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Danh muc, phan tach bang dau phay"
+                            placeholder="Danh mục, phân tách bằng dấu phẩy"
                             value={inviteForm.categories}
                             onChange={(event) => updateInviteField("categories", event.target.value)}
                         />
                     </div>
                     <textarea
                         className="min-h-24 w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                        placeholder="Ghi chu loi moi"
+                        placeholder="Ghi chú lời mời"
                         value={inviteForm.note}
                         onChange={(event) => updateInviteField("note", event.target.value)}
                     />
                     <div className="flex justify-end gap-3">
                         <Button variant="outline" onClick={() => setInviteOpen(false)}>
-                            Huy
+                            Hủy
                         </Button>
                         <Button disabled={isSaving} onClick={() => void handleSubmitInvite()}>
-                            {isSaving ? "Dang gui..." : "Gui loi moi"}
+                            {isSaving ? "Đang gửi..." : "Gửi lời mời"}
                         </Button>
                     </div>
                 </SurfaceCard>
@@ -298,7 +305,7 @@ export function AdminCommunityPage() {
 
             {invitations.length > 0 ? (
                 <SurfaceCard className="space-y-3">
-                    <h3 className="font-headline text-xl font-semibold">Loi moi gan day</h3>
+                    <h3 className="font-headline text-xl font-semibold">Lời mời gần đây</h3>
                     <div className="grid gap-3 md:grid-cols-2">
                         {invitations.slice(0, 4).map((invitation) => (
                             <div key={invitation.id} className="rounded-2xl bg-surface-container-low p-4 text-sm">
@@ -324,7 +331,7 @@ export function AdminCommunityPage() {
                     }`}
                     onClick={() => setTab("suppliers")}
                 >
-                    Nha cung cap
+                    Nhà cung cấp
                 </button>
                 <button
                     className={`rounded-full px-4 py-2 text-sm font-medium ${
@@ -334,13 +341,13 @@ export function AdminCommunityPage() {
                     }`}
                     onClick={() => setTab("customers")}
                 >
-                    Khach hang
+                    Khách hàng
                 </button>
             </div>
 
             <input
                 className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                placeholder="Loc theo ten doi tac hoac khach hang..."
+                placeholder="Lọc theo tên đối tác hoặc khách hàng..."
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
             />
@@ -360,13 +367,13 @@ export function AdminCommunityPage() {
                             <div>
                                 <h3 className="font-headline text-xl font-semibold">{supplier.name}</h3>
                                 <p className="mt-2 text-sm text-on-surface-variant">
-                                    {supplier.address ?? "Khong co dia chi"}
+                                    {supplier.address ?? "Không có địa chỉ"}
                                 </p>
                             </div>
                             <div className="space-y-2 text-sm text-on-surface-variant">
-                                <p>Lien he chinh: {supplier.contact_name ?? "Chua cap nhat"}</p>
-                                <p>Email: {supplier.email ?? "Chua cap nhat"}</p>
-                                <p>So san pham: {supplier.product_count}</p>
+                                <p>Liên hệ chính: {supplier.contact_name ?? "Chưa cập nhật"}</p>
+                                <p>Email: {supplier.email ?? "Chưa cập nhật"}</p>
+                                <p>Số sản phẩm: {supplier.product_count}</p>
                             </div>
                         </SurfaceCard>
                     ))}
@@ -388,13 +395,13 @@ export function AdminCommunityPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div className="rounded-2xl bg-surface-container-low p-4">
-                                    <p className="text-on-surface-variant">Don hang</p>
+                                    <p className="text-on-surface-variant">Đơn hàng</p>
                                     <p className="mt-2 font-headline text-2xl font-bold">
                                         {customer.order_count}
                                     </p>
                                 </div>
                                 <div className="rounded-2xl bg-surface-container-low p-4">
-                                    <p className="text-on-surface-variant">Tong chi tieu</p>
+                                    <p className="text-on-surface-variant">Tổng chi tiêu</p>
                                     <p className="mt-2 font-headline text-2xl font-bold">
                                         {Math.round(Number(customer.total_spend) / 1000)}K
                                     </p>

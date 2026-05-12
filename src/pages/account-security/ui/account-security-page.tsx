@@ -15,24 +15,24 @@ export function AccountSecurityPage() {
 
     async function handleSubmit() {
         if (nextPassword !== confirmPassword) {
-            setMessage("Mat khau xac nhan chua khop.");
+            setMessage("Mật khẩu xác nhận chưa khớp.");
             return;
         }
 
         const result = await changePassword(currentPassword, nextPassword, confirmPassword);
 
         if (!result.success) {
-            setMessage(result.error ?? "Khong the doi mat khau.");
+            setMessage(result.error ?? "Không thể đổi mật khẩu.");
             return;
         }
 
-        setMessage("Mat khau da duoc cap nhat.");
+        setMessage("Mật khẩu đã được cập nhật.");
         setCurrentPassword("");
         setNextPassword("");
         setConfirmPassword("");
         pushToast({
             tone: "success",
-            message: "Da luu thay doi bao mat.",
+            message: "Đã lưu thay đổi bảo mật.",
         });
     }
 
@@ -40,15 +40,15 @@ export function AccountSecurityPage() {
         <div className="mx-auto max-w-4xl px-6 pb-16 pt-24">
             <div className="space-y-8">
                 <div>
-                    <h1 className="font-headline text-2xl font-bold">Bao mat tai khoan</h1>
+                    <h1 className="font-headline text-2xl font-bold">Bảo mật tài khoản</h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Quan ly mat khau va cac nguyen tac bao ve phien dang nhap.
+                        Quản lý mật khẩu và các nguyên tắc bảo vệ phiên đăng nhập.
                     </p>
                 </div>
 
                 <SurfaceCard className="space-y-5">
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Mat khau hien tai</span>
+                        <span className="font-medium">Mật khẩu hiện tại</span>
                         <input
                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             type="password"
@@ -57,7 +57,7 @@ export function AccountSecurityPage() {
                         />
                     </label>
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Mat khau moi</span>
+                        <span className="font-medium">Mật khẩu mới</span>
                         <input
                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             type="password"
@@ -66,7 +66,7 @@ export function AccountSecurityPage() {
                         />
                     </label>
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Xac nhan mat khau moi</span>
+                        <span className="font-medium">Xác nhận mật khẩu mới</span>
                         <input
                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             type="password"
@@ -76,7 +76,7 @@ export function AccountSecurityPage() {
                     </label>
                     {message ? <p className="text-sm text-primary">{message}</p> : null}
                     <Button onClick={() => void handleSubmit()} disabled={isSaving}>
-                        {isSaving ? "Dang luu..." : "Luu mat khau moi"}
+                        {isSaving ? "Đang lưu..." : "Lưu mật khẩu mới"}
                     </Button>
                 </SurfaceCard>
             </div>

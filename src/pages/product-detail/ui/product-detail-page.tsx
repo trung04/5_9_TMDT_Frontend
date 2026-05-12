@@ -13,9 +13,9 @@ import { Icon } from "@/shared/ui";
 type ProductTab = "details" | "reviews" | "brewing";
 
 const tabLabels: Record<ProductTab, string> = {
-    details: "Thong tin chi tiet",
-    reviews: "Danh gia khach hang",
-    brewing: "Huong dan su dung",
+    details: "Thông tin chi tiết",
+    reviews: "Đánh giá khách hàng",
+    brewing: "Hướng dẫn sử dụng",
 };
 
 export function ProductDetailPage() {
@@ -92,7 +92,7 @@ export function ProductDetailPage() {
         return (
             <div className="mx-auto max-w-6xl px-6 pb-16 pt-24">
                 <div className="rounded-2xl bg-surface-container-low p-10 text-center text-on-surface-variant">
-                    {error ?? "Khong the tai chi tiet san pham."}
+                    {error ?? "Không thể tải chi tiết sản phẩm."}
                 </div>
             </div>
         );
@@ -102,7 +102,7 @@ export function ProductDetailPage() {
         return (
             <div className="mx-auto max-w-6xl px-6 pb-16 pt-24">
                 <div className="rounded-2xl bg-surface-container-low p-10 text-center text-on-surface-variant">
-                    Dang tai chi tiet san pham...
+                    Đang tải chi tiết sản phẩm...
                 </div>
             </div>
         );
@@ -124,11 +124,11 @@ export function ProductDetailPage() {
         <div className="mx-auto max-w-screen-2xl px-6 pb-16 pt-24">
             <nav className="mb-8 flex items-center space-x-2 text-xs uppercase tracking-widest text-on-surface-variant/60">
                 <Link className="transition-colors hover:text-primary" to={routes.home}>
-                    Trang chu
+                    Trang chủ
                 </Link>
                 <Icon name="chevron_right" className="text-sm" />
                 <Link className="transition-colors hover:text-primary" to={routes.products}>
-                    Cua hang
+                    Cửa hàng
                 </Link>
                 <Icon name="chevron_right" className="text-sm" />
                 <span className="font-semibold text-on-surface">{currentProduct.name}</span>
@@ -155,7 +155,7 @@ export function ProductDetailPage() {
                                         : "opacity-70 hover:opacity-100",
                                 )}
                                 onClick={() => setActiveMediaIndex(index)}
-                                aria-label={`Xem anh ${index + 1} cua ${currentProduct.name}`}
+                                aria-label={`Xem ảnh ${index + 1} của ${currentProduct.name}`}
                             >
                                 <img
                                     src={media.src}
@@ -171,7 +171,7 @@ export function ProductDetailPage() {
                     <header className="space-y-3">
                         <div className="flex items-center gap-3">
                             <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
-                                {currentProduct.badge ?? "Dac san"}
+                                {currentProduct.badge ?? "Đặc sản"}
                             </span>
                             <button
                                 type="button"
@@ -186,7 +186,7 @@ export function ProductDetailPage() {
                                 }}
                             >
                                 <Icon name="favorite" fill={isWishlisted} />
-                                <span>{isWishlisted ? "Da yeu thich" : "Luu san pham"}</span>
+                                <span>{isWishlisted ? "Đã yêu thích" : "Lưu sản phẩm"}</span>
                             </button>
                         </div>
                         <h1 className="font-headline text-3xl font-bold leading-tight tracking-tight text-on-surface">
@@ -198,7 +198,7 @@ export function ProductDetailPage() {
                                     <Icon key={index} name="star" className="text-sm" fill />
                                 ))}
                                 <span className="ml-2 text-sm font-medium text-on-surface-variant">
-                                    {currentProduct.rating.toFixed(1)} ({currentProduct.reviewCount} danh gia)
+                                    {currentProduct.rating.toFixed(1)} ({currentProduct.reviewCount} đánh giá)
                                 </span>
                             </div>
                         </div>
@@ -210,7 +210,7 @@ export function ProductDetailPage() {
                     <div className="grid grid-cols-2 gap-y-4 border-y border-outline-variant/15 py-6 text-sm">
                         <div className="flex flex-col gap-1">
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
-                                Nha cung cap
+                                Nhà cung cấp
                             </span>
                             <span className="font-medium">{currentProduct.regionName}</span>
                         </div>
@@ -222,7 +222,7 @@ export function ProductDetailPage() {
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
-                                Trang thai
+                                Trạng thái
                             </span>
                             <span className="font-medium">
                                 {stockStatusLabels[currentProduct.stockStatus]}
@@ -230,7 +230,7 @@ export function ProductDetailPage() {
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
-                                Mo ta nhanh
+                                Mô tả nhanh
                             </span>
                             <span className="font-medium">{currentProduct.subtitle}</span>
                         </div>
@@ -243,7 +243,7 @@ export function ProductDetailPage() {
                                     type="button"
                                     className="flex h-8 w-8 items-center justify-center hover:text-primary"
                                     onClick={() => setQuantity((value) => Math.max(1, value - 1))}
-                                    aria-label="Giam so luong"
+                                    aria-label="Giảm số lượng"
                                 >
                                     <Icon name="remove" />
                                 </button>
@@ -257,7 +257,7 @@ export function ProductDetailPage() {
                                     type="button"
                                     className="flex h-8 w-8 items-center justify-center hover:text-primary"
                                     onClick={() => setQuantity((value) => value + 1)}
-                                    aria-label="Tang so luong"
+                                    aria-label="Tăng số lượng"
                                 >
                                     <Icon name="add" />
                                 </button>
@@ -267,7 +267,7 @@ export function ProductDetailPage() {
                                 className="flex-1 rounded-full border border-secondary px-6 py-4 font-bold text-secondary transition-all hover:bg-secondary hover:text-white"
                                 onClick={() => handleAddToCart(false)}
                             >
-                                Them vao gio
+                                Thêm vào giỏ
                             </button>
                         </div>
                         <button
@@ -342,10 +342,10 @@ export function ProductDetailPage() {
                                 <div className="flex flex-wrap items-end justify-between gap-4">
                                     <div>
                                         <h3 className="font-headline text-2xl font-bold tracking-tight">
-                                            Danh gia khach hang
+                                            Đánh giá khách hàng
                                         </h3>
                                         <p className="text-on-surface-variant">
-                                            Hien chua co danh gia chi tiet tu khach hang de hien thi tai day.
+                                            Hiện chưa có đánh giá chi tiết từ khách hàng để hiển thị tại đây.
                                         </p>
                                     </div>
                                     <button
@@ -353,13 +353,13 @@ export function ProductDetailPage() {
                                         className="cursor-not-allowed rounded-full bg-surface-container px-6 py-3 font-bold text-on-surface-variant"
                                         disabled
                                     >
-                                        Sap cap nhat
+                                        Sắp cập nhật
                                     </button>
                                 </div>
 
                                 <div className="rounded-2xl bg-surface-container-low p-6 text-sm leading-7 text-on-surface-variant">
-                                    Khi co danh gia khach hang, tab nay se hien thi phan hoi that va cho
-                                    phep khach hang gui nhan xet ve san pham.
+                                    Khi có đánh giá khách hàng, tab này sẽ hiển thị phản hồi thật và cho
+                                    phép khách hàng gửi nhận xét về sản phẩm.
                                 </div>
                             </div>
                         ) : null}
@@ -367,21 +367,21 @@ export function ProductDetailPage() {
                         {activeTab === "brewing" ? (
                             <div className="space-y-6">
                                 <h3 className="font-headline text-2xl font-bold tracking-tight">
-                                    Cach su dung san pham
+                                    Cách sử dụng sản phẩm
                                 </h3>
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     {[
                                         {
-                                            title: "Kiem tra mo ta",
-                                            body: "Doc ky phan mo ta san pham de chon dung loai dac san phu hop nhu cau.",
+                                            title: "Kiểm tra mô tả",
+                                            body: "Đọc kỹ phần mô tả sản phẩm để chọn đúng loại đặc sản phù hợp nhu cầu.",
                                         },
                                         {
-                                            title: "Them vao gio",
-                                            body: "Chon so luong phu hop roi them san pham vao gio de chuan bi thanh toan.",
+                                            title: "Thêm vào giỏ",
+                                            body: "Chọn số lượng phù hợp rồi thêm sản phẩm vào giỏ để chuẩn bị thanh toán.",
                                         },
                                         {
                                             title: "Checkout",
-                                            body: "Don hang se duoc xac nhan va luu vao lich su dat hang cua ban.",
+                                            body: "Đơn hàng sẽ được xác nhận và lưu vào lịch sử đặt hàng của bạn.",
                                         },
                                     ].map((step) => (
                                         <div
@@ -403,7 +403,7 @@ export function ProductDetailPage() {
 
                     <div className="space-y-8">
                         <div className="space-y-6 rounded-2xl bg-surface-container-high p-8">
-                            <h4 className="font-headline text-xl font-bold">Cam ket chat luong</h4>
+                            <h4 className="font-headline text-xl font-bold">Cam kết chất lượng</h4>
                             <ul className="space-y-4">
                                 {currentProduct.heritageCommitments.map((item) => (
                                     <li key={item.text} className="flex items-start gap-3">
@@ -420,10 +420,10 @@ export function ProductDetailPage() {
             <section className="mt-24">
                 <div className="mb-10 flex items-center justify-between">
                     <h3 className="font-headline text-2xl font-bold tracking-tight">
-                        Co the ban se thich
+                        Có thể bạn sẽ thích
                     </h3>
                     <Link className="font-bold text-primary hover:underline" to={routes.products}>
-                        Xem tat ca
+                        Xem tất cả
                     </Link>
                 </div>
                 <div className="grid grid-cols-2 gap-8 md:grid-cols-4">

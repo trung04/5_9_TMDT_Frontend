@@ -40,14 +40,14 @@ export function AccountNotificationsPage() {
         const result = await saveProfile(preferences);
 
         if (!result.success) {
-            setMessage(result.error ?? "Khong the luu tuy chon thong bao.");
+            setMessage(result.error ?? "Không thể lưu tùy chọn thông báo.");
             return;
         }
 
-        setMessage("Da luu cau hinh thong bao.");
+        setMessage("Đã lưu cấu hình thông báo.");
         pushToast({
             tone: "success",
-            message: "Tuy chon thong bao da duoc cap nhat.",
+            message: "Tùy chọn thông báo đã được cập nhật.",
         });
     }
 
@@ -55,9 +55,9 @@ export function AccountNotificationsPage() {
         <div className="mx-auto max-w-4xl px-6 pb-16 pt-24">
             <div className="space-y-8">
                 <div>
-                    <h1 className="font-headline text-2xl font-bold">Thong bao va lien lac</h1>
+                    <h1 className="font-headline text-2xl font-bold">Thông báo và liên lạc</h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Tuy chinh cach he thong lien he voi ban trong qua trinh mua hang.
+                        Tùy chỉnh cách hệ thống liên hệ với bạn trong quá trình mua hàng.
                     </p>
                 </div>
 
@@ -65,23 +65,23 @@ export function AccountNotificationsPage() {
                     {[
                         {
                             field: "newsletter",
-                            title: "Ban tin mua vu",
-                            description: "Nhan email ve bo suu tap moi va noi dung vung mien.",
+                            title: "Bản tin mùa vụ",
+                            description: "Nhận email về bộ sưu tập mới và nội dung vùng miền.",
                         },
                         {
                             field: "smsAlerts",
-                            title: "SMS giao van",
-                            description: "Thong bao don can giao gap hoac thay doi ca giao.",
+                            title: "SMS giao vận",
+                            description: "Thông báo đơn cần giao gấp hoặc thay đổi ca giao.",
                         },
                         {
                             field: "orderEmail",
-                            title: "Email trang thai don",
-                            description: "Xac nhan don, hoan tien va cap nhat ban giao van chuyen.",
+                            title: "Email trạng thái đơn",
+                            description: "Xác nhận đơn, hoàn tiền và cập nhật bàn giao vận chuyển.",
                         },
                         {
                             field: "securityAlerts",
-                            title: "Canh bao bao mat",
-                            description: "Thong bao khi doi mat khau hoac co dang nhap bat thuong.",
+                            title: "Cảnh báo bảo mật",
+                            description: "Thông báo khi đổi mật khẩu hoặc có đăng nhập bất thường.",
                         },
                     ].map((item) => (
                         <label
@@ -110,24 +110,24 @@ export function AccountNotificationsPage() {
 
                     <div className="flex items-center justify-between rounded-3xl bg-surface-container-low p-5">
                         <div>
-                            <p className="font-semibold">Cap nhat tuy chon thong bao</p>
+                            <p className="font-semibold">Cập nhật tùy chọn thông báo</p>
                             <p className="mt-1 text-sm text-on-surface-variant">
-                                Cac tuy chon nay se duoc luu tren tai khoan backend cua ban.
+                                Các tùy chọn này sẽ được lưu trên tài khoản backend của bạn.
                             </p>
                         </div>
                         <Button variant="secondary" disabled={isSaving} onClick={() => void handleSavePreferences()}>
-                            {isSaving ? "Dang luu..." : "Luu thay doi"}
+                            {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
                         </Button>
                     </div>
                     {message ? <p className="text-sm text-primary">{message}</p> : null}
                 </SurfaceCard>
 
                 <SurfaceCard className="space-y-4">
-                    <h2 className="font-headline text-2xl font-bold">Danh sach thong bao</h2>
+                    <h2 className="font-headline text-2xl font-bold">Danh sách thông báo</h2>
                     {isNotificationsLoading ? (
-                        <p className="text-sm text-on-surface-variant">Dang tai thong bao...</p>
+                        <p className="text-sm text-on-surface-variant">Đang tải thông báo...</p>
                     ) : notifications.length === 0 ? (
-                        <p className="text-sm text-on-surface-variant">Chua co thong bao nao.</p>
+                        <p className="text-sm text-on-surface-variant">Chưa có thông báo nào.</p>
                     ) : (
                         <div className="space-y-3">
                             {notifications.map((notification) => (
@@ -157,16 +157,16 @@ export function AccountNotificationsPage() {
                                                     pushToast({
                                                         tone: result.success ? "success" : "warning",
                                                         message: result.success
-                                                            ? "Da danh dau thong bao da doc."
-                                                            : (result.error ?? "Khong the cap nhat thong bao."),
+                                                            ? "Đã đánh dấu thông báo đã đọc."
+                                                            : (result.error ?? "Không thể cập nhật thông báo."),
                                                     });
                                                 }}
                                             >
-                                                Danh dau da doc
+                                                Đánh dấu đã đọc
                                             </Button>
                                         ) : (
                                             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                                                Da doc
+                                                Đã đọc
                                             </span>
                                         )}
                                     </div>

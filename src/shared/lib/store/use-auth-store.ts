@@ -134,7 +134,7 @@ export const useAuthStore = create<AuthState>()(
                         set({ isSubmitting: false });
                         return {
                             success: false,
-                            error: "Khong the xu ly thong tin dang nhap. Vui long thu lai.",
+                            error: "Không thể xử lý thông tin đăng nhập. Vui lòng thử lại.",
                         };
                     }
 
@@ -160,7 +160,7 @@ export const useAuthStore = create<AuthState>()(
                         error:
                             error instanceof Error
                                 ? error.message
-                                : "Xin loi, khong the dang nhap. Vui long kiem tra email va mat khau.",
+                                : "Xin lỗi, không thể đăng nhập. Vui lòng kiểm tra email và mật khẩu.",
                     };
                 }
             },
@@ -170,7 +170,7 @@ export const useAuthStore = create<AuthState>()(
                 if (!credential) {
                     return {
                         success: false,
-                        error: "Khong co tai khoan demo cho vai tro nay.",
+                        error: "Không có tài khoản demo cho vai trò này.",
                     };
                 }
 
@@ -208,13 +208,13 @@ export const useAuthStore = create<AuthState>()(
                 const session = get().session;
 
                 if (!session) {
-                    return { success: false, error: "Ban can dang nhap truoc." };
+                    return { success: false, error: "Bạn cần đăng nhập trước." };
                 }
 
                 if (get().authSource === "backend") {
                     return {
                         success: false,
-                        error: "Tinh nang doi mat khau backend dang duoc phat trien.",
+                        error: "Tính năng đổi mật khẩu backend đang được phát triển.",
                     };
                 }
 
@@ -225,14 +225,14 @@ export const useAuthStore = create<AuthState>()(
                 if (!matchedCredential || matchedCredential.password !== currentPassword) {
                     return {
                         success: false,
-                        error: "Mat khau hien tai chua chinh xac.",
+                        error: "Mật khẩu hiện tại chưa chính xác.",
                     };
                 }
 
                 if (nextPassword.trim().length < 6) {
                     return {
                         success: false,
-                        error: "Mat khau moi phai co it nhat 6 ky tu.",
+                        error: "Mật khẩu mới phải có ít nhất 6 ký tự.",
                     };
                 }
 

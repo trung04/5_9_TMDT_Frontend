@@ -16,19 +16,19 @@ export function AccountDisputesPage() {
         <div className="mx-auto max-w-5xl px-6 pb-16 pt-24">
             <div className="space-y-8">
                 <div>
-                    <h1 className="font-headline text-2xl font-bold">Khieu nai va ho tro don hang</h1>
+                    <h1 className="font-headline text-2xl font-bold">Khiếu nại và hỗ trợ đơn hàng</h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Theo doi cac phan hoi da gui va tinh trang xu ly hien tai.
+                        Theo dõi các phản hồi đã gửi và tình trạng xử lý hiện tại.
                     </p>
                 </div>
 
                 {isComplaintsLoading ? (
                     <SurfaceCard className="text-sm text-on-surface-variant">
-                        Dang tai danh sach khieu nai...
+                        Đang tải danh sách khiếu nại...
                     </SurfaceCard>
                 ) : complaints.length === 0 ? (
                     <SurfaceCard className="text-sm text-on-surface-variant">
-                        Chua co khieu nai nao duoc gui.
+                        Chưa có khiếu nại nào được gửi.
                     </SurfaceCard>
                 ) : (
                     <div className="space-y-4">
@@ -52,15 +52,15 @@ export function AccountDisputesPage() {
                                 </p>
                                 <div className="grid gap-3 md:grid-cols-3">
                                     <div className="rounded-3xl bg-surface-container-low p-4 text-sm">
-                                        <p className="text-on-surface-variant">Ma don</p>
+                                        <p className="text-on-surface-variant">Mã đơn</p>
                                         <p className="mt-2 font-semibold">{complaint.orderNo || complaint.orderId}</p>
                                     </div>
                                     <div className="rounded-3xl bg-surface-container-low p-4 text-sm">
-                                        <p className="text-on-surface-variant">San pham</p>
-                                        <p className="mt-2 font-semibold">{complaint.productName || "Khong ro"}</p>
+                                        <p className="text-on-surface-variant">Sản phẩm</p>
+                                        <p className="mt-2 font-semibold">{complaint.productName || "Không rõ"}</p>
                                     </div>
                                     <div className="rounded-3xl bg-surface-container-low p-4 text-sm">
-                                        <p className="text-on-surface-variant">Tong don</p>
+                                        <p className="text-on-surface-variant">Tổng đơn</p>
                                         <p className="mt-2 font-semibold">
                                             {complaint.orderTotalAmount.toLocaleString("vi-VN")} d
                                         </p>
@@ -68,7 +68,7 @@ export function AccountDisputesPage() {
                                 </div>
                                 {complaint.resolutionNote ? (
                                     <div className="rounded-3xl bg-on-primary-container p-4 text-sm text-primary">
-                                        Ghi chu xu ly: {complaint.resolutionNote}
+                                        Ghi chú xử lý: {complaint.resolutionNote}
                                     </div>
                                 ) : null}
                             </SurfaceCard>

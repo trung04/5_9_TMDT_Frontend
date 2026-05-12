@@ -1,26 +1,26 @@
 export const customerOrderStatusLabels: Record<string, string> = {
-    PENDING: "Cho xac nhan",
-    CONFIRMED: "Da xac nhan",
-    PACKED: "Da dong goi",
-    SHIPPED: "Dang giao",
-    DELIVERED: "Da giao",
-    PAID: "Da thanh toan",
-    CANCELLED: "Da huy",
+    PENDING: "Chờ xác nhận",
+    CONFIRMED: "Đã xác nhận",
+    PACKED: "Đã đóng gói",
+    SHIPPED: "Đang giao",
+    DELIVERED: "Đã giao",
+    PAID: "Đã thanh toán",
+    CANCELLED: "Đã hủy",
 };
 
 export const customerPaymentStatusLabels: Record<string, string> = {
-    PENDING: "Cho thanh toan",
-    SUCCESS: "Thanh toan thanh cong",
-    FAILED: "Thanh toan that bai",
-    REFUNDED: "Da hoan tien",
-    CANCELLED: "Da huy",
+    PENDING: "Chờ thanh toán",
+    SUCCESS: "Thanh toán thành công",
+    FAILED: "Thanh toán thất bại",
+    REFUNDED: "Đã hoàn tiền",
+    CANCELLED: "Đã hủy",
 };
 
 export const customerPaymentMethodLabels: Record<string, string> = {
-    COD: "Thanh toan khi nhan hang",
-    CREDIT_CARD: "The ngan hang",
-    BANK_TRANSFER: "Chuyen khoan ngan hang",
-    E_WALLET: "Vi dien tu",
+    COD: "Thanh toán khi nhận hàng",
+    CREDIT_CARD: "Thẻ ngân hàng",
+    BANK_TRANSFER: "Chuyển khoản ngân hàng",
+    E_WALLET: "Ví điện tử",
 };
 
 export function fallbackBackendLabel(value: string) {

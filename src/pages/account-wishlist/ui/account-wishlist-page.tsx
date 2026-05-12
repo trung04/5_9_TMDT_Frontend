@@ -34,16 +34,16 @@ export function AccountWishlistPage() {
         <div className="mx-auto max-w-7xl px-6 pb-16 pt-24">
             <div className="space-y-6">
                 <div>
-                    <h1 className="font-headline text-2xl font-bold tracking-tight">Danh sach yeu thich</h1>
+                    <h1 className="font-headline text-2xl font-bold tracking-tight">Danh sách yêu thích</h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Danh sach nay duoc dong bo voi tai khoan backend cua ban va chi hien thi san
-                        pham con ton tai trong cua hang.
+                        Danh sách này được đồng bộ với tài khoản backend của bạn và chỉ hiển thị sản
+                        phẩm còn tồn tại trong cửa hàng.
                     </p>
                 </div>
 
                 {isWishlistLoading ? (
                     <SurfaceCard className="text-center text-on-surface-variant">
-                        Dang tai danh sach yeu thich...
+                        Đang tải danh sách yêu thích...
                     </SurfaceCard>
                 ) : wishlistError ? (
                     <SurfaceCard className="text-center text-on-surface-variant">
@@ -63,13 +63,13 @@ export function AccountWishlistPage() {
                 ) : (
                     <SurfaceCard className="space-y-4 text-center">
                         <h2 className="font-headline text-2xl font-semibold text-on-surface">
-                            Danh sach yeu thich dang trong
+                            Danh sách yêu thích đang trống
                         </h2>
                         <p className="text-on-surface-variant">
-                            Hay luu san pham ban thich de chung xuat hien o day.
+                            Hãy lưu sản phẩm bạn thích để chúng xuất hiện ở đây.
                         </p>
                         <div className="flex justify-center">
-                            <ButtonLink to={routes.products}>Kham pha san pham</ButtonLink>
+                            <ButtonLink to={routes.products}>Khám phá sản phẩm</ButtonLink>
                         </div>
                     </SurfaceCard>
                 )}
@@ -78,10 +78,10 @@ export function AccountWishlistPage() {
                     <section className="space-y-6">
                         <div>
                             <h2 className="font-headline text-3xl font-bold text-on-surface">
-                                Ban co the muon luu them
+                                Bạn có thể muốn lưu thêm
                             </h2>
                             <p className="mt-2 text-on-surface-variant">
-                                Cac san pham ban vua xem nhung chua them vao wishlist.
+                                Các sản phẩm bạn vừa xem nhưng chưa thêm vào wishlist.
                             </p>
                         </div>
                         <div className="grid gap-6 xl:grid-cols-3">

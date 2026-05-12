@@ -33,7 +33,7 @@ export function AdminSettingsPage() {
         downloadTextFile("admin-settings.json", JSON.stringify(form, null, 2), "application/json");
         pushToast({
             tone: "success",
-            message: "Da xuat cau hinh admin hien tai.",
+            message: "Đã xuất cấu hình admin hiện tại.",
         });
     }
 
@@ -43,28 +43,28 @@ export function AdminSettingsPage() {
         pushToast({
             tone: result.success ? "success" : "warning",
             message: result.success
-                ? "Da luu cau hinh quan tri."
-                : (result.error ?? "Khong the luu cau hinh quan tri."),
+                ? "Đã lưu cấu hình quản trị."
+                : (result.error ?? "Không thể lưu cấu hình quản trị."),
         });
     }
 
     return (
         <div className="space-y-8">
             <div>
-                <h1 className="font-headline text-3xl font-bold">Cau hinh quan tri</h1>
+                <h1 className="font-headline text-3xl font-bold">Cấu hình quản trị</h1>
                 <p className="mt-2 text-on-surface-variant">
-                    Quan ly cac thong so van hanh co ban cho tai khoan admin hien tai.
+                    Quản lý các thông số vận hành cơ bản cho tài khoản admin hiện tại.
                 </p>
             </div>
 
             {isLoading ? (
-                <SurfaceCard className="text-on-surface-variant">Dang tai cau hinh...</SurfaceCard>
+                <SurfaceCard className="text-on-surface-variant">Đang tải cấu hình...</SurfaceCard>
             ) : null}
             {error ? <SurfaceCard className="text-on-surface-variant">{error}</SurfaceCard> : null}
 
             <SurfaceCard className="grid gap-6 lg:grid-cols-2">
                 <label className="space-y-2">
-                    <span className="text-sm font-semibold">Ten cua hang</span>
+                    <span className="text-sm font-semibold">Tên cửa hàng</span>
                     <input
                         className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
                         value={form.storeName}
@@ -72,7 +72,7 @@ export function AdminSettingsPage() {
                     />
                 </label>
                 <label className="space-y-2">
-                    <span className="text-sm font-semibold">Email ho tro</span>
+                    <span className="text-sm font-semibold">Email hỗ trợ</span>
                     <input
                         className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
                         value={form.supportEmail}
@@ -80,7 +80,7 @@ export function AdminSettingsPage() {
                     />
                 </label>
                 <label className="space-y-2">
-                    <span className="text-sm font-semibold">So dien thoai ho tro</span>
+                    <span className="text-sm font-semibold">Số điện thoại hỗ trợ</span>
                     <input
                         className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
                         value={form.supportPhone}
@@ -88,7 +88,7 @@ export function AdminSettingsPage() {
                     />
                 </label>
                 <label className="space-y-2">
-                    <span className="text-sm font-semibold">Nguong canh bao ton kho</span>
+                    <span className="text-sm font-semibold">Ngưỡng cảnh báo tồn kho</span>
                     <input
                         className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
                         min={1}
@@ -103,7 +103,7 @@ export function AdminSettingsPage() {
                     />
                 </label>
                 <label className="space-y-2">
-                    <span className="text-sm font-semibold">Chu ky lam moi dashboard (giay)</span>
+                    <span className="text-sm font-semibold">Chu kỳ làm mới dashboard (giây)</span>
                     <input
                         className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
                         min={15}
@@ -118,7 +118,7 @@ export function AdminSettingsPage() {
                     />
                 </label>
                 <label className="space-y-2 lg:col-span-2">
-                    <span className="text-sm font-semibold">Ghi chu van hanh</span>
+                    <span className="text-sm font-semibold">Ghi chú vận hành</span>
                     <textarea
                         className="min-h-32 w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
                         value={form.notes}
@@ -128,18 +128,18 @@ export function AdminSettingsPage() {
                 {[
                     {
                         key: "orderAutoConfirm",
-                        title: "Tu dong xac nhan don",
-                        description: "Luu tuy chon xu ly nhanh don moi cho tai khoan admin nay.",
+                        title: "Tự động xác nhận đơn",
+                        description: "Lưu tùy chọn xử lý nhanh đơn mới cho tài khoản admin này.",
                     },
                     {
                         key: "sendDailySummary",
-                        title: "Nhan tong hop hang ngay",
-                        description: "Dung cho nhac viec va tong hop dashboard theo ngay.",
+                        title: "Nhận tổng hợp hằng ngày",
+                        description: "Dùng cho nhắc việc và tổng hợp dashboard theo ngày.",
                     },
                     {
                         key: "maintenanceMode",
-                        title: "Che do bao tri",
-                        description: "Danh dau trang thai quan tri dang bao tri noi bo.",
+                        title: "Chế độ bảo trì",
+                        description: "Đánh dấu trạng thái quản trị đang bảo trì nội bộ.",
                     },
                 ].map((item) => (
                     <label
@@ -167,48 +167,48 @@ export function AdminSettingsPage() {
                 ))}
                 <div className="flex flex-wrap gap-3 lg:col-span-2">
                     <Button disabled={isSaving} onClick={() => void handleSave()}>
-                        {isSaving ? "Dang luu..." : "Luu cau hinh"}
+                        {isSaving ? "Đang lưu..." : "Lưu cấu hình"}
                     </Button>
                     <Button variant="secondary" onClick={handleExport}>
-                        Xuat JSON
+                        Xuất JSON
                     </Button>
                     <Button variant="outline" onClick={() => void navigate(routes.logout)}>
-                        Dang xuat
+                        Đăng xuất
                     </Button>
                 </div>
                 {form.updatedAt ? (
                     <p className="text-sm text-on-surface-variant lg:col-span-2">
-                        Cap nhat lan cuoi: {new Date(form.updatedAt).toLocaleString("vi-VN")}
+                        Cập nhật lần cuối: {new Date(form.updatedAt).toLocaleString("vi-VN")}
                     </p>
                 ) : null}
             </SurfaceCard>
 
             <div className="grid gap-6 xl:grid-cols-3">
                 <SurfaceCard className="space-y-4">
-                    <h3 className="font-headline text-xl font-semibold">Xuat du lieu</h3>
+                    <h3 className="font-headline text-xl font-semibold">Xuất dữ liệu</h3>
                     <p className="text-sm text-on-surface-variant">
-                        Tai nhanh cau hinh admin dang hien hanh de doi chieu hoac luu tru.
+                        Tải nhanh cấu hình admin đang hiện hành để đối chiếu hoặc lưu trữ.
                     </p>
-                    <Button onClick={handleExport}>Xuat cau hinh</Button>
+                    <Button onClick={handleExport}>Xuất cấu hình</Button>
                 </SurfaceCard>
 
                 <SurfaceCard className="space-y-4">
-                    <h3 className="font-headline text-xl font-semibold">Cau hinh van hanh</h3>
+                    <h3 className="font-headline text-xl font-semibold">Cấu hình vận hành</h3>
                     <p className="text-sm text-on-surface-variant">
-                        Trang nay da duoc noi voi backend, du lieu luu theo tai khoan admin dang dang nhap.
+                        Trang này đã được nối với backend, dữ liệu lưu theo tài khoản admin đang đăng nhập.
                     </p>
                     <Button variant="secondary" disabled>
-                        Dang dung API that
+                        Đang dùng API thật
                     </Button>
                 </SurfaceCard>
 
                 <SurfaceCard className="space-y-4">
-                    <h3 className="font-headline text-xl font-semibold">Phien lam viec</h3>
+                    <h3 className="font-headline text-xl font-semibold">Phiên làm việc</h3>
                     <p className="text-sm text-on-surface-variant">
-                        Dang xuat de chuyen tai khoan hoac kiem tra phan quyen admin khac.
+                        Đăng xuất để chuyển tài khoản hoặc kiểm tra phân quyền admin khác.
                     </p>
                     <Button variant="outline" onClick={() => void navigate(routes.logout)}>
-                        Dang xuat
+                        Đăng xuất
                     </Button>
                 </SurfaceCard>
             </div>

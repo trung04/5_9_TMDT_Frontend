@@ -64,7 +64,7 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function token() {
     return useAuthStore.getState().accessToken;
@@ -85,7 +85,7 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
         if (!accessToken) {
             return {
                 success: false,
-                error: "Ban can dang nhap admin de tai kho du lieu.",
+                error: "Bạn cần đăng nhập admin để tải kho dữ liệu.",
             };
         }
 
@@ -113,14 +113,14 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tai du lieu admin.";
+            const message = error instanceof Error ? error.message : "Không thể tải dữ liệu admin.";
             set({ isLoading: false, error: message });
             return { success: false, error: message };
         }
     },
     createProduct: async (payload) => {
         const accessToken = token();
-        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de tao san pham." };
+        if (!accessToken) return { success: false, error: "Bạn cần đăng nhập admin để tạo sản phẩm." };
 
         set({ isSaving: true, error: null });
 
@@ -144,14 +144,14 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tao san pham.";
+            const message = error instanceof Error ? error.message : "Không thể tạo sản phẩm.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
     },
     updateProduct: async (productId, payload) => {
         const accessToken = token();
-        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de cap nhat san pham." };
+        if (!accessToken) return { success: false, error: "Bạn cần đăng nhập admin để cập nhật sản phẩm." };
 
         set({ isSaving: true, error: null });
 
@@ -175,14 +175,14 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the cap nhat san pham.";
+            const message = error instanceof Error ? error.message : "Không thể cập nhật sản phẩm.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
     },
     deleteProduct: async (productId) => {
         const accessToken = token();
-        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de xoa san pham." };
+        if (!accessToken) return { success: false, error: "Bạn cần đăng nhập admin để xóa sản phẩm." };
 
         set({ isSaving: true, error: null });
 
@@ -205,14 +205,14 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the xoa san pham.";
+            const message = error instanceof Error ? error.message : "Không thể xóa sản phẩm.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
     },
     createCategory: async (payload) => {
         const accessToken = token();
-        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de tao danh muc." };
+        if (!accessToken) return { success: false, error: "Bạn cần đăng nhập admin để tạo danh mục." };
 
         set({ isSaving: true, error: null });
 
@@ -236,14 +236,14 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tao danh muc.";
+            const message = error instanceof Error ? error.message : "Không thể tạo danh mục.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
     },
     updateCategory: async (categoryId, payload) => {
         const accessToken = token();
-        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de cap nhat danh muc." };
+        if (!accessToken) return { success: false, error: "Bạn cần đăng nhập admin để cập nhật danh mục." };
 
         set({ isSaving: true, error: null });
 
@@ -267,14 +267,14 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the cap nhat danh muc.";
+            const message = error instanceof Error ? error.message : "Không thể cập nhật danh mục.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
     },
     deleteCategory: async (categoryId) => {
         const accessToken = token();
-        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de xoa danh muc." };
+        if (!accessToken) return { success: false, error: "Bạn cần đăng nhập admin để xóa danh mục." };
 
         set({ isSaving: true, error: null });
 
@@ -297,7 +297,7 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the xoa danh muc.";
+            const message = error instanceof Error ? error.message : "Không thể xóa danh mục.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }

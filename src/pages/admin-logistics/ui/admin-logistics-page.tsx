@@ -99,13 +99,13 @@ export function AdminLogisticsPage() {
         const result = await updateStatus(String(activeOrderSummary.id), nextStatus, note);
 
         if (!result.success || !result.data) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat trang thai don hang." });
+            pushToast({ tone: "warning", message: result.error ?? "Không thể cập nhật trạng thái đơn hàng." });
             return;
         }
 
         pushToast({
             tone: "success",
-            message: `Da cap nhat ${result.data.order_no} sang ${customerOrderStatusLabels[result.data.status] ?? fallbackBackendLabel(result.data.status)}.`,
+            message: `Đã cập nhật ${result.data.order_no} sang ${customerOrderStatusLabels[result.data.status] ?? fallbackBackendLabel(result.data.status)}.`,
         });
         setNote("");
     }
@@ -124,14 +124,14 @@ export function AdminLogisticsPage() {
         if (!result.success || !result.data) {
             pushToast({
                 tone: "warning",
-                message: result.error ?? "Khong the cap nhat trang thai thanh toan.",
+                message: result.error ?? "Không thể cập nhật trạng thái thanh toán.",
             });
             return;
         }
 
         pushToast({
             tone: "success",
-            message: `Da cap nhat thanh toan ${result.data.order_no} sang ${customerPaymentStatusLabels[result.data.payment?.payment_status ?? nextPaymentStatus] ?? fallbackBackendLabel(result.data.payment?.payment_status ?? nextPaymentStatus)}.`,
+            message: `Đã cập nhật thanh toán ${result.data.order_no} sang ${customerPaymentStatusLabels[result.data.payment?.payment_status ?? nextPaymentStatus] ?? fallbackBackendLabel(result.data.payment?.payment_status ?? nextPaymentStatus)}.`,
         });
         setPaymentNote("");
     }
@@ -141,7 +141,7 @@ export function AdminLogisticsPage() {
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
                 <input
                     className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                    placeholder="Loc theo ma don, ten khach hang hoac email..."
+                    placeholder="Lọc theo mã đơn, tên khách hàng hoặc email..."
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                 />
@@ -150,7 +150,7 @@ export function AdminLogisticsPage() {
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
                 >
-                    <option value="all">Tat ca trang thai</option>
+                    <option value="all">Tất cả trạng thái</option>
                     {ORDER_STATUSES.map((status) => (
                         <option key={status} value={status}>
                             {customerOrderStatusLabels[status] ?? fallbackBackendLabel(status)}
@@ -164,11 +164,11 @@ export function AdminLogisticsPage() {
             <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                 <SurfaceCard className="space-y-4">
                     {isLoading && orders.length === 0 ? (
-                        <p className="text-sm text-on-surface-variant">Dang tai danh sach don hang...</p>
+                        <p className="text-sm text-on-surface-variant">Đang tải danh sách đơn hàng...</p>
                     ) : null}
                     {!isLoading && filteredOrders.length === 0 ? (
                         <p className="text-sm text-on-surface-variant">
-                            Chua co don hang nao phu hop bo loc hien tai.
+                            Chưa có đơn hàng nào phù hợp bộ lọc hiện tại.
                         </p>
                     ) : null}
                     {filteredOrders.map((order) => (
@@ -188,7 +188,7 @@ export function AdminLogisticsPage() {
                                 </span>
                             </div>
                             <p className="mt-2 text-sm text-on-surface-variant">
-                                {order.customer?.full_name ?? "Khach hang khong ro"}
+                                {order.customer?.full_name ?? "Khách hàng không rõ"}
                             </p>
                             <p className="mt-1 text-sm text-on-surface-variant">{formatDate(order.created_at)}</p>
                             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
@@ -206,26 +206,26 @@ export function AdminLogisticsPage() {
 
                 <SurfaceCard className="space-y-5">
                     {!activeOrderSummary ? (
-                        <p className="text-sm text-on-surface-variant">Chon mot don hang de xem chi tiet.</p>
+                        <p className="text-sm text-on-surface-variant">Chọn một đơn hàng để xem chi tiết.</p>
                     ) : (
                         <>
                             <div>
                                 <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Don dang chon
+                                    Đơn đang chọn
                                 </p>
                                 <h3 className="mt-2 font-headline text-xl font-bold">
                                     {activeOrderSummary.order_no}
                                 </h3>
                                 <p className="mt-2 text-sm text-on-surface-variant">
-                                    {activeOrderSummary.customer?.full_name ?? "Khach hang khong ro"} -{" "}
-                                    {activeOrderSummary.customer?.email ?? "Khong co email"}
+                                    {activeOrderSummary.customer?.full_name ?? "Khách hàng không rõ"} -{" "}
+                                    {activeOrderSummary.customer?.email ?? "Không có email"}
                                 </p>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="rounded-2xl bg-surface-container-low p-4">
                                     <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                        Trang thai don
+                                        Trạng thái đơn
                                     </p>
                                     <p className="mt-2 font-semibold">
                                         {customerOrderStatusLabels[activeOrderSummary.status] ??
@@ -234,13 +234,13 @@ export function AdminLogisticsPage() {
                                 </div>
                                 <div className="rounded-2xl bg-surface-container-low p-4">
                                     <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                        Thanh toan
+                                        Thanh toán
                                     </p>
                                     <p className="mt-2 font-semibold">
                                         {activeOrderSummary.payment
                                             ? customerPaymentStatusLabels[activeOrderSummary.payment.payment_status] ??
                                               fallbackBackendLabel(activeOrderSummary.payment.payment_status)
-                                            : "Chua co du lieu"}
+                                            : "Chưa có dữ liệu"}
                                     </p>
                                 </div>
                             </div>
@@ -249,39 +249,39 @@ export function AdminLogisticsPage() {
                                 <>
                                     <div className="space-y-3 rounded-2xl bg-surface-container-low p-4 text-sm">
                                         <p>
-                                            <span className="font-medium">Nguoi nhan:</span>{" "}
+                                            <span className="font-medium">Người nhận:</span>{" "}
                                             {activeOrder.recipient_name}
                                         </p>
                                         <p>
-                                            <span className="font-medium">Dien thoai:</span>{" "}
+                                            <span className="font-medium">Điện thoại:</span>{" "}
                                             {activeOrder.recipient_phone}
                                         </p>
                                         <p>
-                                            <span className="font-medium">Dia chi:</span>{" "}
+                                            <span className="font-medium">Địa chỉ:</span>{" "}
                                             {activeOrder.shipping_address}
                                         </p>
                                         <p>
-                                            <span className="font-medium">Phuong thuc:</span>{" "}
+                                            <span className="font-medium">Phương thức:</span>{" "}
                                             {customerPaymentMethodLabels[activeOrder.payment_method] ??
                                                 fallbackBackendLabel(activeOrder.payment_method)}
                                         </p>
                                         <p>
-                                            <span className="font-medium">Cong thanh toan:</span>{" "}
-                                            {activeOrder.payment?.gateway_name ?? "Khong co"}
+                                            <span className="font-medium">Cổng thanh toán:</span>{" "}
+                                            {activeOrder.payment?.gateway_name ?? "Không có"}
                                         </p>
                                         <p>
-                                            <span className="font-medium">Ma giao dich:</span>{" "}
-                                            {activeOrder.payment?.transaction_code ?? "Khong co"}
+                                            <span className="font-medium">Mã giao dịch:</span>{" "}
+                                            {activeOrder.payment?.transaction_code ?? "Không có"}
                                         </p>
                                         <p>
-                                            <span className="font-medium">Ghi chu:</span>{" "}
-                                            {activeOrder.note || "Khong co"}
+                                            <span className="font-medium">Ghi chú:</span>{" "}
+                                            {activeOrder.note || "Không có"}
                                         </p>
                                     </div>
 
                                     <div className="space-y-3 rounded-2xl bg-surface-container-low p-4">
                                         <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                            San pham trong don
+                                            Sản phẩm trong đơn
                                         </p>
                                         {activeOrder.items.map((item) => (
                                             <div
@@ -303,7 +303,7 @@ export function AdminLogisticsPage() {
 
                                     <div className="space-y-4 rounded-2xl bg-surface-container-low p-4">
                                         <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                            Cap nhat trang thai don
+                                            Cập nhật trạng thái đơn
                                         </p>
                                         <select
                                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none"
@@ -319,20 +319,20 @@ export function AdminLogisticsPage() {
                                         </select>
                                         <textarea
                                             className="min-h-24 w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                                            placeholder="Ghi chu cho lich su trang thai don"
+                                            placeholder="Ghi chú cho lịch sử trạng thái đơn"
                                             value={note}
                                             onChange={(event) => setNote(event.target.value)}
                                         />
                                         <div className="flex justify-end">
                                             <Button onClick={() => void handleUpdateStatus()} disabled={isSaving}>
-                                                {isSaving ? "Dang cap nhat..." : "Luu trang thai don"}
+                                                {isSaving ? "Đang cập nhật..." : "Lưu trạng thái đơn"}
                                             </Button>
                                         </div>
                                     </div>
 
                                     <div className="space-y-4 rounded-2xl bg-surface-container-low p-4">
                                         <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                            Cap nhat thanh toan
+                                            Cập nhật thanh toán
                                         </p>
                                         <select
                                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none"
@@ -348,7 +348,7 @@ export function AdminLogisticsPage() {
                                         </select>
                                         <textarea
                                             className="min-h-24 w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                                            placeholder="Ghi chu cho lich su thanh toan"
+                                            placeholder="Ghi chú cho lịch sử thanh toán"
                                             value={paymentNote}
                                             onChange={(event) => setPaymentNote(event.target.value)}
                                         />
@@ -357,18 +357,18 @@ export function AdminLogisticsPage() {
                                                 onClick={() => void handleUpdatePaymentStatus()}
                                                 disabled={isSaving}
                                             >
-                                                {isSaving ? "Dang cap nhat..." : "Luu trang thai thanh toan"}
+                                                {isSaving ? "Đang cập nhật..." : "Lưu trạng thái thanh toán"}
                                             </Button>
                                         </div>
                                     </div>
 
                                     <div className="space-y-3">
                                         <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                            Lich su trang thai
+                                            Lịch sử trạng thái
                                         </p>
                                         {activeOrder.status_history.length === 0 ? (
                                             <div className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                                                Chua co lich su trang thai
+                                                Chưa có lịch sử trạng thái
                                             </div>
                                         ) : null}
                                         {activeOrder.status_history.map((history) => (
@@ -388,7 +388,7 @@ export function AdminLogisticsPage() {
                                     </div>
                                 </>
                             ) : (
-                                <p className="text-sm text-on-surface-variant">Dang tai chi tiet don hang...</p>
+                                <p className="text-sm text-on-surface-variant">Đang tải chi tiết đơn hàng...</p>
                             )}
                         </>
                     )}

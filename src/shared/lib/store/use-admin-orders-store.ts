@@ -41,7 +41,7 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function token() {
     return useAuthStore.getState().accessToken;
@@ -71,7 +71,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
         const accessToken = token();
 
         if (!accessToken) {
-            return { success: false, error: "Ban can dang nhap admin de xem don hang." };
+            return { success: false, error: "Bạn cần đăng nhập admin để xem đơn hàng." };
         }
 
         set({ isLoading: true, error: null });
@@ -94,7 +94,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tai danh sach don hang.";
+            const message = error instanceof Error ? error.message : "Không thể tải danh sách đơn hàng.";
             set({ isLoading: false, error: message });
             return { success: false, error: message };
         }
@@ -109,7 +109,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
         const accessToken = token();
 
         if (!accessToken) {
-            return { success: false, error: "Ban can dang nhap admin de xem chi tiet don hang." };
+            return { success: false, error: "Bạn cần đăng nhập admin để xem chi tiết đơn hàng." };
         }
 
         set({ isLoading: true, error: null });
@@ -138,7 +138,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tai chi tiet don hang.";
+            const message = error instanceof Error ? error.message : "Không thể tải chi tiết đơn hàng.";
             set({ isLoading: false, error: message });
             return { success: false, error: message };
         }
@@ -147,7 +147,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
         const accessToken = token();
 
         if (!accessToken) {
-            return { success: false, error: "Ban can dang nhap admin de cap nhat trang thai." };
+            return { success: false, error: "Bạn cần đăng nhập admin để cập nhật trạng thái." };
         }
 
         set({ isSaving: true, error: null });
@@ -181,7 +181,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the cap nhat trang thai don hang.";
+            const message = error instanceof Error ? error.message : "Không thể cập nhật trạng thái đơn hàng.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -190,7 +190,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
         const accessToken = token();
 
         if (!accessToken) {
-            return { success: false, error: "Ban can dang nhap admin de cap nhat trang thai thanh toan." };
+            return { success: false, error: "Bạn cần đăng nhập admin để cập nhật trạng thái thanh toán." };
         }
 
         set({ isSaving: true, error: null });
@@ -224,7 +224,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the cap nhat trang thai thanh toan.";
+            const message = error instanceof Error ? error.message : "Không thể cập nhật trạng thái thanh toán.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }

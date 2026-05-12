@@ -43,7 +43,7 @@ export function LoginPage() {
         const result = await login(email, password);
 
         if (!result.success) {
-            setError(result.error ?? "Dang nhap that bai.");
+            setError(result.error ?? "Đăng nhập thất bại.");
             return;
         }
 
@@ -51,7 +51,7 @@ export function LoginPage() {
         const role = nextSession?.user.role;
 
         if (!role) {
-            setError("Khong xac dinh duoc vai tro sau khi dang nhap.");
+            setError("Không xác định được vai trò sau khi đăng nhập.");
             return;
         }
 
@@ -59,7 +59,7 @@ export function LoginPage() {
             const syncResult = await syncGuestCart();
 
             if (!syncResult.success) {
-                setError(syncResult.error ?? "Khong the dong bo gio hang sau dang nhap.");
+                setError(syncResult.error ?? "Không thể đồng bộ giỏ hàng sau đăng nhập.");
                 return;
             }
         }
@@ -72,7 +72,7 @@ export function LoginPage() {
             <div className="grid w-full gap-8 lg:grid-cols-[1fr_0.95fr]">
                 <SurfaceCard className="space-y-6">
                     <div>
-                        <p className="text-xs uppercase tracking-widest text-primary">Dang nhap he thong</p>
+                        <p className="text-xs uppercase tracking-widest text-primary">Đăng nhập hệ thống</p>
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -84,7 +84,7 @@ export function LoginPage() {
                                     const result = loginAsRole(credential.role);
 
                                     if (!result.success) {
-                                        setError(result.error ?? "Khong the dang nhap nhanh.");
+                                        setError(result.error ?? "Không thể đăng nhập nhanh.");
                                         return;
                                     }
 
@@ -111,7 +111,7 @@ export function LoginPage() {
                             />
                         </label>
                         <label className="block space-y-2 text-sm">
-                            <span className="font-medium text-on-surface">Mat khau</span>
+                            <span className="font-medium text-on-surface">Mật khẩu</span>
                             <input
                                 className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                                 type="password"
@@ -122,7 +122,7 @@ export function LoginPage() {
                         </label>
                         {error ? <p className="text-sm text-error">{error}</p> : null}
                         <Button className="w-full" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-                            {isSubmitting ? "Dang dang nhap..." : "Dang nhap"}
+                            {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
                         </Button>
                     </div>
                 </SurfaceCard>

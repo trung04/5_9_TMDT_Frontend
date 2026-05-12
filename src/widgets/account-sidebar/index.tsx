@@ -24,19 +24,19 @@ export function AccountSidebar({ profile, rewards }: ProfileSidebarProps) {
             <div className="rounded-3xl bg-surface-container-low p-4">
                 <nav className="flex flex-col gap-2">
                     <NavLink className={itemClasses} to={routes.accountProfile}>
-                        Thong tin ca nhan
+                        Thông tin cá nhân
                     </NavLink>
                     <NavLink className={itemClasses} to={routes.accountWishlist}>
-                        Danh sach yeu thich
+                        Danh sách yêu thích
                     </NavLink>
                     <NavLink className={itemClasses} to={routes.accountOrders}>
-                        Lich su don hang
+                        Lịch sử đơn hàng
                     </NavLink>
                     <Link
                         className="block rounded-full px-4 py-2.5 text-sm font-medium text-error transition hover:bg-surface-container hover:text-error"
                         to={routes.logout}
                     >
-                        Dang xuat
+                        Đăng xuất
                     </Link>
                 </nav>
             </div>

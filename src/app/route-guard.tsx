@@ -19,7 +19,7 @@ export function RouteGuard({ allowedRoles, children }: RouteGuardProps) {
     if (isHydrating) {
         return (
             <div className="mx-auto flex min-h-[40vh] max-w-7xl items-center justify-center px-6 text-sm text-on-surface-variant">
-                Dang khoi tao phien dang nhap...
+                Đang khởi tạo phiên đăng nhập...
             </div>
         );
     }

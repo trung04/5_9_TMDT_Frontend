@@ -53,7 +53,7 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function authState() {
     return useAuthStore.getState();

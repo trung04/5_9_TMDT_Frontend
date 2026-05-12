@@ -36,7 +36,7 @@ export function OrderSuccessPage() {
         return (
             <div className="mx-auto max-w-5xl px-6 pb-16 pt-24">
                 <div className="rounded-3xl bg-surface-container-low p-8 text-center text-on-surface-variant">
-                    Dang tai chi tiet don hang...
+                    Đang tải chi tiết đơn hàng...
                 </div>
             </div>
         );
@@ -49,16 +49,16 @@ export function OrderSuccessPage() {
     return (
         <div className="mx-auto max-w-5xl px-6 pb-16 pt-24">
             <section className="space-y-6">
-                <Badge tone="success">Dat hang thanh cong</Badge>
+                <Badge tone="success">Đặt hàng thành công</Badge>
                 <div>
                     <h1 className="font-headline text-2xl font-bold tracking-tight text-on-surface">
-                        Don {order.orderNo} da duoc ghi nhan.
+                        Đơn {order.orderNo} đã được ghi nhận.
                     </h1>
                 </div>
                 <div className="flex flex-wrap gap-3">
-                    <ButtonLink to={routes.accountOrderDetail(order.id)}>Xem don hang</ButtonLink>
+                    <ButtonLink to={routes.accountOrderDetail(order.id)}>Xem đơn hàng</ButtonLink>
                     <ButtonLink to={routes.products} variant="secondary">
-                        Tiep tuc mua sam
+                        Tiếp tục mua sắm
                     </ButtonLink>
                 </div>
             </section>
@@ -66,12 +66,12 @@ export function OrderSuccessPage() {
             <section className="mt-10 grid gap-6 xl:grid-cols-[1fr_0.95fr]">
                 <SurfaceCard className="space-y-4">
                     <h2 className="font-headline text-2xl font-bold text-on-surface">
-                        Tom tat don moi
+                        Tóm tắt đơn mới
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="rounded-3xl bg-surface-container-low p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Ngay dat
+                                Ngày đặt
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
                                 {formatDate(order.createdAt)}
@@ -79,7 +79,7 @@ export function OrderSuccessPage() {
                         </div>
                         <div className="rounded-3xl bg-surface-container-low p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Tong cong
+                                Tổng cộng
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
                                 {formatCurrency(order.totalAmount)}
@@ -87,7 +87,7 @@ export function OrderSuccessPage() {
                         </div>
                         <div className="rounded-3xl bg-surface-container-low p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Phuong thuc thanh toan
+                                Phương thức thanh toán
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
                                 {customerPaymentMethodLabels[order.paymentMethod] ??
@@ -96,7 +96,7 @@ export function OrderSuccessPage() {
                         </div>
                         <div className="rounded-3xl bg-surface-container-low p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Trang thai don
+                                Trạng thái đơn
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
                                 {customerOrderStatusLabels[order.status] ??
@@ -106,7 +106,7 @@ export function OrderSuccessPage() {
                     </div>
                     <div className="rounded-3xl bg-surface-container-low p-5">
                         <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                            Dia chi nhan
+                            Địa chỉ nhận
                         </p>
                         <p className="mt-2 text-sm leading-6 text-on-surface">
                             {order.shippingAddress}
@@ -116,49 +116,49 @@ export function OrderSuccessPage() {
 
                 <SurfaceCard tone="low" className="space-y-4">
                     <h2 className="font-headline text-2xl font-bold text-on-surface">
-                        Theo doi thanh toan
+                        Theo dõi thanh toán
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2">
                         <div className="rounded-3xl bg-surface-container-lowest p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Trang thai thanh toan
+                                Trạng thái thanh toán
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
                                 {order.payment
                                     ? customerPaymentStatusLabels[order.payment.paymentStatus] ??
                                       fallbackBackendLabel(order.payment.paymentStatus)
-                                    : "Chua co du lieu thanh toan"}
+                                    : "Chưa có dữ liệu thanh toán"}
                             </p>
                         </div>
                         <div className="rounded-3xl bg-surface-container-lowest p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Cong thanh toan
+                                Cổng thanh toán
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
-                                {order.payment?.gatewayName ?? "Thanh toan khi nhan hang"}
+                                {order.payment?.gatewayName ?? "Thanh toán khi nhận hàng"}
                             </p>
                         </div>
                         <div className="rounded-3xl bg-surface-container-lowest p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Ma giao dich
+                                Mã giao dịch
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
-                                {order.payment?.transactionCode ?? "Se xuat hien sau khi tao don"}
+                                {order.payment?.transactionCode ?? "Sẽ xuất hiện sau khi tạo đơn"}
                             </p>
                         </div>
                         <div className="rounded-3xl bg-surface-container-lowest p-5">
                             <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Thoi diem cap nhat
+                                Thời điểm cập nhật
                             </p>
                             <p className="mt-2 font-semibold text-on-surface">
-                                {order.payment?.paidAt ? formatDate(order.payment.paidAt) : "Dang cho xu ly"}
+                                {order.payment?.paidAt ? formatDate(order.payment.paidAt) : "Đang chờ xử lý"}
                             </p>
                         </div>
                     </div>
                     <div className="rounded-3xl bg-surface-container-lowest p-5 text-sm text-on-surface-variant">
                         {order.paymentMethod === "COD"
-                            ? "Ban thanh toan tien mat khi nhan hang."
-                            : "Don hang da ghi nhan phuong thuc thanh toan cua ban va dang cho admin xac nhan."}
+                            ? "Bạn thanh toán tiền mặt khi nhận hàng."
+                            : "Đơn hàng đã ghi nhận phương thức thanh toán của bạn và đang chờ admin xác nhận."}
                     </div>
                     <div className="space-y-3">
                         {order.items.map((item) => (

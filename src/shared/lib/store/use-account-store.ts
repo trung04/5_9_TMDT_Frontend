@@ -119,7 +119,7 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function authState() {
     return useAuthStore.getState();
@@ -184,7 +184,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         if (!token) {
             return {
                 success: false,
-                error: "Ban can dang nhap lai de xem thong tin tai khoan.",
+                error: "Bạn cần đăng nhập lại để xem thông tin tài khoản.",
             };
         }
 
@@ -210,7 +210,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             }
 
             const message =
-                error instanceof Error ? error.message : "Khong the tai thong tin tai khoan.";
+                error instanceof Error ? error.message : "Không thể tải thông tin tài khoản.";
             set({ isLoading: false, error: message });
             return { success: false, error: message };
         }
@@ -221,7 +221,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         if (!token) {
             return {
                 success: false,
-                error: "Ban can dang nhap lai de cap nhat tai khoan.",
+                error: "Bạn cần đăng nhập lại để cập nhật tài khoản.",
             };
         }
 
@@ -254,7 +254,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             }
 
             const message =
-                error instanceof Error ? error.message : "Khong the cap nhat tai khoan.";
+                error instanceof Error ? error.message : "Không thể cập nhật tài khoản.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -265,7 +265,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de luu dia chi." };
+            return { success: false, error: "Bạn cần đăng nhập lại để lưu địa chỉ." };
         }
 
         set({ isSaving: true, error: null });
@@ -295,7 +295,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the them dia chi.";
+            const message = error instanceof Error ? error.message : "Không thể thêm địa chỉ.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -304,7 +304,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de cap nhat dia chi." };
+            return { success: false, error: "Bạn cần đăng nhập lại để cập nhật địa chỉ." };
         }
 
         set({ isSaving: true, error: null });
@@ -338,7 +338,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             }
 
             const message =
-                error instanceof Error ? error.message : "Khong the cap nhat dia chi.";
+                error instanceof Error ? error.message : "Không thể cập nhật địa chỉ.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -347,7 +347,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de xoa dia chi." };
+            return { success: false, error: "Bạn cần đăng nhập lại để xóa địa chỉ." };
         }
 
         set({ isSaving: true, error: null });
@@ -372,7 +372,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the xoa dia chi.";
+            const message = error instanceof Error ? error.message : "Không thể xóa địa chỉ.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -381,7 +381,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de dat dia chi mac dinh." };
+            return { success: false, error: "Bạn cần đăng nhập lại để đặt địa chỉ mặc định." };
         }
 
         set({ isSaving: true, error: null });
@@ -407,7 +407,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             }
 
             const message =
-                error instanceof Error ? error.message : "Khong the cap nhat dia chi mac dinh.";
+                error instanceof Error ? error.message : "Không thể cập nhật địa chỉ mặc định.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -416,7 +416,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de doi mat khau." };
+            return { success: false, error: "Bạn cần đăng nhập lại để đổi mật khẩu." };
         }
 
         set({ isSaving: true, error: null });
@@ -441,7 +441,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             }
 
             const message =
-                error instanceof Error ? error.message : "Khong the doi mat khau luc nay.";
+                error instanceof Error ? error.message : "Không thể đổi mật khẩu lúc này.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -450,7 +450,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de doi thuong." };
+            return { success: false, error: "Bạn cần đăng nhập lại để đổi thưởng." };
         }
 
         set({ isSaving: true, error: null });
@@ -476,7 +476,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the doi thuong.";
+            const message = error instanceof Error ? error.message : "Không thể đổi thưởng.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
@@ -485,7 +485,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de xem thong bao." };
+            return { success: false, error: "Bạn cần đăng nhập lại để xem thông báo." };
         }
 
         set({ isNotificationsLoading: true, error: null });
@@ -509,7 +509,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tai thong bao.";
+            const message = error instanceof Error ? error.message : "Không thể tải thông báo.";
             set({ isNotificationsLoading: false, error: message });
             return { success: false, error: message };
         }
@@ -518,7 +518,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de cap nhat thong bao." };
+            return { success: false, error: "Bạn cần đăng nhập lại để cập nhật thông báo." };
         }
 
         try {
@@ -547,7 +547,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             }
 
             const message =
-                error instanceof Error ? error.message : "Khong the cap nhat thong bao.";
+                error instanceof Error ? error.message : "Không thể cập nhật thông báo.";
             set({ error: message });
             return { success: false, error: message };
         }
@@ -556,7 +556,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de xem khieu nai." };
+            return { success: false, error: "Bạn cần đăng nhập lại để xem khiếu nại." };
         }
 
         set({ isComplaintsLoading: true, error: null });
@@ -580,7 +580,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the tai khieu nai.";
+            const message = error instanceof Error ? error.message : "Không thể tải khiếu nại.";
             set({ isComplaintsLoading: false, error: message });
             return { success: false, error: message };
         }
@@ -589,7 +589,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
         const token = customerToken();
 
         if (!token) {
-            return { success: false, error: "Ban can dang nhap lai de gui khieu nai." };
+            return { success: false, error: "Bạn cần đăng nhập lại để gửi khiếu nại." };
         }
 
         try {
@@ -619,7 +619,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            const message = error instanceof Error ? error.message : "Khong the gui khieu nai.";
+            const message = error instanceof Error ? error.message : "Không thể gửi khiếu nại.";
             set({ error: message });
             return { success: false, error: message };
         }

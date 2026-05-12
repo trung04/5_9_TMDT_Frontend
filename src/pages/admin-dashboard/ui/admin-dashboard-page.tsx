@@ -65,7 +65,7 @@ export function AdminDashboardPage() {
     useEffect(() => {
         if (!accessToken) {
             setIsLoading(false);
-            setError("Ban can dang nhap admin de xem dashboard.");
+            setError("Bạn cần đăng nhập admin để xem dashboard.");
             return;
         }
 
@@ -91,7 +91,7 @@ export function AdminDashboardPage() {
                     return;
                 }
 
-                setError(nextError instanceof Error ? nextError.message : "Khong the tai dashboard.");
+                setError(nextError instanceof Error ? nextError.message : "Không thể tải dashboard.");
                 setIsLoading(false);
             }
         }
@@ -113,37 +113,33 @@ export function AdminDashboardPage() {
                 id: "metric-sales",
                 label: "Doanh thu",
                 value: formatCurrency(dashboard.metrics.revenue),
-                delta: `${dashboard.metrics.delivered_orders} don da giao`,
+                delta: `${dashboard.metrics.delivered_orders} đơn đã giao`,
                 tone: "primary",
                 icon: "payments",
-                
             },
             {
                 id: "metric-orders",
-                label: "Don dang xu ly",
+                label: "Đơn đang xử lý",
                 value: `${dashboard.metrics.processing_orders}`,
-                delta: `${dashboard.recent_orders.length} don gan nhat`,
+                delta: `${dashboard.recent_orders.length} đơn gần nhất`,
                 tone: "secondary",
                 icon: "shopping_bag",
-                
             },
             {
                 id: "metric-suppliers",
-                label: "Nha cung cap",
+                label: "Nhà cung cấp",
                 value: `${dashboard.metrics.supplier_count}`,
-                delta: `${dashboard.metrics.product_count} san pham dang hoat dong`,
+                delta: `${dashboard.metrics.product_count} sản phẩm đang hoạt động`,
                 tone: "tertiary",
                 icon: "handshake",
-                
             },
             {
                 id: "metric-aov",
-                label: "Gia tri don TB",
+                label: "Giá trị đơn TB",
                 value: formatCurrency(dashboard.metrics.average_order_value),
-                delta: `${dashboard.metrics.complaint_count} khieu nai`,
+                delta: `${dashboard.metrics.complaint_count} khiếu nại`,
                 tone: "success",
                 icon: "sell",
-               
             },
         ];
     }, [dashboard]);
@@ -172,22 +168,20 @@ export function AdminDashboardPage() {
 
         pushToast({
             tone: "success",
-            message: "Da xuat bao cao dashboard tu du lieu backend.",
+            message: "Đã xuất báo cáo dashboard từ dữ liệu backend.",
         });
     }
 
     return (
         <div className="space-y-8">
             <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                <div className="space-y-1">
-                    
-                </div>
+                <div className="space-y-1" />
                 <div className="flex gap-3">
                     <Button variant="secondary" onClick={() => window.location.reload()}>
-                        Tai lai du lieu
+                        Tải lại dữ liệu
                     </Button>
                     <Button onClick={handleExportReport} disabled={!dashboard}>
-                        Xuat bao cao
+                        Xuất báo cáo
                     </Button>
                 </div>
             </section>
@@ -196,7 +190,7 @@ export function AdminDashboardPage() {
 
             {isLoading ? (
                 <SurfaceCard className="text-sm text-on-surface-variant">
-                    Dang tai du lieu dashboard...
+                    Đang tải dữ liệu dashboard...
                 </SurfaceCard>
             ) : null}
 
@@ -211,7 +205,7 @@ export function AdminDashboardPage() {
                     <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
                         <SurfaceCard className="space-y-4">
                             <div className="border-b border-outline-variant/15 pb-4">
-                                <h3 className="font-headline text-2xl font-bold">Don hang gan day</h3>
+                                <h3 className="font-headline text-2xl font-bold">Đơn hàng gần đây</h3>
                             </div>
                             <div className="space-y-3">
                                 {dashboard.recent_orders.map((order) => (
@@ -225,7 +219,7 @@ export function AdminDashboardPage() {
                                                     {order.order_no}
                                                 </p>
                                                 <p className="mt-1 text-sm text-on-surface-variant">
-                                                    {order.customer?.full_name ?? "Khach hang khong ro"} ·{" "}
+                                                    {order.customer?.full_name ?? "Khách hàng không rõ"} ·{" "}
                                                     {formatDate(order.created_at)}
                                                 </p>
                                             </div>
@@ -245,7 +239,7 @@ export function AdminDashboardPage() {
 
                         <SurfaceCard className="space-y-4">
                             <div>
-                                <h3 className="font-headline text-2xl font-bold">Nha cung cap noi bat</h3>
+                                <h3 className="font-headline text-2xl font-bold">Nhà cung cấp nổi bật</h3>
                             </div>
                             {dashboard.featured_suppliers.map((supplier) => (
                                 <div
@@ -254,11 +248,14 @@ export function AdminDashboardPage() {
                                 >
                                     <p className="font-headline text-lg font-semibold">{supplier.name}</p>
                                     <p className="mt-1 text-sm text-on-surface-variant">
-                                        {supplier.address ?? supplier.email ?? supplier.phone ?? "Khong co thong tin"}
+                                        {supplier.address ??
+                                            supplier.email ??
+                                            supplier.phone ??
+                                            "Không có thông tin"}
                                     </p>
                                     {supplier.contact_name ? (
                                         <p className="mt-2 text-sm text-on-surface-variant">
-                                            Lien he: {supplier.contact_name}
+                                            Liên hệ: {supplier.contact_name}
                                         </p>
                                     ) : null}
                                 </div>
@@ -270,19 +267,19 @@ export function AdminDashboardPage() {
                         {dashboard.featured_products.map((product) => (
                             <SurfaceCard key={product.id} className="space-y-3">
                                 <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Kho san pham
+                                    Kho sản phẩm
                                 </p>
                                 <h3 className="font-headline text-xl font-semibold">{product.name}</h3>
                                 <p className="text-sm text-on-surface-variant">{product.sku}</p>
                                 <p className="text-sm leading-6 text-on-surface-variant">
-                                    {product.description ?? "Chua co mo ta."}
+                                    {product.description ?? "Chưa có mô tả."}
                                 </p>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="font-semibold text-primary">
                                         {formatCurrency(numberValue(product.sale_price))}
                                     </span>
                                     <span className="text-on-surface-variant">
-                                        Ton kho: {product.stock_quantity}
+                                        Tồn kho: {product.stock_quantity}
                                     </span>
                                 </div>
                             </SurfaceCard>

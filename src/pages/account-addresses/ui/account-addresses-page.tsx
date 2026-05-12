@@ -37,7 +37,7 @@ export function AccountAddressesPage() {
 
     async function handleSubmit() {
         if (!form.label || !form.recipient || !form.phone || !form.line1 || !form.city) {
-            setMessage("Vui long dien day du thong tin dia chi.");
+            setMessage("Vui lòng điền đầy đủ thông tin địa chỉ.");
             return;
         }
 
@@ -46,16 +46,16 @@ export function AccountAddressesPage() {
             : await addAddress(form);
 
         if (!result.success) {
-            setMessage(result.error ?? "Khong the luu dia chi.");
+            setMessage(result.error ?? "Không thể lưu địa chỉ.");
             return;
         }
 
-        setMessage(editingAddress ? "Da cap nhat dia chi." : "Da them dia chi moi.");
+        setMessage(editingAddress ? "Đã cập nhật địa chỉ." : "Đã thêm địa chỉ mới.");
         setForm(emptyForm);
         setEditingId("");
         pushToast({
             tone: "success",
-            message: "So dia chi da duoc luu.",
+            message: "Sổ địa chỉ đã được lưu.",
         });
     }
 
@@ -64,9 +64,9 @@ export function AccountAddressesPage() {
             <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
                 <SurfaceCard className="space-y-5">
                     <div>
-                        <h1 className="font-headline text-2xl font-bold">So dia chi nhan hang</h1>
+                        <h1 className="font-headline text-2xl font-bold">Sổ địa chỉ nhận hàng</h1>
                         <p className="mt-2 text-on-surface-variant">
-                            Quan ly nhieu dia chi giao nhan va chon dia chi mac dinh cho checkout.
+                            Quản lý nhiều địa chỉ giao nhận và chọn địa chỉ mặc định cho checkout.
                         </p>
                     </div>
 
@@ -91,7 +91,7 @@ export function AccountAddressesPage() {
                                     </div>
                                     {address.isDefault ? (
                                         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-                                            Mac dinh
+                                            Mặc định
                                         </span>
                                     ) : null}
                                 </div>
@@ -111,7 +111,7 @@ export function AccountAddressesPage() {
                                             });
                                         }}
                                     >
-                                        Chinh sua
+                                        Chỉnh sửa
                                     </Button>
                                     <Button
                                         variant="outline"
@@ -123,12 +123,12 @@ export function AccountAddressesPage() {
                                             pushToast({
                                                 tone: result.success ? "success" : "warning",
                                                 message: result.success
-                                                    ? "Da cap nhat dia chi mac dinh."
-                                                    : (result.error ?? "Khong the dat dia chi mac dinh."),
+                                                    ? "Đã cập nhật địa chỉ mặc định."
+                                                    : (result.error ?? "Không thể đặt địa chỉ mặc định."),
                                             });
                                         }}
                                     >
-                                        Dat lam mac dinh
+                                        Đặt làm mặc định
                                     </Button>
                                     <Button
                                         variant="ghost"
@@ -140,12 +140,12 @@ export function AccountAddressesPage() {
                                             pushToast({
                                                 tone: result.success ? "success" : "warning",
                                                 message: result.success
-                                                    ? "Da xoa dia chi."
-                                                    : (result.error ?? "Khong the xoa dia chi."),
+                                                    ? "Đã xóa địa chỉ."
+                                                    : (result.error ?? "Không thể xóa địa chỉ."),
                                             });
                                         }}
                                     >
-                                        Xoa
+                                        Xóa
                                     </Button>
                                 </div>
                             </div>
@@ -155,14 +155,14 @@ export function AccountAddressesPage() {
 
                 <SurfaceCard tone="low" className="space-y-4">
                     <h2 className="font-headline text-2xl font-bold">
-                        {editingAddress ? "Chinh sua dia chi" : "Them dia chi moi"}
+                        {editingAddress ? "Chỉnh sửa địa chỉ" : "Thêm địa chỉ mới"}
                     </h2>
                     {[
-                        ["label", "Nhan goi nho"],
-                        ["recipient", "Nguoi nhan"],
-                        ["phone", "So dien thoai"],
-                        ["line1", "Dia chi"],
-                        ["city", "Thanh pho"],
+                        ["label", "Nhãn gợi nhớ"],
+                        ["recipient", "Người nhận"],
+                        ["phone", "Số điện thoại"],
+                        ["line1", "Địa chỉ"],
+                        ["city", "Thành phố"],
                     ].map(([key, label]) => (
                         <label key={key} className="block space-y-2 text-sm">
                             <span className="font-medium">{label}</span>
@@ -179,7 +179,7 @@ export function AccountAddressesPage() {
                         </label>
                     ))}
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Ghi chu</span>
+                        <span className="font-medium">Ghi chú</span>
                         <textarea
                             className="min-h-28 w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             value={form.note}
@@ -195,10 +195,10 @@ export function AccountAddressesPage() {
                     <div className="flex flex-wrap gap-3">
                         <Button onClick={() => void handleSubmit()} disabled={isSaving}>
                             {isSaving
-                                ? "Dang luu..."
+                                ? "Đang lưu..."
                                 : editingAddress
-                                  ? "Luu dia chi"
-                                  : "Them dia chi"}
+                                  ? "Lưu địa chỉ"
+                                  : "Thêm địa chỉ"}
                         </Button>
                         {editingAddress ? (
                             <Button
@@ -208,7 +208,7 @@ export function AccountAddressesPage() {
                                     setForm(emptyForm);
                                 }}
                             >
-                                Huy chinh sua
+                                Hủy chỉnh sửa
                             </Button>
                         ) : null}
                     </div>

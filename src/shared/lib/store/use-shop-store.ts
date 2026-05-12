@@ -36,7 +36,7 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function authState() {
     return useAuthStore.getState();
@@ -88,7 +88,7 @@ export const useShopStore = create<ShopState>()(
                 if (!token) {
                     return {
                         success: false,
-                        error: "Ban can dang nhap lai de tai wishlist.",
+                        error: "Bạn cần đăng nhập lại để tải wishlist.",
                     };
                 }
 
@@ -152,7 +152,7 @@ export const useShopStore = create<ShopState>()(
                         };
                     }
 
-                    const message = error instanceof Error ? error.message : "Khong the tai wishlist.";
+                    const message = error instanceof Error ? error.message : "Không thể tải wishlist.";
 
                     set({
                         isWishlistLoading: false,
@@ -188,7 +188,7 @@ export const useShopStore = create<ShopState>()(
                 if (!token || !parsedProductId) {
                     return {
                         success: false,
-                        error: "San pham khong hop le de cap nhat wishlist.",
+                        error: "Sản phẩm không hợp lệ để cập nhật wishlist.",
                     };
                 }
 
@@ -241,7 +241,7 @@ export const useShopStore = create<ShopState>()(
                         };
                     }
 
-                    const message = error instanceof Error ? error.message : "Khong the cap nhat wishlist.";
+                    const message = error instanceof Error ? error.message : "Không thể cập nhật wishlist.";
 
                     set({
                         isWishlistSaving: false,

@@ -53,8 +53,8 @@ export function AccountProfilePage() {
         pushToast({
             tone: result.success ? "success" : "warning",
             message: result.success
-                ? "Ho so khach hang da duoc cap nhat."
-                : (result.error ?? "Khong the cap nhat ho so."),
+                ? "Hồ sơ khách hàng đã được cập nhật."
+                : (result.error ?? "Không thể cập nhật hồ sơ."),
         });
     }
 
@@ -68,7 +68,7 @@ export function AccountProfilePage() {
             if (typeof source !== "string") {
                 pushToast({
                     tone: "warning",
-                    message: "Khong the doc tep anh da chon.",
+                    message: "Không thể đọc tệp ảnh đã chọn.",
                 });
                 return;
             }
@@ -87,7 +87,7 @@ export function AccountProfilePage() {
                 if (!context) {
                     pushToast({
                         tone: "warning",
-                        message: "Khong the xu ly anh da chon.",
+                        message: "Không thể xử lý ảnh đã chọn.",
                     });
                     return;
                 }
@@ -107,14 +107,14 @@ export function AccountProfilePage() {
                 pushToast({
                     tone: result.success ? "success" : "warning",
                     message: result.success
-                        ? "Anh dai dien da duoc thay moi."
-                        : (result.error ?? "Khong the cap nhat anh dai dien."),
+                        ? "Ảnh đại diện đã được thay mới."
+                        : (result.error ?? "Không thể cập nhật ảnh đại diện."),
                 });
             };
             image.onerror = () => {
                 pushToast({
                     tone: "warning",
-                    message: "Tep anh khong hop le.",
+                    message: "Tệp ảnh không hợp lệ.",
                 });
             };
             image.src = source;
@@ -135,11 +135,11 @@ export function AccountProfilePage() {
                                 name="inventory_2"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">Don hang cua toi</span>
+                            <span className="text-sm font-medium">Đơn hàng của tôi</span>
                         </Link>
                         <div className="flex w-full items-center gap-3 rounded-xl border-r-4 border-primary bg-primary/10 px-4 py-3 font-semibold text-primary">
                             <Icon name="person" className="text-xl" />
-                            <span className="text-sm">Thong tin ca nhan</span>
+                            <span className="text-sm">Thông tin cá nhân</span>
                         </div>
                         <button
                             className="group flex w-full items-center gap-3 px-4 py-3 text-left text-stone-500 transition-colors hover:text-green-600"
@@ -149,7 +149,7 @@ export function AccountProfilePage() {
                                 name="shield"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">Bao mat va mat khau</span>
+                            <span className="text-sm font-medium">Bảo mật và mật khẩu</span>
                         </button>
                         <button
                             className="group flex w-full items-center gap-3 px-4 py-3 text-left text-stone-500 transition-colors hover:text-green-600"
@@ -159,7 +159,7 @@ export function AccountProfilePage() {
                                 name="notifications"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">Thong bao</span>
+                            <span className="text-sm font-medium">Thông báo</span>
                         </button>
                         <button
                             className="group flex w-full items-center gap-3 px-4 py-3 text-left text-stone-500 transition-colors hover:text-green-600"
@@ -169,7 +169,7 @@ export function AccountProfilePage() {
                                 name="location_on"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">So dia chi</span>
+                            <span className="text-sm font-medium">Sổ địa chỉ</span>
                         </button>
                         <button
                             className="group flex w-full items-center gap-3 px-4 py-3 text-left text-stone-500 transition-colors hover:text-green-600"
@@ -179,7 +179,7 @@ export function AccountProfilePage() {
                                 name="gavel"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">Khieu nai va ho tro</span>
+                            <span className="text-sm font-medium">Khiếu nại và hỗ trợ</span>
                         </button>
                     </div>
                 </aside>
@@ -188,10 +188,10 @@ export function AccountProfilePage() {
                     <div className="flex flex-col justify-between gap-6 border-b border-outline-variant/15 pb-8 sm:flex-row sm:items-end">
                         <div>
                             <h1 className="text-2xl font-bold tracking-tight text-on-surface">
-                                Thong tin ca nhan
+                                Thông tin cá nhân
                             </h1>
                             <p className="mt-2 text-on-surface-variant">
-                                Quan ly ho so khach hang, thong tin lien he va kenh nhan cap nhat.
+                                Quản lý hồ sơ khách hàng, thông tin liên hệ và kênh nhận cập nhật.
                             </p>
                         </div>
                         <button
@@ -199,7 +199,7 @@ export function AccountProfilePage() {
                             disabled={isSaving}
                             onClick={() => void handleSaveChanges()}
                         >
-                            {isSaving ? "Dang luu..." : "Luu thay doi"}
+                            {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
                         </button>
                     </div>
 
@@ -225,16 +225,16 @@ export function AccountProfilePage() {
                             />
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-on-surface">Anh dai dien</h3>
+                            <h3 className="text-lg font-semibold text-on-surface">Ảnh đại diện</h3>
                             <p className="mb-3 text-sm text-on-surface-variant">
-                                Ho tro JPG, GIF hoac PNG. Anh se duoc luu vao tai khoan backend.
+                                Hỗ trợ JPG, GIF hoặc PNG. Ảnh sẽ được lưu vào tài khoản backend.
                             </p>
                             <div className="flex gap-3">
                                 <button
                                     className="rounded-lg border border-primary/20 px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/5"
                                     onClick={() => fileInputRef.current?.click()}
                                 >
-                                    Tai anh moi
+                                    Tải ảnh mới
                                 </button>
                                 <button
                                     className="rounded-lg px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/5"
@@ -244,12 +244,12 @@ export function AccountProfilePage() {
                                         pushToast({
                                             tone: result.success ? "success" : "warning",
                                             message: result.success
-                                                ? "Da go anh dai dien."
-                                                : (result.error ?? "Khong the go anh dai dien."),
+                                                ? "Đã gỡ ảnh đại diện."
+                                                : (result.error ?? "Không thể gỡ ảnh đại diện."),
                                         });
                                     }}
                                 >
-                                    Go anh
+                                    Gỡ ảnh
                                 </button>
                             </div>
                         </div>
@@ -258,12 +258,12 @@ export function AccountProfilePage() {
                     <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8">
                         <div className="flex items-center gap-3">
                             <span className="h-6 w-1 rounded-full bg-primary" />
-                            <h2 className="text-xl font-bold text-on-surface">Thong tin co ban</h2>
+                            <h2 className="text-xl font-bold text-on-surface">Thông tin cơ bản</h2>
                         </div>
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                                    Ho va ten
+                                    Họ và tên
                                 </label>
                                 <input
                                     className="w-full rounded-t-lg border-b-2 border-transparent bg-surface-container-highest px-4 py-3 transition-all focus:border-primary focus:ring-0"
@@ -284,7 +284,7 @@ export function AccountProfilePage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                                    So dien thoai
+                                    Số điện thoại
                                 </label>
                                 <input
                                     className="w-full rounded-t-lg border-b-2 border-transparent bg-surface-container-highest px-4 py-3 transition-all focus:border-primary focus:ring-0"
@@ -294,7 +294,7 @@ export function AccountProfilePage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                                    Thanh pho
+                                    Thành phố
                                 </label>
                                 <input
                                     className="w-full rounded-t-lg border-b-2 border-transparent bg-surface-container-highest px-4 py-3 transition-all focus:border-primary focus:ring-0"
@@ -305,7 +305,7 @@ export function AccountProfilePage() {
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                                Dia chi
+                                Địa chỉ
                             </label>
                             <input
                                 className="w-full rounded-t-lg border-b-2 border-transparent bg-surface-container-highest px-4 py-3 transition-all focus:border-primary focus:ring-0"
@@ -318,13 +318,13 @@ export function AccountProfilePage() {
                     <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8">
                         <div className="flex items-center gap-3">
                             <span className="h-6 w-1 rounded-full bg-primary" />
-                            <h2 className="text-xl font-bold text-on-surface">Tuy chon thong bao nhanh</h2>
+                            <h2 className="text-xl font-bold text-on-surface">Tùy chọn thông báo nhanh</h2>
                         </div>
                         <label className="flex items-center justify-between gap-4 rounded-xl bg-surface-container-low p-4">
                             <span>
-                                <span className="block font-medium">Nhan email ve bo suu tap moi</span>
+                                <span className="block font-medium">Nhận email về bộ sưu tập mới</span>
                                 <span className="text-sm text-on-surface-variant">
-                                    Cap nhat mua vu, dac san moi va uu dai hoi vien.
+                                    Cập nhật mùa vụ, đặc sản mới và ưu đãi hội viên.
                                 </span>
                             </span>
                             <input
@@ -336,9 +336,9 @@ export function AccountProfilePage() {
                         </label>
                         <label className="flex items-center justify-between gap-4 rounded-xl bg-surface-container-low p-4">
                             <span>
-                                <span className="block font-medium">Nhan SMS ve cap nhat don hang</span>
+                                <span className="block font-medium">Nhận SMS về cập nhật đơn hàng</span>
                                 <span className="text-sm text-on-surface-variant">
-                                    Dung cho cac don can giao nhanh hoac don qua tang.
+                                    Dùng cho các đơn cần giao nhanh hoặc đơn quà tặng.
                                 </span>
                             </span>
                             <input
