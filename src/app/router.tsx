@@ -46,20 +46,14 @@ export function AppRoutes() {
             <Route element={<StorefrontLayout />}>
                 <Route path={appRoutes.home} element={<HomePage />} />
                 <Route path={appRoutes.login} element={<LoginPage />} />
+                <Route path={appRoutes.register} element={<LoginPage />} />
                 <Route path={appRoutes.logout} element={<LogoutPage />} />
                 <Route path={appRoutes.unauthorized} element={<UnauthorizedPage />} />
                 <Route path={appRoutes.products} element={<ProductCatalogPage />} />
                 <Route path={appRoutes.productDetail()} element={<ProductDetailPage />} />
                 <Route path={appRoutes.story} element={<StoryPage />} />
                 <Route path={appRoutes.regions} element={<RegionsPage />} />
-                <Route
-                    path={appRoutes.checkout}
-                    element={
-                        <RouteGuard allowedRoles={["customer"]}>
-                            <CheckoutPage />
-                        </RouteGuard>
-                    }
-                />
+                <Route path={appRoutes.checkout} element={<CheckoutPage />} />
                 <Route
                     path={appRoutes.orderSuccess()}
                     element={

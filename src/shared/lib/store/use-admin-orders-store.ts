@@ -24,7 +24,14 @@ interface AdminOrdersState {
     error: string | null;
     loadOrders: () => Promise<AsyncResult<BackendAdminOrderSummary[]>>;
     loadOrder: (orderId: string) => Promise<AsyncResult<BackendAdminOrderDetail>>;
-    updateStatus: (orderId: string, status: string, note?: string) => Promise<AsyncResult<BackendAdminOrderDetail>>;
+    updateStatus: (
+        orderId: string,
+        status: string,
+        note?: string,
+        options?: {
+            restockInventory?: boolean;
+        },
+    ) => Promise<AsyncResult<BackendAdminOrderDetail>>;
     updatePaymentStatus: (
         orderId: string,
         paymentStatus: string,
@@ -57,6 +64,13 @@ function mergeSummary(detail: BackendAdminOrderDetail): BackendAdminOrderSummary
         shipping_fee: detail.shipping_fee,
         discount_amount: detail.discount_amount,
         total_amount: detail.total_amount,
+        stock_deducted: detail.stock_deducted,
+        stock_deducted_at: detail.stock_deducted_at,
+        shipping_carrier: detail.shipping_carrier,
+        shipping_code: detail.shipping_code,
+        shipped_at: detail.shipped_at,
+        delivered_at: detail.delivered_at,
+        cancelled_at: detail.cancelled_at,
         item_count: detail.item_count,
         customer: detail.customer ?? null,
         payment: detail.payment,
@@ -143,7 +157,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
             return { success: false, error: message };
         }
     },
-    updateStatus: async (orderId, status, note) => {
+    updateStatus: async (orderId, status, note, options) => {
         const accessToken = token();
 
         if (!accessToken) {
@@ -159,6 +173,7 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
                 body: {
                     status,
                     note: note?.trim() ? note.trim() : undefined,
+                    restock_inventory: options?.restockInventory,
                 },
             });
 

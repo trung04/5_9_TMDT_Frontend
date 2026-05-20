@@ -370,7 +370,8 @@ export function ProductCatalogPage() {
                                                 {formatCurrency(product.price)}
                                             </span>
                                             <button
-                                                className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary transition-all active:scale-90"
+                                                className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary transition-all active:scale-90 disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
+                                                disabled={(product.stockQuantity ?? 0) <= 0}
                                                 onClick={() => void addItem(product.id, 1)}
                                                 aria-label={`Thêm vào giỏ ${product.name}`}
                                             >
@@ -432,7 +433,8 @@ export function ProductCatalogPage() {
                                                     Xem chi tiết
                                                 </Link>
                                                 <button
-                                                    className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary"
+                                                    className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
+                                                    disabled={(product.stockQuantity ?? 0) <= 0}
                                                     onClick={() => void addItem(product.id, 1)}
                                                 >
                                                     Thêm vào giỏ

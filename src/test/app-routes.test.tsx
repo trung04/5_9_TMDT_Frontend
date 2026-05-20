@@ -55,7 +55,7 @@ describe("customer commerce routes", () => {
         vi.unstubAllGlobals();
     });
 
-    it("redirects anonymous checkout users to login and returns after backend login", async () => {
+    it("allows guest checkout access, then redirects to login when placing the order", async () => {
         const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
             const path = getRequestPath(input);
 
@@ -66,6 +66,53 @@ describe("customer commerce routes", () => {
                     token_type: "Bearer",
                     expires_at: "2026-04-20T10:00:00.000Z",
                     user: createBackendUser(),
+                });
+            }
+
+            if (path.endsWith("/api/account/profile")) {
+                return jsonResponse(
+                    {
+                        data: {
+                            user: {
+                                id: 1,
+                                full_name: "Nguyen Van A",
+                                email: "customer@example.com",
+                                phone: "0909123456",
+                                address: "123 Nguyen Trai",
+                                city: "Ha Noi",
+                                favorite_region: "Thai Nguyen",
+                                avatar: null,
+                                loyalty_points: 0,
+                                loyalty_tier: "Member",
+                                next_tier_points: 100,
+                                preferences: {
+                                    newsletter: false,
+                                    sms_alerts: false,
+                                    order_email: true,
+                                    security_alerts: true,
+                                },
+                                addresses: [],
+                                reward_history: [],
+                                created_at: "2026-04-20T00:00:00.000000Z",
+                            },
+                            reward_snapshot: {
+                                tier: "Member",
+                                points: 0,
+                                next_tier_points: 100,
+                                perks: [],
+                            },
+                        },
+                    },
+                    { status: 200 },
+                );
+            }
+
+            if (path.endsWith("/api/account/wishlist")) {
+                return jsonResponse({
+                    data: {
+                        product_ids: [],
+                        products: [],
+                    },
                 });
             }
 
@@ -89,11 +136,15 @@ describe("customer commerce routes", () => {
         const user = userEvent.setup();
         renderApp(routes.checkout);
 
-        expect(await screen.findByText(/Dang nhap he thong/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Dang nhap de dat hang/i })).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: /Dang nhap de dat hang/i }));
+        expect(await screen.findByLabelText(/Email/i)).toBeInTheDocument();
 
         await user.type(screen.getByLabelText(/Email/i), "customer@example.com");
-        await user.type(screen.getByLabelText(/Mat khau/i), "secret123");
-        await user.click(screen.getByRole("button", { name: /^Dang nhap$/i }));
+        await user.type(screen.getByLabelText(/Mật khẩu/i), "secret123");
+        await user.click(screen.getByRole("button", { name: /^Đăng nhập$/i }));
 
         expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
 
@@ -191,7 +242,8 @@ describe("customer commerce routes", () => {
 
         expect(await screen.findByText(/Tra huu co/i)).toBeInTheDocument();
 
-        await user.click(screen.getByRole("button", { name: /Them lai vao gio/i }));
+        await user.click(screen.getByRole("button", { name: /Xem chi tiết/i }));
+        await user.click(await screen.findByRole("button", { name: /Thêm lại vào giỏ/i }));
 
         await waitFor(() => {
             const reorderCall = fetchMock.mock.calls.find(([input, init]) => {

@@ -27,6 +27,7 @@ interface ProductPayload {
     sku: string;
     name: string;
     description?: string;
+    image_url?: string | null;
     sale_price: number;
     stock_quantity: number;
     is_active?: boolean;

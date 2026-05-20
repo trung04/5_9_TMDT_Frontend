@@ -161,6 +161,7 @@ export interface BackendProduct {
     sku: string;
     name: string;
     description: string;
+    image_url?: string | null;
     sale_price: number | string;
     stock_quantity: number;
     is_active: boolean;
@@ -280,8 +281,20 @@ export interface BackendPayment {
     gateway_name: string | null;
     gateway_reference: string | null;
     paid_at: string | null;
+    raw_payload?: Record<string, unknown> | null;
     created_at?: string;
     updated_at?: string;
+}
+
+export interface BackendPaymentStatusHistory {
+    id: number;
+    payment_id: number;
+    order_id: number;
+    changed_by_user_id: number | null;
+    from_status: string | null;
+    to_status: string;
+    note: string | null;
+    changed_at: string;
 }
 
 export interface BackendOrderSummary {
@@ -293,6 +306,13 @@ export interface BackendOrderSummary {
     shipping_fee: number | string;
     discount_amount: number | string;
     total_amount: number | string;
+    stock_deducted?: boolean;
+    stock_deducted_at?: string | null;
+    shipping_carrier?: string | null;
+    shipping_code?: string | null;
+    shipped_at?: string | null;
+    delivered_at?: string | null;
+    cancelled_at?: string | null;
     item_count: number;
     customer?: BackendUser | null;
     payment: BackendPayment | null;
@@ -325,9 +345,12 @@ export interface BackendOrderDetail extends BackendOrderSummary {
     recipient_phone: string;
     shipping_address: string;
     note: string | null;
+    allowed_next_statuses: string[];
+    allowed_payment_statuses?: string[];
     customer?: BackendUser | null;
     items: BackendOrderItem[];
     status_history: BackendOrderStatusHistory[];
+    payment_status_history: BackendPaymentStatusHistory[];
 }
 
 export interface BackendOrderDetailResponse {

@@ -84,6 +84,15 @@ export function ProductDetailPage() {
         setActiveTab("details");
     }, [addRecentlyViewed, product?.id]);
 
+    useEffect(() => {
+        if (!product) {
+            return;
+        }
+
+        const currentMaxAvailableQuantity = Math.max(1, product.stockQuantity ?? 0);
+        setQuantity((value) => Math.min(Math.max(1, value), currentMaxAvailableQuantity));
+    }, [product]);
+
     if (!product && status === "ready") {
         return <Navigate replace to={routes.products} />;
     }
@@ -111,8 +120,19 @@ export function ProductDetailPage() {
     const currentProduct = product;
     const isWishlisted = wishlistIds.includes(currentProduct.id);
     const activeMedia = currentProduct.gallery[activeMediaIndex] ?? currentProduct.gallery[0];
+    const currentStockQuantity = currentProduct.stockQuantity ?? 0;
+    const isOutOfStock = currentStockQuantity <= 0;
+    const maxAvailableQuantity = Math.max(1, currentStockQuantity);
+    const lowStockLabel =
+        currentStockQuantity > 0 && currentStockQuantity <= 5
+            ? `Chỉ còn ${currentProduct.stockQuantity} sản phẩm`
+            : null;
 
     function handleAddToCart(redirectToCheckout = false) {
+        if (isOutOfStock) {
+            return;
+        }
+
         void addItem(currentProduct.id, quantity);
 
         if (redirectToCheckout) {
@@ -237,6 +257,9 @@ export function ProductDetailPage() {
                     </div>
 
                     <div className="space-y-6">
+                        <p className={cn("text-sm font-medium", isOutOfStock ? "text-error" : lowStockLabel ? "text-amber-700" : "text-on-surface-variant")}>
+                            {isOutOfStock ? "Hết hàng" : lowStockLabel ?? `Còn ${currentProduct.stockQuantity} sản phẩm`}
+                        </p>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center rounded-full border border-outline-variant/20 bg-surface-container-low px-4 py-2">
                                 <button
@@ -256,7 +279,9 @@ export function ProductDetailPage() {
                                 <button
                                     type="button"
                                     className="flex h-8 w-8 items-center justify-center hover:text-primary"
-                                    onClick={() => setQuantity((value) => value + 1)}
+                                    onClick={() =>
+                                        setQuantity((value) => Math.min(maxAvailableQuantity, value + 1))
+                                    }
                                     aria-label="Tăng số lượng"
                                 >
                                     <Icon name="add" />

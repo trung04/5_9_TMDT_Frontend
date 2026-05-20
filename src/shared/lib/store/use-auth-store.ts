@@ -12,14 +12,14 @@ import { apiRequest, isUnauthorizedApiError } from "@/shared/api/backend-client"
 import { adaptBackendUserToSession } from "@/shared/api/storefront-adapters";
 import { routes } from "@/shared/config/routes";
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
-import { useShopStore } from "@/shared/lib/store/use-shop-store";
 import { runProtectedSessionCleanup } from "@/shared/lib/store/protected-session";
+import { useShopStore } from "@/shared/lib/store/use-shop-store";
 
 const demoCredentials: DemoCredential[] = [
     {
         id: "demo-admin",
         role: "admin",
-        displayName: "Quan tri demo",
+        displayName: "Quản trị demo",
         email: "admin@heritage.local",
         password: "123456",
         redirectTo: routes.adminDashboard,
@@ -27,7 +27,7 @@ const demoCredentials: DemoCredential[] = [
     {
         id: "demo-supplier",
         role: "supplier",
-        displayName: "Nha cung cap demo",
+        displayName: "Nhà cung cấp demo",
         email: "supplier@heritage.local",
         password: "123456",
         redirectTo: routes.supplierOrders,
@@ -42,9 +42,17 @@ const demoCredentials: DemoCredential[] = [
     },
 ];
 
-interface LoginResult {
+interface AuthActionResult {
     success: boolean;
     error?: string;
+}
+
+interface RegisterPayload {
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+    passwordConfirmation: string;
 }
 
 interface AuthState {
@@ -55,10 +63,11 @@ interface AuthState {
     authSource: AuthSource | null;
     isHydrating: boolean;
     isSubmitting: boolean;
-    login: (email: string, password: string) => Promise<LoginResult>;
-    loginAsRole: (role: UserRole) => LoginResult;
+    login: (email: string, password: string) => Promise<AuthActionResult>;
+    register: (payload: RegisterPayload) => Promise<AuthActionResult>;
+    loginAsRole: (role: UserRole) => AuthActionResult;
     logout: () => Promise<void>;
-    changePassword: (currentPassword: string, nextPassword: string) => LoginResult;
+    changePassword: (currentPassword: string, nextPassword: string) => AuthActionResult;
     hydrateSession: () => Promise<void>;
     clearSession: () => void;
     reset: () => void;
@@ -104,6 +113,36 @@ function clearAuthState(set: (payload: Partial<AuthState>) => void) {
     runProtectedSessionCleanup();
 }
 
+async function applyAuthenticatedBackendSession(
+    response: BackendAuthResponse,
+    set: (payload: Partial<AuthState>) => void,
+) {
+    const session = adaptBackendUserToSession(response.user);
+
+    if (!session) {
+        set({ isSubmitting: false });
+        return {
+            success: false,
+            error: "Không thể xử lý thông tin tài khoản. Vui lòng thử lại.",
+        };
+    }
+
+    set({
+        session,
+        accessToken: response.access_token,
+        accessTokenExpiresAt: response.expires_at ?? null,
+        authSource: "backend",
+        isSubmitting: false,
+    });
+
+    if (session.user.role === "customer") {
+        await useAccountStore.getState().loadProfile();
+        await useShopStore.getState().loadWishlist();
+    }
+
+    return { success: true };
+}
+
 export function redirectForRole(role: UserRole) {
     if (role === "customer") return routes.accountProfile;
     if (role === "admin") return routes.adminDashboard;
@@ -128,30 +167,8 @@ export const useAuthStore = create<AuthState>()(
                             password,
                         },
                     });
-                    const session = adaptBackendUserToSession(response.user);
 
-                    if (!session) {
-                        set({ isSubmitting: false });
-                        return {
-                            success: false,
-                            error: "Không thể xử lý thông tin đăng nhập. Vui lòng thử lại.",
-                        };
-                    }
-
-                    set({
-                        session,
-                        accessToken: response.access_token,
-                        accessTokenExpiresAt: response.expires_at ?? null,
-                        authSource: "backend",
-                        isSubmitting: false,
-                    });
-
-                    if (session.user.role === "customer") {
-                        await useAccountStore.getState().loadProfile();
-                        await useShopStore.getState().loadWishlist();
-                    }
-
-                    return { success: true };
+                    return await applyAuthenticatedBackendSession(response, set);
                 } catch (error) {
                     set({ isSubmitting: false });
 
@@ -160,7 +177,35 @@ export const useAuthStore = create<AuthState>()(
                         error:
                             error instanceof Error
                                 ? error.message
-                                : "Xin lỗi, không thể đăng nhập. Vui lòng kiểm tra email và mật khẩu.",
+                                : "Không thể đăng nhập. Vui lòng kiểm tra email và mật khẩu.",
+                    };
+                }
+            },
+            register: async (payload) => {
+                set({ isSubmitting: true });
+
+                try {
+                    const response = await apiRequest<BackendAuthResponse>("/register", {
+                        method: "POST",
+                        body: {
+                            full_name: payload.fullName.trim(),
+                            email: payload.email.trim(),
+                            phone: payload.phone.trim(),
+                            password: payload.password,
+                            password_confirmation: payload.passwordConfirmation,
+                        },
+                    });
+
+                    return await applyAuthenticatedBackendSession(response, set);
+                } catch (error) {
+                    set({ isSubmitting: false });
+
+                    return {
+                        success: false,
+                        error:
+                            error instanceof Error
+                                ? error.message
+                                : "Không thể đăng ký tài khoản lúc này. Vui lòng thử lại.",
                     };
                 }
             },

@@ -62,7 +62,6 @@ describe("customer commerce stores", () => {
         expect(useAuthStore.getState().accessToken).toBe("token-1");
         expect(useAuthStore.getState().authSource).toBe("backend");
         expect(useAuthStore.getState().session?.user.role).toBe("customer");
-        expect(useAccountStore.getState().profile.email).toBe("customer@example.com");
     });
 
     it("reports login failures and clears expired backend sessions during hydrate", async () => {

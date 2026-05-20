@@ -28,6 +28,7 @@ function withQuery(path: string, options: ProductQueryOptions = {}) {
 export const routes = {
     home: "/",
     login: "/login",
+    register: "/register",
     logout: "/logout",
     unauthorized: "/unauthorized",
     products: "/products",

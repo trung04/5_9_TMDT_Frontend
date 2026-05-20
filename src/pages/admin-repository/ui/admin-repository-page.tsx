@@ -13,6 +13,7 @@ const emptyProductForm = {
     categoryId: "",
     supplierId: "",
     description: "",
+    imageUrl: "",
     salePrice: "0",
     stockQuantity: "0",
     isActive: true,
@@ -89,6 +90,7 @@ export function AdminRepositoryPage() {
             categoryId: String(activeProduct.category_id),
             supplierId: activeProduct.supplier_id ? String(activeProduct.supplier_id) : "",
             description: activeProduct.description ?? "",
+            imageUrl: activeProduct.image_url ?? "",
             salePrice: String(activeProduct.sale_price),
             stockQuantity: String(activeProduct.stock_quantity),
             isActive: activeProduct.is_active,
@@ -150,6 +152,7 @@ export function AdminRepositoryPage() {
             sku: productForm.sku.trim(),
             name: productForm.name.trim(),
             description: productForm.description.trim(),
+            image_url: productForm.imageUrl.trim() || null,
             sale_price: Number.isFinite(salePrice) ? salePrice : 0,
             stock_quantity: Number.isFinite(stockQuantity) ? stockQuantity : 0,
             is_active: productForm.isActive,
@@ -173,6 +176,7 @@ export function AdminRepositoryPage() {
             sku: productForm.sku.trim(),
             name: productForm.name.trim(),
             description: productForm.description.trim(),
+            image_url: productForm.imageUrl.trim() || null,
             sale_price: Number(productForm.salePrice),
             stock_quantity: Number(productForm.stockQuantity),
             is_active: productForm.isActive,
@@ -435,6 +439,17 @@ export function AdminRepositoryPage() {
                                     setProductForm((current) => ({
                                         ...current,
                                         description: event.target.value,
+                                    }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
+                                placeholder="URL hinh anh san pham"
+                                value={productForm.imageUrl}
+                                onChange={(event) =>
+                                    setProductForm((current) => ({
+                                        ...current,
+                                        imageUrl: event.target.value,
                                     }))
                                 }
                             />

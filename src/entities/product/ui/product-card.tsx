@@ -19,6 +19,12 @@ export function ProductCard({ product, view = "grid", onAddToCart }: ProductCard
     const wishlistIds = useShopStore((state) => state.wishlistIds);
     const toggleWishlist = useShopStore((state) => state.toggleWishlist);
     const isWishlisted = wishlistIds.includes(product.id);
+    const currentStockQuantity = product.stockQuantity ?? 0;
+    const isOutOfStock = currentStockQuantity <= 0;
+    const lowStockLabel =
+        currentStockQuantity > 0 && currentStockQuantity <= 5
+            ? `Chỉ còn ${currentStockQuantity} sản phẩm`
+            : null;
 
     return (
         <SurfaceCard
@@ -95,6 +101,19 @@ export function ProductCard({ product, view = "grid", onAddToCart }: ProductCard
                     </Badge>
                 </div>
 
+                <p
+                    className={cn(
+                        "text-sm font-medium",
+                        isOutOfStock
+                            ? "text-error"
+                            : lowStockLabel
+                              ? "text-amber-700"
+                              : "text-on-surface-variant",
+                    )}
+                >
+                    {isOutOfStock ? "Hết hàng" : lowStockLabel ?? `Còn ${currentStockQuantity} sản phẩm`}
+                </p>
+
                 <div className="mt-auto flex flex-wrap items-end justify-between gap-4">
                     <div>
                         <p className="font-headline text-2xl font-bold text-on-surface">
@@ -109,9 +128,10 @@ export function ProductCard({ product, view = "grid", onAddToCart }: ProductCard
 
                     <Button
                         iconLeft={<Icon name="shopping_basket" className="text-lg" />}
+                        disabled={isOutOfStock}
                         onClick={() => onAddToCart?.(product.id)}
                     >
-                        Thêm vào giỏ
+                        {isOutOfStock ? "Hết hàng" : "Thêm vào giỏ"}
                     </Button>
                 </div>
             </div>

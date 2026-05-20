@@ -84,7 +84,7 @@ export function StorefrontHeader() {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     {variant === "home" ? (
                         <form
                             className="hidden items-center rounded-full bg-surface-container-low px-3 py-1.5 sm:flex"
@@ -126,12 +126,12 @@ export function StorefrontHeader() {
                     <Link
                         to={accountTarget}
                         className={cn(
-                            "flex items-center gap-2 rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary",
+                            "rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary",
                             (location.pathname.startsWith("/account") ||
                                 location.pathname.startsWith("/admin") ||
                                 location.pathname.startsWith("/supplier") ||
                                 location.pathname.startsWith("/warehouse")) &&
-                                "border-b-2 border-green-800 pb-1 text-green-800",
+                                "text-green-800",
                         )}
                         aria-label={session ? "Khu vực tài khoản" : "Đăng nhập"}
                     >

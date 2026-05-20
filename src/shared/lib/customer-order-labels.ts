@@ -4,7 +4,7 @@ export const customerOrderStatusLabels: Record<string, string> = {
     PACKED: "Đã đóng gói",
     SHIPPED: "Đang giao",
     DELIVERED: "Đã giao",
-    PAID: "Đã thanh toán",
+    DELIVERY_FAILED: "Giao thất bại",
     CANCELLED: "Đã hủy",
 };
 
@@ -20,7 +20,6 @@ export const customerPaymentMethodLabels: Record<string, string> = {
     COD: "Thanh toán khi nhận hàng",
     CREDIT_CARD: "Thẻ ngân hàng",
     BANK_TRANSFER: "Chuyển khoản ngân hàng",
-    E_WALLET: "Ví điện tử",
 };
 
 export function fallbackBackendLabel(value: string) {

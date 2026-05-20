@@ -61,6 +61,7 @@ export interface CustomerPaymentView {
     gatewayName: string | null;
     gatewayReference: string | null;
     paidAt: string | null;
+    rawPayload?: Record<string, unknown> | null;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -103,11 +104,14 @@ export interface CustomerOrderDetailView extends CustomerOrderSummaryView {
     recipientPhone: string;
     shippingAddress: string;
     note: string;
+    shippingCode?: string | null;
+    shippingCarrier?: string | null;
+    shippedAt?: string | null;
+    deliveredAt?: string | null;
+    cancelledAt?: string | null;
     items: CustomerOrderItemView[];
     statusHistory: CustomerOrderStatusHistoryView[];
 }
-
-const fallbackImages = seedProducts.slice(0, 6).map((product) => product.image);
 
 function fallbackProduct(index: number) {
     return seedProducts[index % seedProducts.length] ?? seedProducts[0];
@@ -278,7 +282,7 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
     const fallback = fallbackProduct(index);
     const supplierName = product.supplier?.name ?? `Nhà cung cấp #${product.supplier_id}`;
     const categoryName = product.category?.name ?? `Danh mục #${product.category_id}`;
-    const image = fallbackImages[index % fallbackImages.length] ?? fallback.image;
+    const image = product.image_url?.trim() || fallback.image;
 
     return {
         id: String(product.id),
@@ -297,6 +301,7 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
         rating: fallback.rating,
         reviewCount: fallback.reviewCount,
         stockStatus: stockStatusForProduct(product),
+        stockQuantity: product.stock_quantity,
         badge: fallback.badge ?? categoryName,
         tag: product.sku,
         image,
@@ -387,6 +392,7 @@ function adaptPayment(payment: BackendPayment): CustomerPaymentView {
         gatewayName: payment.gateway_name,
         gatewayReference: payment.gateway_reference,
         paidAt: payment.paid_at,
+        rawPayload: payment.raw_payload ?? null,
         createdAt: payment.created_at,
         updatedAt: payment.updated_at,
     };
@@ -440,6 +446,11 @@ export function adaptBackendOrderDetail(order: BackendOrderDetail): CustomerOrde
         recipientPhone: order.recipient_phone,
         shippingAddress: order.shipping_address,
         note: order.note ?? "",
+        shippingCode: order.shipping_code ?? null,
+        shippingCarrier: order.shipping_carrier ?? null,
+        shippedAt: order.shipped_at ?? null,
+        deliveredAt: order.delivered_at ?? null,
+        cancelledAt: order.cancelled_at ?? null,
         items: order.items.map(adaptOrderItem),
         statusHistory: order.status_history.map(adaptStatusHistory),
     };

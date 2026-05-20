@@ -23,7 +23,7 @@ interface CheckoutInput {
     recipient_phone: string;
     shipping_address: string;
     note?: string;
-    payment_method: "COD" | "BANK_TRANSFER" | "E_WALLET";
+    payment_method: "COD" | "BANK_TRANSFER";
     payment_gateway?: string;
 }
 
@@ -43,6 +43,18 @@ interface CustomerOrdersState {
     loadOrders: (page?: number, perPage?: number) => Promise<AsyncResult<CustomerOrderSummaryView[]>>;
     loadOrder: (orderId: string) => Promise<AsyncResult<CustomerOrderDetailView>>;
     checkout: (payload: CheckoutInput) => Promise<AsyncResult<CustomerOrderDetailView>>;
+    cancelOrder: (
+        orderId: string,
+        payload: {
+            reason: string;
+            note?: string;
+        },
+    ) => Promise<AsyncResult<CustomerOrderDetailView>>;
+    confirmBankTransferSubmitted: (
+        orderId: string,
+        note?: string,
+    ) => Promise<AsyncResult<CustomerOrderDetailView>>;
+    confirmDelivery: (orderId: string) => Promise<AsyncResult<CustomerOrderDetailView>>;
     reset: () => void;
 }
 
@@ -55,10 +67,27 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
+const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
 
 function sessionToken() {
     return useAuthStore.getState().accessToken;
+}
+
+function mergeSummary(detail: CustomerOrderDetailView): CustomerOrderSummaryView {
+    return {
+        id: detail.id,
+        orderNo: detail.orderNo,
+        paymentMethod: detail.paymentMethod,
+        status: detail.status,
+        subtotal: detail.subtotal,
+        shippingFee: detail.shippingFee,
+        discountAmount: detail.discountAmount,
+        totalAmount: detail.totalAmount,
+        itemCount: detail.itemCount,
+        payment: detail.payment,
+        createdAt: detail.createdAt,
+        updatedAt: detail.updatedAt,
+    };
 }
 
 export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) => ({
@@ -74,7 +103,7 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
 
             return {
                 success: false,
-                error: "Bạn cần đăng nhập lại để xem đơn hàng.",
+                error: "Ban can dang nhap lai de xem don hang.",
             };
         }
 
@@ -86,9 +115,7 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
         try {
             const response = await apiRequest<BackendOrdersResponse>(
                 `/orders?page=${page}&per_page=${perPage}`,
-                {
-                    token,
-                },
+                { token },
             );
             const orders = response.data.map(adaptBackendOrderSummary);
 
@@ -104,43 +131,26 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
                 error: null,
             });
 
-            return {
-                success: true,
-                data: orders,
-            };
+            return { success: true, data: orders };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
-                set({
-                    isLoading: false,
-                    error: SESSION_EXPIRED_MESSAGE,
-                });
+                set({ isLoading: false, error: SESSION_EXPIRED_MESSAGE });
                 useAuthStore.getState().clearSession();
 
-                return {
-                    success: false,
-                    error: SESSION_EXPIRED_MESSAGE,
-                };
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : "Không thể tải lịch sử đơn hàng.",
-            });
+            const message = error instanceof Error ? error.message : "Khong the tai lich su don hang.";
+            set({ isLoading: false, error: message });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : "Không thể tải lịch sử đơn hàng.",
-            };
+            return { success: false, error: message };
         }
     },
     loadOrder: async (orderId) => {
         const cached = get().orderDetails[orderId];
 
         if (cached) {
-            return {
-                success: true,
-                data: cached,
-            };
+            return { success: true, data: cached };
         }
 
         const token = sessionToken();
@@ -148,19 +158,14 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
         if (!token) {
             return {
                 success: false,
-                error: "Bạn cần đăng nhập lại để xem chi tiết đơn hàng.",
+                error: "Ban can dang nhap lai de xem chi tiet don hang.",
             };
         }
 
-        set({
-            isLoading: true,
-            error: null,
-        });
+        set({ isLoading: true, error: null });
 
         try {
-            const response = await apiRequest<BackendOrderDetailResponse>(`/orders/${orderId}`, {
-                token,
-            });
+            const response = await apiRequest<BackendOrderDetailResponse>(`/orders/${orderId}`, { token });
             const order = adaptBackendOrderDetail(response.data);
 
             set((state) => ({
@@ -172,33 +177,19 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
                 },
             }));
 
-            return {
-                success: true,
-                data: order,
-            };
+            return { success: true, data: order };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
-                set({
-                    isLoading: false,
-                    error: SESSION_EXPIRED_MESSAGE,
-                });
+                set({ isLoading: false, error: SESSION_EXPIRED_MESSAGE });
                 useAuthStore.getState().clearSession();
 
-                return {
-                    success: false,
-                    error: SESSION_EXPIRED_MESSAGE,
-                };
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            set({
-                isLoading: false,
-                error: error instanceof Error ? error.message : "Không thể tải chi tiết đơn hàng.",
-            });
+            const message = error instanceof Error ? error.message : "Khong the tai chi tiet don hang.";
+            set({ isLoading: false, error: message });
 
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : "Không thể tải chi tiết đơn hàng.",
-            };
+            return { success: false, error: message };
         }
     },
     checkout: async (payload) => {
@@ -207,14 +198,11 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
         if (!token) {
             return {
                 success: false,
-                error: "Bạn cần đăng nhập lại để tiếp tục đặt hàng.",
+                error: "Ban can dang nhap lai de tiep tuc dat hang.",
             };
         }
 
-        set({
-            isSubmitting: true,
-            error: null,
-        });
+        set({ isSubmitting: true, error: null });
 
         try {
             const response = await apiRequest<BackendOrderDetailResponse>("/orders/checkout", {
@@ -227,40 +215,168 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
             set((state) => ({
                 isSubmitting: false,
                 error: null,
-                orders: [adaptBackendOrderSummary(response.data), ...state.orders],
+                orders: [mergeSummary(order), ...state.orders],
                 orderDetails: {
                     ...state.orderDetails,
                     [order.id]: order,
                 },
             }));
 
-            return {
-                success: true,
-                data: order,
-            };
+            return { success: true, data: order };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
-                set({
-                    isSubmitting: false,
-                    error: SESSION_EXPIRED_MESSAGE,
-                });
+                set({ isSubmitting: false, error: SESSION_EXPIRED_MESSAGE });
                 useAuthStore.getState().clearSession();
 
-                return {
-                    success: false,
-                    error: SESSION_EXPIRED_MESSAGE,
-                };
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
             }
 
-            set({
-                isSubmitting: false,
-                error: error instanceof Error ? error.message : "Không thể hoàn tất đặt hàng.",
-            });
+            const message = error instanceof Error ? error.message : "Khong the hoan tat dat hang.";
+            set({ isSubmitting: false, error: message });
 
+            return { success: false, error: message };
+        }
+    },
+    cancelOrder: async (orderId, payload) => {
+        const token = sessionToken();
+
+        if (!token) {
             return {
                 success: false,
-                error: error instanceof Error ? error.message : "Không thể hoàn tất đặt hàng.",
+                error: "Bạn cần đăng nhập lại để hủy đơn hàng.",
             };
+        }
+
+        set({ isSubmitting: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendOrderDetailResponse>(`/orders/${orderId}/cancel`, {
+                method: "PATCH",
+                token,
+                body: {
+                    reason: payload.reason,
+                    note: payload.note?.trim() ? payload.note.trim() : undefined,
+                },
+            });
+            const order = adaptBackendOrderDetail(response.data);
+
+            set((state) => ({
+                isSubmitting: false,
+                error: null,
+                orders: state.orders.map((item) => (item.id === order.id ? mergeSummary(order) : item)),
+                orderDetails: {
+                    ...state.orderDetails,
+                    [order.id]: order,
+                },
+            }));
+
+            return { success: true, data: order };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                set({ isSubmitting: false, error: SESSION_EXPIRED_MESSAGE });
+                useAuthStore.getState().clearSession();
+
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Không thể hủy đơn hàng.";
+            set({ isSubmitting: false, error: message });
+
+            return { success: false, error: message };
+        }
+    },
+    confirmBankTransferSubmitted: async (orderId, note) => {
+        const token = sessionToken();
+
+        if (!token) {
+            return {
+                success: false,
+                error: "Ban can dang nhap lai de xac nhan da chuyen khoan.",
+            };
+        }
+
+        set({ isSubmitting: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendOrderDetailResponse>(
+                `/orders/${orderId}/bank-transfer-submitted`,
+                {
+                    method: "PATCH",
+                    token,
+                    body: {
+                        note: note?.trim() ? note.trim() : undefined,
+                    },
+                },
+            );
+            const order = adaptBackendOrderDetail(response.data);
+
+            set((state) => ({
+                isSubmitting: false,
+                error: null,
+                orders: state.orders.map((item) => (item.id === order.id ? mergeSummary(order) : item)),
+                orderDetails: {
+                    ...state.orderDetails,
+                    [order.id]: order,
+                },
+            }));
+
+            return { success: true, data: order };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                set({ isSubmitting: false, error: SESSION_EXPIRED_MESSAGE });
+                useAuthStore.getState().clearSession();
+
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the gui xac nhan chuyen khoan.";
+            set({ isSubmitting: false, error: message });
+
+            return { success: false, error: message };
+        }
+    },
+    confirmDelivery: async (orderId) => {
+        const token = sessionToken();
+
+        if (!token) {
+            return {
+                success: false,
+                error: "Ban can dang nhap lai de xac nhan da nhan hang.",
+            };
+        }
+
+        set({ isSubmitting: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendOrderDetailResponse>(`/orders/${orderId}/confirm-delivery`, {
+                method: "PATCH",
+                token,
+            });
+            const order = adaptBackendOrderDetail(response.data);
+
+            set((state) => ({
+                isSubmitting: false,
+                error: null,
+                orders: state.orders.map((item) => (item.id === order.id ? mergeSummary(order) : item)),
+                orderDetails: {
+                    ...state.orderDetails,
+                    [order.id]: order,
+                },
+            }));
+
+            return { success: true, data: order };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                set({ isSubmitting: false, error: SESSION_EXPIRED_MESSAGE });
+                useAuthStore.getState().clearSession();
+
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the xac nhan da nhan hang.";
+            set({ isSubmitting: false, error: message });
+
+            return { success: false, error: message };
         }
     },
     reset: () => set(initialState),

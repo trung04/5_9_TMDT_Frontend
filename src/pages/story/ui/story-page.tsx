@@ -72,7 +72,7 @@ export function StoryPage() {
                 </SurfaceCard>
             </section>
 
-            <section className="mt-16 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <section className="mt-16 grid gap-8 xl:grid-cols-[1fr_0.9fr]">
                 <SurfaceCard tone="low" className="space-y-4">
                     <p className="text-xs uppercase tracking-widest text-on-surface-variant">
                         Quy trình tuyển chọn
