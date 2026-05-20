@@ -358,6 +358,25 @@ export interface BackendOrderDetailResponse {
     data: BackendOrderDetail;
 }
 
+export interface BackendBulkOrderResultItem {
+    orderId: number;
+    orderNo: string | null;
+    success: boolean;
+    message: string;
+}
+
+export interface BackendBulkOrderStatusResult {
+    total: number;
+    success: number;
+    failed: number;
+    results: BackendBulkOrderResultItem[];
+}
+
+export interface BackendBulkOrderStatusResponse {
+    message: string;
+    data: BackendBulkOrderStatusResult;
+}
+
 export interface BackendOrdersResponse {
     message: string;
     data: BackendOrderSummary[];

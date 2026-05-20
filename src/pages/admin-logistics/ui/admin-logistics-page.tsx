@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import type { BackendBulkOrderStatusResult } from "@/shared/api/backend-types";
 import {
     customerOrderStatusLabels,
     customerPaymentMethodLabels,
@@ -21,6 +22,18 @@ const ORDER_STATUSES = [
     "CANCELLED",
 ] as const;
 
+type BulkAction = "CONFIRM" | "PACK" | "SHIP" | "DELIVER" | "MARK_DELIVERY_FAILED" | "CANCEL" | "RESHIP";
+
+const BULK_ACTION_LABELS: Record<BulkAction, string> = {
+    CONFIRM: "Xác nhận đơn",
+    PACK: "Đóng gói",
+    SHIP: "Bàn giao vận chuyển",
+    DELIVER: "Đánh dấu giao thành công",
+    MARK_DELIVERY_FAILED: "Đánh dấu giao thất bại",
+    CANCEL: "Hủy đơn",
+    RESHIP: "Giao lại",
+};
+
 function labelForStatus(status: string) {
     return customerOrderStatusLabels[status] ?? fallbackBackendLabel(status);
 }
@@ -34,6 +47,26 @@ function paymentInstructionValue(payload: Record<string, unknown> | null | undef
     return typeof value === "string" ? value : "";
 }
 
+function bulkActionsForFilter(statusFilter: string): BulkAction[] {
+    switch (statusFilter) {
+        case "PENDING":
+            return ["CONFIRM", "CANCEL"];
+        case "CONFIRMED":
+            return ["PACK", "CANCEL"];
+        case "PACKED":
+            return ["SHIP", "CANCEL"];
+        case "SHIPPED":
+            return ["DELIVER", "MARK_DELIVERY_FAILED"];
+        case "DELIVERY_FAILED":
+            return ["RESHIP", "CANCEL"];
+        case "DELIVERED":
+        case "CANCELLED":
+            return [];
+        default:
+            return ["CONFIRM", "PACK", "SHIP", "DELIVER", "MARK_DELIVERY_FAILED", "CANCEL", "RESHIP"];
+    }
+}
+
 export function AdminLogisticsPage() {
     const [query, setQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
@@ -42,6 +75,9 @@ export function AdminLogisticsPage() {
     const [nextPaymentStatus, setNextPaymentStatus] = useState("PENDING");
     const [note, setNote] = useState("");
     const [paymentNote, setPaymentNote] = useState("");
+    const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+    const [bulkAction, setBulkAction] = useState<BulkAction | "">("");
+    const [bulkResult, setBulkResult] = useState<BackendBulkOrderStatusResult | null>(null);
     const orders = useAdminOrdersStore((state) => state.orders);
     const orderDetails = useAdminOrdersStore((state) => state.orderDetails);
     const isLoading = useAdminOrdersStore((state) => state.isLoading);
@@ -51,6 +87,7 @@ export function AdminLogisticsPage() {
     const loadOrder = useAdminOrdersStore((state) => state.loadOrder);
     const updateStatus = useAdminOrdersStore((state) => state.updateStatus);
     const updatePaymentStatus = useAdminOrdersStore((state) => state.updatePaymentStatus);
+    const bulkUpdateStatus = useAdminOrdersStore((state) => state.bulkUpdateStatus);
     const pushToast = useFeedbackStore((state) => state.pushToast);
 
     useEffect(() => {
@@ -85,6 +122,10 @@ export function AdminLogisticsPage() {
     const activeOrderSummary =
         filteredOrders.find((order) => String(order.id) === activeOrderId) ?? filteredOrders[0];
     const activeOrder = activeOrderSummary ? orderDetails[String(activeOrderSummary.id)] : undefined;
+    const availableBulkActions = useMemo(() => bulkActionsForFilter(statusFilter), [statusFilter]);
+    const isAllFilteredSelected =
+        filteredOrders.length > 0 &&
+        filteredOrders.every((order) => selectedOrderIds.includes(String(order.id)));
 
     useEffect(() => {
         if (!filteredOrders.some((order) => String(order.id) === activeOrderId)) {
@@ -116,6 +157,22 @@ export function AdminLogisticsPage() {
         setNote("");
         setPaymentNote("");
     }, [activeOrder, activeOrderSummary]);
+
+    useEffect(() => {
+        setSelectedOrderIds((current) =>
+            current.filter((id) => orders.some((order) => String(order.id) === id)),
+        );
+    }, [orders]);
+
+    useEffect(() => {
+        setBulkAction((current) => {
+            if (!availableBulkActions.length) {
+                return "";
+            }
+
+            return current && availableBulkActions.includes(current) ? current : availableBulkActions[0];
+        });
+    }, [availableBulkActions]);
 
     async function handleUpdateStatus() {
         if (!activeOrderSummary || !activeOrder) {
@@ -160,11 +217,7 @@ export function AdminLogisticsPage() {
             return;
         }
 
-        const result = await updatePaymentStatus(
-            String(activeOrderSummary.id),
-            nextPaymentStatus,
-            paymentNote,
-        );
+        const result = await updatePaymentStatus(String(activeOrderSummary.id), nextPaymentStatus, paymentNote);
 
         if (!result.success || !result.data) {
             pushToast({
@@ -197,12 +250,9 @@ export function AdminLogisticsPage() {
         const result =
             action === "reshop"
                 ? await updateStatus(String(activeOrderSummary.id), "SHIPPED", note)
-                : await updateStatus(
-                      String(activeOrderSummary.id),
-                      "CANCELLED",
-                      note,
-                      { restockInventory: action === "restock" },
-                  );
+                : await updateStatus(String(activeOrderSummary.id), "CANCELLED", note, {
+                      restockInventory: action === "restock",
+                  });
 
         if (!result.success || !result.data) {
             pushToast({
@@ -220,6 +270,62 @@ export function AdminLogisticsPage() {
                     : `Đã hủy ${result.data.order_no} thành công.`,
         });
         setNote("");
+    }
+
+    function toggleOrderSelection(orderId: string, checked: boolean) {
+        setSelectedOrderIds((current) =>
+            checked ? Array.from(new Set([...current, orderId])) : current.filter((id) => id !== orderId),
+        );
+    }
+
+    function handleToggleSelectAll(checked: boolean) {
+        setSelectedOrderIds((current) => {
+            const filteredIds = filteredOrders.map((order) => String(order.id));
+
+            if (checked) {
+                return Array.from(new Set([...current, ...filteredIds]));
+            }
+
+            return current.filter((id) => !filteredIds.includes(id));
+        });
+    }
+
+    async function handleApplyBulkAction() {
+        if (!selectedOrderIds.length || !bulkAction) {
+            return;
+        }
+
+        const result = await bulkUpdateStatus({
+            orderIds: selectedOrderIds.map((id) => Number(id)),
+            action: bulkAction,
+            note: note || undefined,
+        });
+
+        if (!result.success || !result.data) {
+            pushToast({
+                tone: "warning",
+                message: result.error ?? "Không thể xử lý hàng loạt đơn hàng.",
+            });
+            return;
+        }
+
+        setBulkResult(result.data);
+        pushToast({
+            tone: result.data.failed > 0 ? "warning" : "success",
+            message: `Đã xử lý ${result.data.total} đơn: ${result.data.success} thành công, ${result.data.failed} thất bại.`,
+        });
+
+        const successIds = result.data.results
+            .filter((item) => item.success)
+            .map((item) => String(item.orderId));
+
+        setSelectedOrderIds((current) => current.filter((id) => !successIds.includes(id)));
+
+        const refreshResult = await loadOrders();
+
+        if (activeOrderSummary && refreshResult.success) {
+            await loadOrder(String(activeOrderSummary.id));
+        }
     }
 
     const paymentPayload = activeOrder?.payment?.raw_payload ?? null;
@@ -252,6 +358,53 @@ export function AdminLogisticsPage() {
 
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
                 <SurfaceCard className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
+                        <label className="flex items-center gap-3 text-sm font-medium text-on-surface">
+                            <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-outline-variant/30"
+                                checked={isAllFilteredSelected}
+                                onChange={(event) => handleToggleSelectAll(event.target.checked)}
+                            />
+                            Chọn tất cả
+                        </label>
+                        <span className="text-xs text-on-surface-variant">{filteredOrders.length} đơn đang hiển thị</span>
+                    </div>
+
+                    {selectedOrderIds.length > 0 ? (
+                        <div className="space-y-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                            <div className="text-sm font-semibold text-on-surface">
+                                Đã chọn {selectedOrderIds.length} đơn
+                            </div>
+                            <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+                                <select
+                                    className="min-w-0 flex-1 rounded-2xl bg-white px-4 py-3 text-sm outline-none"
+                                    value={bulkAction}
+                                    onChange={(event) => setBulkAction(event.target.value as BulkAction | "")}
+                                >
+                                    {availableBulkActions.length === 0 ? (
+                                        <option value="">Không có thao tác phù hợp</option>
+                                    ) : (
+                                        availableBulkActions.map((action) => (
+                                            <option key={action} value={action}>
+                                                {BULK_ACTION_LABELS[action]}
+                                            </option>
+                                        ))
+                                    )}
+                                </select>
+                                <Button
+                                    onClick={() => void handleApplyBulkAction()}
+                                    disabled={isSaving || !bulkAction || availableBulkActions.length === 0}
+                                >
+                                    {isSaving ? "Đang xử lý..." : "Áp dụng"}
+                                </Button>
+                                <Button variant="outline" onClick={() => setSelectedOrderIds([])} disabled={isSaving}>
+                                    Bỏ chọn
+                                </Button>
+                            </div>
+                        </div>
+                    ) : null}
+
                     {isLoading && orders.length === 0 ? (
                         <p className="text-sm text-on-surface-variant">Đang tải danh sách đơn hàng...</p>
                     ) : null}
@@ -260,45 +413,61 @@ export function AdminLogisticsPage() {
                             Chưa có đơn hàng nào phù hợp với bộ lọc hiện tại.
                         </p>
                     ) : null}
-                    {filteredOrders.map((order) => (
-                        <button
-                            key={order.id}
-                            className={`w-full rounded-3xl p-4 text-left transition ${
-                                order.id === activeOrderSummary?.id
-                                    ? "bg-primary/5"
-                                    : "bg-surface-container-low hover:bg-surface-container"
-                            }`}
-                            onClick={() => setActiveOrderId(String(order.id))}
-                        >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="font-semibold text-on-surface">{order.order_no}</p>
-                                <span className="rounded-full bg-surface-container-highest px-3 py-1 text-xs text-on-surface-variant">
-                                    {labelForStatus(order.status)}
-                                </span>
+
+                    {filteredOrders.map((order) => {
+                        const orderId = String(order.id);
+                        const isSelected = selectedOrderIds.includes(orderId);
+                        const isActive = order.id === activeOrderSummary?.id;
+
+                        return (
+                            <div
+                                key={order.id}
+                                className={`rounded-3xl p-4 transition ${
+                                    isActive ? "bg-primary/5" : "bg-surface-container-low hover:bg-surface-container"
+                                }`}
+                            >
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-outline-variant/30"
+                                            checked={isSelected}
+                                            onChange={(event) => toggleOrderSelection(orderId, event.target.checked)}
+                                        />
+                                        <button className="text-left" onClick={() => setActiveOrderId(orderId)}>
+                                            <p className="font-semibold text-on-surface">{order.order_no}</p>
+                                        </button>
+                                    </div>
+                                    <span className="rounded-full bg-surface-container-highest px-3 py-1 text-xs text-on-surface-variant">
+                                        {labelForStatus(order.status)}
+                                    </span>
+                                </div>
+
+                                <button className="mt-2 block w-full text-left" onClick={() => setActiveOrderId(orderId)}>
+                                    <p className="text-sm text-on-surface-variant">
+                                        {order.customer?.full_name ?? "Khách hàng không rõ"}
+                                    </p>
+                                    <p className="mt-1 text-sm text-on-surface-variant">
+                                        {formatDate(order.created_at)}
+                                    </p>
+                                    <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
+                                        <p className="font-semibold text-primary">
+                                            {formatCurrency(Number(order.total_amount))}
+                                        </p>
+                                        <p className="text-on-surface-variant">
+                                            Thanh toán: {labelForPaymentStatus(order.payment?.payment_status ?? "PENDING")}
+                                        </p>
+                                        <p className="text-on-surface-variant">
+                                            Mã vận đơn: {order.shipping_code ?? "Chưa tạo"}
+                                        </p>
+                                        <p className="text-on-surface-variant">
+                                            Trừ kho: {order.stock_deducted ? "Đã trừ" : "Chưa trừ"}
+                                        </p>
+                                    </div>
+                                </button>
                             </div>
-                            <p className="mt-2 text-sm text-on-surface-variant">
-                                {order.customer?.full_name ?? "Khách hàng không rõ"}
-                            </p>
-                            <p className="mt-1 text-sm text-on-surface-variant">
-                                {formatDate(order.created_at)}
-                            </p>
-                            <div className="mt-3 grid gap-2 text-sm md:grid-cols-2">
-                                <p className="font-semibold text-primary">
-                                    {formatCurrency(Number(order.total_amount))}
-                                </p>
-                                <p className="text-on-surface-variant">
-                                    Thanh toán:{" "}
-                                    {labelForPaymentStatus(order.payment?.payment_status ?? "PENDING")}
-                                </p>
-                                <p className="text-on-surface-variant">
-                                    Mã vận đơn: {order.shipping_code ?? "Chưa tạo"}
-                                </p>
-                                <p className="text-on-surface-variant">
-                                    Trừ kho: {order.stock_deducted ? "Đã trừ" : "Chưa trừ"}
-                                </p>
-                            </div>
-                        </button>
-                    ))}
+                        );
+                    })}
                 </SurfaceCard>
 
                 <SurfaceCard className="space-y-5">
@@ -309,9 +478,7 @@ export function AdminLogisticsPage() {
                     ) : (
                         <>
                             <div>
-                                <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Đơn đang chọn
-                                </p>
+                                <p className="text-xs uppercase tracking-widest text-on-surface-variant">Đơn đang chọn</p>
                                 <h3 className="mt-2 font-headline text-xl font-bold">{activeOrder.order_no}</h3>
                                 <p className="mt-2 text-sm text-on-surface-variant">
                                     {activeOrder.customer?.full_name ?? "Khách hàng không rõ"} -{" "}
@@ -338,98 +505,39 @@ export function AdminLogisticsPage() {
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-3 rounded-2xl bg-surface-container-low p-4 text-sm">
-                                    <p>
-                                        <span className="font-medium">Khách hàng:</span>{" "}
-                                        {activeOrder.customer?.full_name ?? "Không rõ"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Người nhận:</span> {activeOrder.recipient_name}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Điện thoại:</span> {activeOrder.recipient_phone}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Địa chỉ giao hàng:</span>{" "}
-                                        {activeOrder.shipping_address}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Ghi chú:</span> {activeOrder.note || "Không có"}
-                                    </p>
+                                    <p><span className="font-medium">Khách hàng:</span> {activeOrder.customer?.full_name ?? "Không rõ"}</p>
+                                    <p><span className="font-medium">Người nhận:</span> {activeOrder.recipient_name}</p>
+                                    <p><span className="font-medium">Điện thoại:</span> {activeOrder.recipient_phone}</p>
+                                    <p><span className="font-medium">Địa chỉ giao hàng:</span> {activeOrder.shipping_address}</p>
+                                    <p><span className="font-medium">Ghi chú:</span> {activeOrder.note || "Không có"}</p>
                                 </div>
                                 <div className="space-y-3 rounded-2xl bg-surface-container-low p-4 text-sm">
-                                    <p>
-                                        <span className="font-medium">Tạm tính:</span>{" "}
-                                        {formatCurrency(Number(activeOrder.subtotal))}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Phí vận chuyển:</span>{" "}
-                                        {formatCurrency(Number(activeOrder.shipping_fee))}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Tổng tiền:</span>{" "}
-                                        {formatCurrency(Number(activeOrder.total_amount))}
-                                    </p>
+                                    <p><span className="font-medium">Tạm tính:</span> {formatCurrency(Number(activeOrder.subtotal))}</p>
+                                    <p><span className="font-medium">Phí vận chuyển:</span> {formatCurrency(Number(activeOrder.shipping_fee))}</p>
+                                    <p><span className="font-medium">Tổng tiền:</span> {formatCurrency(Number(activeOrder.total_amount))}</p>
                                     <p>
                                         <span className="font-medium">Phương thức thanh toán:</span>{" "}
                                         {customerPaymentMethodLabels[activeOrder.payment_method] ??
                                             fallbackBackendLabel(activeOrder.payment_method)}
                                     </p>
-                                    <p>
-                                        <span className="font-medium">Trừ kho:</span>{" "}
-                                        {activeOrder.stock_deducted ? "Đã trừ" : "Chưa trừ"}
-                                    </p>
+                                    <p><span className="font-medium">Trừ kho:</span> {activeOrder.stock_deducted ? "Đã trừ" : "Chưa trừ"}</p>
                                 </div>
                             </div>
 
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="space-y-3 rounded-2xl bg-surface-container-low p-4 text-sm">
-                                    <p>
-                                        <span className="font-medium">Đơn vị vận chuyển:</span>{" "}
-                                        {activeOrder.shipping_carrier ?? "Chưa cập nhật"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Mã vận đơn:</span>{" "}
-                                        {activeOrder.shipping_code ?? "Chưa tạo"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Thời điểm giao:</span>{" "}
-                                        {activeOrder.shipped_at ? formatDate(activeOrder.shipped_at) : "Chưa giao"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Thời điểm hoàn tất:</span>{" "}
-                                        {activeOrder.delivered_at
-                                            ? formatDate(activeOrder.delivered_at)
-                                            : "Chưa giao xong"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Thời điểm hủy:</span>{" "}
-                                        {activeOrder.cancelled_at
-                                            ? formatDate(activeOrder.cancelled_at)
-                                            : "Chưa hủy"}
-                                    </p>
+                                    <p><span className="font-medium">Đơn vị vận chuyển:</span> {activeOrder.shipping_carrier ?? "Chưa cập nhật"}</p>
+                                    <p><span className="font-medium">Mã vận đơn:</span> {activeOrder.shipping_code ?? "Chưa tạo"}</p>
+                                    <p><span className="font-medium">Thời điểm giao:</span> {activeOrder.shipped_at ? formatDate(activeOrder.shipped_at) : "Chưa giao"}</p>
+                                    <p><span className="font-medium">Thời điểm hoàn tất:</span> {activeOrder.delivered_at ? formatDate(activeOrder.delivered_at) : "Chưa giao xong"}</p>
+                                    <p><span className="font-medium">Thời điểm hủy:</span> {activeOrder.cancelled_at ? formatDate(activeOrder.cancelled_at) : "Chưa hủy"}</p>
                                 </div>
                                 <div className="space-y-3 rounded-2xl bg-surface-container-low p-4 text-sm">
-                                    <p>
-                                        <span className="font-medium">Cổng thanh toán:</span>{" "}
-                                        {activeOrder.payment?.gateway_name ?? "Không có"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Mã giao dịch:</span>{" "}
-                                        {activeOrder.payment?.transaction_code ?? "Không có"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Thanh toán lúc:</span>{" "}
-                                        {activeOrder.payment?.paid_at
-                                            ? formatDate(activeOrder.payment.paid_at)
-                                            : "Chưa thanh toán"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Mã tham chiếu:</span>{" "}
-                                        {activeOrder.payment?.gateway_reference ?? "Không có"}
-                                    </p>
-                                    <p>
-                                        <span className="font-medium">Số mặt hàng:</span> {activeOrder.item_count}
-                                    </p>
+                                    <p><span className="font-medium">Cổng thanh toán:</span> {activeOrder.payment?.gateway_name ?? "Không có"}</p>
+                                    <p><span className="font-medium">Mã giao dịch:</span> {activeOrder.payment?.transaction_code ?? "Không có"}</p>
+                                    <p><span className="font-medium">Thanh toán lúc:</span> {activeOrder.payment?.paid_at ? formatDate(activeOrder.payment.paid_at) : "Chưa thanh toán"}</p>
+                                    <p><span className="font-medium">Mã tham chiếu:</span> {activeOrder.payment?.gateway_reference ?? "Không có"}</p>
+                                    <p><span className="font-medium">Số mặt hàng:</span> {activeOrder.item_count}</p>
                                 </div>
                             </div>
 
@@ -437,36 +545,12 @@ export function AdminLogisticsPage() {
                                 <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm">
                                     <p className="font-medium">Thông tin chuyển khoản</p>
                                     <div className="mt-3 space-y-2 text-on-surface-variant">
-                                        <p>
-                                            Ngân hàng:{" "}
-                                            {paymentInstructionValue(paymentPayload, "bank_name") || "MB Bank"}
-                                        </p>
-                                        <p>
-                                            Chủ tài khoản:{" "}
-                                            {paymentInstructionValue(paymentPayload, "account_name") ||
-                                                "HERITAGE HARVEST"}
-                                        </p>
-                                        <p>
-                                            Số tài khoản:{" "}
-                                            {paymentInstructionValue(paymentPayload, "account_number") ||
-                                                "0123456789"}
-                                        </p>
-                                        <p>
-                                            Nội dung chuyển khoản:{" "}
-                                            {paymentInstructionValue(paymentPayload, "transfer_content") ||
-                                                activeOrder.order_no}
-                                        </p>
-                                        <p>
-                                            Khách đã báo chuyển khoản:{" "}
-                                            {transferSubmitted ? "Đã gửi" : "Chưa gửi"}
-                                        </p>
-                                        <p>
-                                            Thời điểm khách báo:{" "}
-                                            {paymentInstructionValue(
-                                                paymentPayload,
-                                                "customer_transfer_submitted_at",
-                                            ) || "Chưa có"}
-                                        </p>
+                                        <p>Ngân hàng: {paymentInstructionValue(paymentPayload, "bank_name") || "MB Bank"}</p>
+                                        <p>Chủ tài khoản: {paymentInstructionValue(paymentPayload, "account_name") || "HERITAGE HARVEST"}</p>
+                                        <p>Số tài khoản: {paymentInstructionValue(paymentPayload, "account_number") || "0123456789"}</p>
+                                        <p>Nội dung chuyển khoản: {paymentInstructionValue(paymentPayload, "transfer_content") || activeOrder.order_no}</p>
+                                        <p>Khách đã báo chuyển khoản: {transferSubmitted ? "Đã gửi" : "Chưa gửi"}</p>
+                                        <p>Thời điểm khách báo: {paymentInstructionValue(paymentPayload, "customer_transfer_submitted_at") || "Chưa có"}</p>
                                     </div>
                                 </div>
                             ) : null}
@@ -503,11 +587,7 @@ export function AdminLogisticsPage() {
                                             Đơn giao thất bại. Cần kiểm tra chất lượng hàng hoàn trước khi nhập lại kho.
                                         </div>
                                         <div className="flex flex-col gap-3 lg:flex-row lg:flex-nowrap">
-                                            <Button
-                                                className="lg:flex-1"
-                                                onClick={() => void handleDeliveryFailedAction("reshop")}
-                                                disabled={isSaving}
-                                            >
+                                            <Button className="lg:flex-1" onClick={() => void handleDeliveryFailedAction("reshop")} disabled={isSaving}>
                                                 {isSaving ? "Đang cập nhật..." : "Giao lại"}
                                             </Button>
                                             <Button
@@ -535,9 +615,7 @@ export function AdminLogisticsPage() {
                                             onChange={(event) => setNextStatus(event.target.value)}
                                         >
                                             {activeOrder.allowed_next_statuses.length === 0 ? (
-                                                <option value={activeOrder.status}>
-                                                    {labelForStatus(activeOrder.status)}
-                                                </option>
+                                                <option value={activeOrder.status}>{labelForStatus(activeOrder.status)}</option>
                                             ) : (
                                                 activeOrder.allowed_next_statuses.map((status) => (
                                                     <option key={status} value={status}>
@@ -584,9 +662,7 @@ export function AdminLogisticsPage() {
                                             ))
                                         ) : (
                                             <option value={activeOrder.payment?.payment_status ?? "PENDING"}>
-                                                {labelForPaymentStatus(
-                                                    activeOrder.payment?.payment_status ?? "PENDING",
-                                                )}
+                                                {labelForPaymentStatus(activeOrder.payment?.payment_status ?? "PENDING")}
                                             </option>
                                         )}
                                     </select>
@@ -612,13 +688,10 @@ export function AdminLogisticsPage() {
                                 {activeOrder.status_history.map((history) => (
                                     <div key={history.id} className="rounded-2xl bg-surface-container-low p-4 text-sm">
                                         <p className="font-medium">
-                                            {(history.from_status
-                                                ? `${labelForStatus(history.from_status)} -> `
-                                                : "") + labelForStatus(history.to_status)}
+                                            {(history.from_status ? `${labelForStatus(history.from_status)} -> ` : "") +
+                                                labelForStatus(history.to_status)}
                                         </p>
-                                        <p className="mt-1 text-on-surface-variant">
-                                            {formatDate(history.changed_at)}
-                                        </p>
+                                        <p className="mt-1 text-on-surface-variant">{formatDate(history.changed_at)}</p>
                                         {history.note ? (
                                             <p className="mt-2 text-on-surface-variant">{history.note}</p>
                                         ) : null}
@@ -637,9 +710,7 @@ export function AdminLogisticsPage() {
                                                 ? `${labelForPaymentStatus(history.from_status)} -> `
                                                 : "") + labelForPaymentStatus(history.to_status)}
                                         </p>
-                                        <p className="mt-1 text-on-surface-variant">
-                                            {formatDate(history.changed_at)}
-                                        </p>
+                                        <p className="mt-1 text-on-surface-variant">{formatDate(history.changed_at)}</p>
                                         {history.note ? (
                                             <p className="mt-2 text-on-surface-variant">{history.note}</p>
                                         ) : null}
@@ -650,6 +721,45 @@ export function AdminLogisticsPage() {
                     )}
                 </SurfaceCard>
             </div>
+
+            {bulkResult ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 px-4 py-6">
+                    <div className="max-h-[88vh] w-full max-w-3xl overflow-y-auto rounded-[1.5rem] bg-white p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl font-semibold text-on-surface">Kết quả xử lý</h3>
+                                <p className="mt-2 text-sm text-on-surface-variant">
+                                    Đã xử lý {bulkResult.total} đơn: {bulkResult.success} thành công, {bulkResult.failed} thất bại.
+                                </p>
+                            </div>
+                            <button
+                                className="rounded-full bg-surface-container px-4 py-2 text-sm font-medium"
+                                onClick={() => setBulkResult(null)}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+
+                        <div className="mt-6 space-y-3">
+                            {bulkResult.results.map((item) => (
+                                <div
+                                    key={`${item.orderId}-${item.orderNo}`}
+                                    className={`rounded-2xl border px-4 py-4 text-sm ${
+                                        item.success
+                                            ? "border-green-200 bg-green-50 text-green-900"
+                                            : "border-red-200 bg-red-50 text-red-900"
+                                    }`}
+                                >
+                                    <p className="font-semibold">
+                                        {item.orderNo ?? `Đơn #${item.orderId}`}: {item.success ? "Thành công" : "Thất bại"}
+                                    </p>
+                                    <p className="mt-1">{item.message}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </div>
     );
 }

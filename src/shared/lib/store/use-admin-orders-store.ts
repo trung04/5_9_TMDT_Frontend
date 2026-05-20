@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 import type {
+    BackendBulkOrderStatusResponse,
     BackendAdminOrderDetail,
     BackendAdminOrderDetailResponse,
     BackendAdminOrderSummary,
@@ -14,6 +15,12 @@ interface AsyncResult<T = void> {
     success: boolean;
     data?: T;
     error?: string;
+}
+
+interface BulkUpdatePayload {
+    orderIds: number[];
+    action: "CONFIRM" | "PACK" | "SHIP" | "DELIVER" | "MARK_DELIVERY_FAILED" | "CANCEL" | "RESHIP";
+    note?: string;
 }
 
 interface AdminOrdersState {
@@ -37,6 +44,9 @@ interface AdminOrdersState {
         paymentStatus: string,
         note?: string,
     ) => Promise<AsyncResult<BackendAdminOrderDetail>>;
+    bulkUpdateStatus: (
+        payload: BulkUpdatePayload,
+    ) => Promise<AsyncResult<BackendBulkOrderStatusResponse["data"]>>;
     reset: () => void;
 }
 
@@ -240,6 +250,40 @@ export const useAdminOrdersStore = create<AdminOrdersState>()((set, get) => ({
             }
 
             const message = error instanceof Error ? error.message : "Không thể cập nhật trạng thái thanh toán.";
+            set({ isSaving: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+    bulkUpdateStatus: async (payload) => {
+        const accessToken = token();
+
+        if (!accessToken) {
+            return { success: false, error: "Bạn cần đăng nhập admin để xử lý hàng loạt." };
+        }
+
+        set({ isSaving: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendBulkOrderStatusResponse>("/admin/orders/bulk-status", {
+                method: "POST",
+                token: accessToken,
+                body: {
+                    orderIds: payload.orderIds,
+                    action: payload.action,
+                    note: payload.note?.trim() ? payload.note.trim() : undefined,
+                },
+            });
+
+            set({ isSaving: false, error: null });
+
+            return { success: true, data: response.data };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Không thể xử lý hàng loạt đơn hàng.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }
