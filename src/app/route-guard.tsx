@@ -3,8 +3,8 @@ import { Navigate, useLocation } from "react-router-dom";
 
 import type { UserRole } from "@/entities/user/model/types";
 import { canAccessRoute } from "@/shared/lib/auth";
-import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { routes } from "@/shared/config/routes";
+import { redirectForRole, useAuthStore } from "@/shared/lib/store/use-auth-store";
 
 interface RouteGuardProps {
     allowedRoles: UserRole[];
@@ -33,7 +33,14 @@ export function RouteGuard({ allowedRoles, children }: RouteGuardProps) {
         !allowedRoles.includes(session.user.role) ||
         !canAccessRoute(session.user.role, location.pathname)
     ) {
-        return <Navigate replace to={routes.unauthorized} />;
+        const fallbackRoute = redirectForRole(session.user.role);
+
+        return (
+            <Navigate
+                replace
+                to={fallbackRoute === location.pathname ? routes.unauthorized : fallbackRoute}
+            />
+        );
     }
 
     return <>{children}</>;

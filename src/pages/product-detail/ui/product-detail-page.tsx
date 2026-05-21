@@ -6,7 +6,6 @@ import { cn } from "@/shared/lib/cn";
 import { formatCurrency } from "@/shared/lib/format";
 import { stockStatusLabels } from "@/shared/lib/labels";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useShopStore } from "@/shared/lib/store/use-shop-store";
 import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
 import { Icon } from "@/shared/ui";
@@ -22,39 +21,77 @@ const tabLabels: Record<ProductTab, string> = {
 export function ProductDetailPage() {
     const navigate = useNavigate();
     const { slug } = useParams();
-    const pushToast = useFeedbackStore((state) => state.pushToast);
     const addItem = useCartStore((state) => state.addItem);
     const wishlistIds = useShopStore((state) => state.wishlistIds);
     const toggleWishlist = useShopStore((state) => state.toggleWishlist);
     const addRecentlyViewed = useShopStore((state) => state.addRecentlyViewed);
     const products = useStorefrontCatalogStore((state) => state.products);
+    const productDetails = useStorefrontCatalogStore((state) => state.productDetails);
     const status = useStorefrontCatalogStore((state) => state.status);
     const error = useStorefrontCatalogStore((state) => state.error);
     const loadCatalog = useStorefrontCatalogStore((state) => state.loadCatalog);
     const loadProductById = useStorefrontCatalogStore((state) => state.loadProductById);
-    const product = products.find((item) => item.slug === slug);
+    const productIdFromSlug = useMemo(() => {
+        if (!slug) return null;
+
+        const segments = slug.split("-");
+        const productId = segments[segments.length - 1];
+
+        return productId && /^\d+$/.test(productId) ? productId : null;
+    }, [slug]);
+    const productFromCatalog = products.find((item) => item.slug === slug);
+    const product = productFromCatalog
+        ? (productDetails[productFromCatalog.id] ?? productFromCatalog)
+        : undefined;
     const [quantity, setQuantity] = useState(1);
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
     const [activeTab, setActiveTab] = useState<ProductTab>("details");
 
-    const relatedProducts = useMemo(
-        () => (product ? products.filter((item) => item.id !== product.id).slice(0, 3) : []),
-        [product, products],
-    );
+    const relatedProducts = useMemo(() => {
+        if (!product) return [];
+
+        const sameCategory = products.filter(
+            (item) => item.id !== product.id && item.categoryId === product.categoryId,
+        );
+        const fallbackProducts = products.filter(
+            (item) =>
+                item.id !== product.id && !sameCategory.some((candidate) => candidate.id === item.id),
+        );
+
+        return [...sameCategory, ...fallbackProducts].slice(0, 4);
+    }, [product, products]);
 
     useEffect(() => {
         void loadCatalog();
     }, [loadCatalog]);
 
     useEffect(() => {
-        if (!product) return;
+        if (!productIdFromSlug) {
+            return;
+        }
+
+        void loadProductById(productIdFromSlug);
+    }, [loadProductById, productIdFromSlug]);
+
+    useEffect(() => {
+        if (!product?.id) {
+            return;
+        }
 
         addRecentlyViewed(product.id);
         setQuantity(1);
         setActiveMediaIndex(0);
         setActiveTab("details");
-        void loadProductById(product.id);
-    }, [addRecentlyViewed, loadProductById, product]);
+    }, [addRecentlyViewed, product?.id]);
+
+    useEffect(() => {
+        if (!product) {
+            return;
+        }
+
+        const currentMaxAvailableQuantity = Math.max(1, product.stockQuantity ?? 0);
+        setQuantity((value) => Math.min(Math.max(1, value), currentMaxAvailableQuantity));
+    }, [product]);
 
     if (!product && status === "ready") {
         return <Navigate replace to={routes.products} />;
@@ -83,15 +120,20 @@ export function ProductDetailPage() {
     const currentProduct = product;
     const isWishlisted = wishlistIds.includes(currentProduct.id);
     const activeMedia = currentProduct.gallery[activeMediaIndex] ?? currentProduct.gallery[0];
+    const currentStockQuantity = currentProduct.stockQuantity ?? 0;
+    const isOutOfStock = currentStockQuantity <= 0;
+    const maxAvailableQuantity = Math.max(1, currentStockQuantity);
+    const lowStockLabel =
+        currentStockQuantity > 0 && currentStockQuantity <= 5
+            ? `Chỉ còn ${currentProduct.stockQuantity} sản phẩm`
+            : null;
 
     function handleAddToCart(redirectToCheckout = false) {
-        if (!product) return;
+        if (isOutOfStock) {
+            return;
+        }
 
         void addItem(currentProduct.id, quantity);
-        pushToast({
-            tone: "success",
-            message: `Đã thêm ${quantity} ${product.name} vào giỏ hàng.`,
-        });
 
         if (redirectToCheckout) {
             void navigate(routes.checkout);
@@ -109,7 +151,7 @@ export function ProductDetailPage() {
                     Cửa hàng
                 </Link>
                 <Icon name="chevron_right" className="text-sm" />
-                <span className="font-semibold text-on-surface">{product.name}</span>
+                <span className="font-semibold text-on-surface">{currentProduct.name}</span>
             </nav>
 
             <div className="grid grid-cols-1 items-start gap-12 lg:grid-cols-12">
@@ -122,9 +164,10 @@ export function ProductDetailPage() {
                         />
                     </div>
                     <div className="grid grid-cols-4 gap-4">
-                        {product.gallery.map((media, index) => (
+                        {currentProduct.gallery.map((media, index) => (
                             <button
                                 key={`${media.src}-${index}`}
+                                type="button"
                                 className={cn(
                                     "aspect-square overflow-hidden rounded-xl transition-opacity",
                                     index === activeMediaIndex
@@ -132,7 +175,7 @@ export function ProductDetailPage() {
                                         : "opacity-70 hover:opacity-100",
                                 )}
                                 onClick={() => setActiveMediaIndex(index)}
-                                aria-label={`Xem ảnh ${index + 1} của ${product.name}`}
+                                aria-label={`Xem ảnh ${index + 1} của ${currentProduct.name}`}
                             >
                                 <img
                                     src={media.src}
@@ -148,9 +191,10 @@ export function ProductDetailPage() {
                     <header className="space-y-3">
                         <div className="flex items-center gap-3">
                             <span className="inline-block rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary">
-                                {product.badge ?? "Đặc sản"}
+                                {currentProduct.badge ?? "Đặc sản"}
                             </span>
                             <button
+                                type="button"
                                 className={cn(
                                     "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-all",
                                     isWishlisted
@@ -158,13 +202,7 @@ export function ProductDetailPage() {
                                         : "border-outline-variant/20 text-on-surface-variant hover:text-primary",
                                 )}
                                 onClick={() => {
-                                    toggleWishlist(product.id);
-                                    pushToast({
-                                        tone: "info",
-                                        message: isWishlisted
-                                            ? `Đã bỏ ${product.name} khỏi danh sách yêu thích.`
-                                            : `Đã lưu ${product.name} vào danh sách yêu thích.`,
-                                    });
+                                    toggleWishlist(currentProduct.id);
                                 }}
                             >
                                 <Icon name="favorite" fill={isWishlisted} />
@@ -172,20 +210,20 @@ export function ProductDetailPage() {
                             </button>
                         </div>
                         <h1 className="font-headline text-3xl font-bold leading-tight tracking-tight text-on-surface">
-                            {product.detailTitle}
+                            {currentProduct.detailTitle}
                         </h1>
                         <div className="flex items-center space-x-4">
                             <div className="flex items-center text-tertiary">
-                                {Array.from({ length: Math.floor(product.rating) }).map((_, index) => (
+                                {Array.from({ length: Math.floor(currentProduct.rating) }).map((_, index) => (
                                     <Icon key={index} name="star" className="text-sm" fill />
                                 ))}
                                 <span className="ml-2 text-sm font-medium text-on-surface-variant">
-                                    {product.rating.toFixed(1)} ({product.reviewCount} đánh giá)
+                                    {currentProduct.rating.toFixed(1)} ({currentProduct.reviewCount} đánh giá)
                                 </span>
                             </div>
                         </div>
                         <p className="pt-2 font-headline text-2xl font-bold text-primary">
-                            {formatCurrency(product.price)}
+                            {formatCurrency(currentProduct.price)}
                         </p>
                     </header>
 
@@ -194,32 +232,38 @@ export function ProductDetailPage() {
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
                                 Nhà cung cấp
                             </span>
-                            <span className="font-medium">{product.regionName}</span>
+                            <span className="font-medium">{currentProduct.regionName}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
                                 SKU / Tag
                             </span>
-                            <span className="font-medium">{product.tag}</span>
+                            <span className="font-medium">{currentProduct.tag}</span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
                                 Trạng thái
                             </span>
-                            <span className="font-medium">{stockStatusLabels[product.stockStatus]}</span>
+                            <span className="font-medium">
+                                {stockStatusLabels[currentProduct.stockStatus]}
+                            </span>
                         </div>
                         <div className="flex flex-col gap-1">
                             <span className="text-xs uppercase tracking-wider text-on-surface-variant">
                                 Mô tả nhanh
                             </span>
-                            <span className="font-medium">{product.subtitle}</span>
+                            <span className="font-medium">{currentProduct.subtitle}</span>
                         </div>
                     </div>
 
                     <div className="space-y-6">
+                        <p className={cn("text-sm font-medium", isOutOfStock ? "text-error" : lowStockLabel ? "text-amber-700" : "text-on-surface-variant")}>
+                            {isOutOfStock ? "Hết hàng" : lowStockLabel ?? `Còn ${currentProduct.stockQuantity} sản phẩm`}
+                        </p>
                         <div className="flex items-center gap-4">
                             <div className="flex items-center rounded-full border border-outline-variant/20 bg-surface-container-low px-4 py-2">
                                 <button
+                                    type="button"
                                     className="flex h-8 w-8 items-center justify-center hover:text-primary"
                                     onClick={() => setQuantity((value) => Math.max(1, value - 1))}
                                     aria-label="Giảm số lượng"
@@ -233,14 +277,18 @@ export function ProductDetailPage() {
                                     readOnly
                                 />
                                 <button
+                                    type="button"
                                     className="flex h-8 w-8 items-center justify-center hover:text-primary"
-                                    onClick={() => setQuantity((value) => value + 1)}
+                                    onClick={() =>
+                                        setQuantity((value) => Math.min(maxAvailableQuantity, value + 1))
+                                    }
                                     aria-label="Tăng số lượng"
                                 >
                                     <Icon name="add" />
                                 </button>
                             </div>
                             <button
+                                type="button"
                                 className="flex-1 rounded-full border border-secondary px-6 py-4 font-bold text-secondary transition-all hover:bg-secondary hover:text-white"
                                 onClick={() => handleAddToCart(false)}
                             >
@@ -248,6 +296,7 @@ export function ProductDetailPage() {
                             </button>
                         </div>
                         <button
+                            type="button"
                             className="w-full rounded-full bg-primary-glow px-6 py-4 font-bold text-white shadow-lg shadow-primary/20 transition-transform active:scale-95"
                             onClick={() => handleAddToCart(true)}
                         >
@@ -258,9 +307,9 @@ export function ProductDetailPage() {
                     <div className="flex items-start gap-4 rounded-xl bg-surface-container-low p-4">
                         <Icon name="local_shipping" className="text-primary" />
                         <div className="text-sm">
-                            <p className="font-bold">{product.shippingNotice.title}</p>
+                            <p className="font-bold">{currentProduct.shippingNotice.title}</p>
                             <p className="text-on-surface-variant">
-                                {product.shippingNotice.description}
+                                {currentProduct.shippingNotice.description}
                             </p>
                         </div>
                     </div>
@@ -272,6 +321,7 @@ export function ProductDetailPage() {
                     {(Object.keys(tabLabels) as ProductTab[]).map((tab) => (
                         <button
                             key={tab}
+                            type="button"
                             className={cn(
                                 "whitespace-nowrap pb-4 font-medium transition-colors",
                                 activeTab === tab
@@ -290,13 +340,13 @@ export function ProductDetailPage() {
                         {activeTab === "details" ? (
                             <div className="space-y-6">
                                 <h3 className="font-headline text-2xl font-bold tracking-tight">
-                                    {product.sourcing.title}
+                                    {currentProduct.sourcing.title}
                                 </h3>
                                 <p className="leading-relaxed text-on-surface-variant">
-                                    {product.sourcing.body}
+                                    {currentProduct.sourcing.body}
                                 </p>
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    {product.sourcing.certificationCards.map((card) => (
+                                    {currentProduct.sourcing.certificationCards.map((card) => (
                                         <div
                                             key={card.title}
                                             className="rounded-xl bg-surface-container-lowest p-6"
@@ -324,6 +374,7 @@ export function ProductDetailPage() {
                                         </p>
                                     </div>
                                     <button
+                                        type="button"
                                         className="cursor-not-allowed rounded-full bg-surface-container px-6 py-3 font-bold text-on-surface-variant"
                                         disabled
                                     >
@@ -332,8 +383,8 @@ export function ProductDetailPage() {
                                 </div>
 
                                 <div className="rounded-2xl bg-surface-container-low p-6 text-sm leading-7 text-on-surface-variant">
-                                    Khi có đánh giá khách hàng, tab này sẽ hiển thị phản hồi thật và cho phép
-                                    khách hàng gửi nhận xét về sản phẩm.
+                                    Khi có đánh giá khách hàng, tab này sẽ hiển thị phản hồi thật và cho
+                                    phép khách hàng gửi nhận xét về sản phẩm.
                                 </div>
                             </div>
                         ) : null}
@@ -347,14 +398,14 @@ export function ProductDetailPage() {
                                     {[
                                         {
                                             title: "Kiểm tra mô tả",
-                                            body: `Đọc kỹ phần mô tả sản phẩm để chọn lựa đúng loại đặc sản phù hợp nhu cầu.`,
+                                            body: "Đọc kỹ phần mô tả sản phẩm để chọn đúng loại đặc sản phù hợp nhu cầu.",
                                         },
                                         {
                                             title: "Thêm vào giỏ",
                                             body: "Chọn số lượng phù hợp rồi thêm sản phẩm vào giỏ để chuẩn bị thanh toán.",
                                         },
                                         {
-                                            title: "Checkout COD",
+                                            title: "Checkout",
                                             body: "Đơn hàng sẽ được xác nhận và lưu vào lịch sử đặt hàng của bạn.",
                                         },
                                     ].map((step) => (
@@ -379,7 +430,7 @@ export function ProductDetailPage() {
                         <div className="space-y-6 rounded-2xl bg-surface-container-high p-8">
                             <h4 className="font-headline text-xl font-bold">Cam kết chất lượng</h4>
                             <ul className="space-y-4">
-                                {product.heritageCommitments.map((item) => (
+                                {currentProduct.heritageCommitments.map((item) => (
                                     <li key={item.text} className="flex items-start gap-3">
                                         <Icon name={item.icon} className="text-primary" />
                                         <span className="text-sm">{item.text}</span>

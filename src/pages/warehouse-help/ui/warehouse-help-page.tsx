@@ -20,10 +20,6 @@ export function WarehouseHelpPage() {
     return (
         <div className="space-y-8">
             <section>
-                <h2 className="font-headline text-3xl font-bold tracking-tight">Hỗ trợ kho vận</h2>
-                <p className="mt-1 text-on-surface-variant">
-                    Gửi ticket nội bộ để xử lý sự cố vận hành, lịch ca và phối hợp carrier.
-                </p>
             </section>
 
             <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">

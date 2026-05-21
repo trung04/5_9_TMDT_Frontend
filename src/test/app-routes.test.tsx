@@ -10,7 +10,6 @@ import { routes } from "@/shared/config/routes";
 import { resetDemoState } from "@/shared/lib/store/reset-demo";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { FeedbackToaster } from "@/widgets/feedback-toaster";
 import {
     createBackendProduct,
     createBackendUser,
@@ -27,7 +26,6 @@ function renderApp(route: string) {
         <MemoryRouter initialEntries={[route]}>
             <AppBootstrap />
             <AppRoutes />
-            <FeedbackToaster />
         </MemoryRouter>,
     );
 }
@@ -44,6 +42,7 @@ function setBackendCustomerSession() {
             loggedInAt: "2026-04-20T08:00:00.000Z",
         },
         accessToken: "token-1",
+        accessTokenExpiresAt: "2026-12-31T10:00:00.000Z",
         authSource: "backend",
     });
 }
@@ -56,7 +55,7 @@ describe("customer commerce routes", () => {
         vi.unstubAllGlobals();
     });
 
-    it("redirects anonymous checkout users to login and returns after backend login", async () => {
+    it("allows guest checkout access, then redirects to login when placing the order", async () => {
         const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
             const path = getRequestPath(input);
 
@@ -65,7 +64,55 @@ describe("customer commerce routes", () => {
                     message: "Logged in successfully.",
                     access_token: "token-1",
                     token_type: "Bearer",
+                    expires_at: "2026-04-20T10:00:00.000Z",
                     user: createBackendUser(),
+                });
+            }
+
+            if (path.endsWith("/api/account/profile")) {
+                return jsonResponse(
+                    {
+                        data: {
+                            user: {
+                                id: 1,
+                                full_name: "Nguyen Van A",
+                                email: "customer@example.com",
+                                phone: "0909123456",
+                                address: "123 Nguyen Trai",
+                                city: "Ha Noi",
+                                favorite_region: "Thai Nguyen",
+                                avatar: null,
+                                loyalty_points: 0,
+                                loyalty_tier: "Member",
+                                next_tier_points: 100,
+                                preferences: {
+                                    newsletter: false,
+                                    sms_alerts: false,
+                                    order_email: true,
+                                    security_alerts: true,
+                                },
+                                addresses: [],
+                                reward_history: [],
+                                created_at: "2026-04-20T00:00:00.000000Z",
+                            },
+                            reward_snapshot: {
+                                tier: "Member",
+                                points: 0,
+                                next_tier_points: 100,
+                                perks: [],
+                            },
+                        },
+                    },
+                    { status: 200 },
+                );
+            }
+
+            if (path.endsWith("/api/account/wishlist")) {
+                return jsonResponse({
+                    data: {
+                        product_ids: [],
+                        products: [],
+                    },
                 });
             }
 
@@ -89,15 +136,17 @@ describe("customer commerce routes", () => {
         const user = userEvent.setup();
         renderApp(routes.checkout);
 
-        expect(
-            await screen.findByRole("heading", { name: /Đăng nhập khách hàng/i }),
-        ).toBeInTheDocument();
+        expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Dang nhap de dat hang/i })).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: /Dang nhap de dat hang/i }));
+        expect(await screen.findByLabelText(/Email/i)).toBeInTheDocument();
 
         await user.type(screen.getByLabelText(/Email/i), "customer@example.com");
         await user.type(screen.getByLabelText(/Mật khẩu/i), "secret123");
-        await user.click(screen.getByRole("button", { name: /Đăng nhập khách hàng/i }));
+        await user.click(screen.getByRole("button", { name: /^Đăng nhập$/i }));
 
-        expect(await screen.findByText(/Tóm tắt đơn hàng/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
 
         const syncCall = fetchMock.mock.calls.find(([input, init]) => {
             return (
@@ -130,7 +179,7 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.products);
 
-        expect(await screen.findByText(/Xin lỗi, không thể kết nối đến hệ thống/i)).toBeInTheDocument();
+        expect(await screen.findByText(/không thể kết nối đến hệ thống/i)).toBeInTheDocument();
     });
 
     it("shows a connection error on the product detail page when the API is unavailable", async () => {
@@ -143,7 +192,7 @@ describe("customer commerce routes", () => {
 
         renderApp(routes.productDetail(slug));
 
-        expect(await screen.findByText(/Xin lỗi, không thể kết nối đến hệ thống/i)).toBeInTheDocument();
+        expect(await screen.findByText(/không thể kết nối đến hệ thống/i)).toBeInTheDocument();
     });
 
     it("loads backend orders and reorders items back into the cart", async () => {
@@ -193,7 +242,8 @@ describe("customer commerce routes", () => {
 
         expect(await screen.findByText(/Tra huu co/i)).toBeInTheDocument();
 
-        await user.click(screen.getByRole("button", { name: /Thêm lại vào giỏ/i }));
+        await user.click(screen.getByRole("button", { name: /Xem chi tiết/i }));
+        await user.click(await screen.findByRole("button", { name: /Thêm lại vào giỏ/i }));
 
         await waitFor(() => {
             const reorderCall = fetchMock.mock.calls.find(([input, init]) => {

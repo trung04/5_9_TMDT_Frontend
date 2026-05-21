@@ -1,7 +1,6 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { accountRepository } from "@/shared/api/mock-repositories";
 import { routes } from "@/shared/config/routes";
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
@@ -9,13 +8,23 @@ import { Icon } from "@/shared/ui";
 
 export function AccountProfilePage() {
     const navigate = useNavigate();
-    const profile = accountRepository.getProfile();
-    const updateProfile = useAccountStore((state) => state.updateProfile);
+    const profile = useAccountStore((state) => state.profile);
+    const loadProfile = useAccountStore((state) => state.loadProfile);
+    const saveProfile = useAccountStore((state) => state.saveProfile);
     const updateAvatar = useAccountStore((state) => state.updateAvatar);
     const removeAvatar = useAccountStore((state) => state.removeAvatar);
+    const isSaving = useAccountStore((state) => state.isSaving);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [form, setForm] = useState(profile);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    useEffect(() => {
+        void loadProfile();
+    }, [loadProfile]);
+
+    useEffect(() => {
+        setForm(profile);
+    }, [profile]);
 
     function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
         setForm((current) => ({
@@ -24,18 +33,28 @@ export function AccountProfilePage() {
         }));
     }
 
-    function handleSaveChanges() {
-        updateProfile({
+    async function handleSaveChanges() {
+        const result = await saveProfile({
             name: form.name,
             phone: form.phone,
             city: form.city,
             address: form.address,
             newsletter: form.newsletter,
             smsAlerts: form.smsAlerts,
+            orderEmail: form.orderEmail,
+            securityAlerts: form.securityAlerts,
+            favoriteRegion: form.favoriteRegion,
         });
+
+        if (result.success) {
+            await loadProfile();
+        }
+
         pushToast({
-            tone: "success",
-            message: "Hồ sơ khách hàng đã được cập nhật.",
+            tone: result.success ? "success" : "warning",
+            message: result.success
+                ? "Hồ sơ khách hàng đã được cập nhật."
+                : (result.error ?? "Không thể cập nhật hồ sơ."),
         });
     }
 
@@ -44,9 +63,9 @@ export function AccountProfilePage() {
 
         const reader = new FileReader();
         reader.onload = () => {
-            const avatar = reader.result;
+            const source = reader.result;
 
-            if (typeof avatar !== "string") {
+            if (typeof source !== "string") {
                 pushToast({
                     tone: "warning",
                     message: "Không thể đọc tệp ảnh đã chọn.",
@@ -54,15 +73,51 @@ export function AccountProfilePage() {
                 return;
             }
 
-            updateAvatar(avatar);
-            setForm((current) => ({
-                ...current,
-                avatar,
-            }));
-            pushToast({
-                tone: "success",
-                message: "Ảnh đại diện đã được thay mới.",
-            });
+            const image = new Image();
+            image.onload = async () => {
+                const canvas = document.createElement("canvas");
+                const maxSize = 320;
+                const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
+
+                canvas.width = Math.max(1, Math.round(image.width * scale));
+                canvas.height = Math.max(1, Math.round(image.height * scale));
+
+                const context = canvas.getContext("2d");
+
+                if (!context) {
+                    pushToast({
+                        tone: "warning",
+                        message: "Không thể xử lý ảnh đã chọn.",
+                    });
+                    return;
+                }
+
+                context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+                const avatar = canvas.toDataURL("image/jpeg", 0.82);
+
+                updateField("avatar", avatar);
+
+                const result = await updateAvatar(avatar);
+
+                if (result.success) {
+                    await loadProfile();
+                }
+
+                pushToast({
+                    tone: result.success ? "success" : "warning",
+                    message: result.success
+                        ? "Ảnh đại diện đã được thay mới."
+                        : (result.error ?? "Không thể cập nhật ảnh đại diện."),
+                });
+            };
+            image.onerror = () => {
+                pushToast({
+                    tone: "warning",
+                    message: "Tệp ảnh không hợp lệ.",
+                });
+            };
+            image.src = source;
         };
         reader.readAsDataURL(file);
     }
@@ -94,7 +149,7 @@ export function AccountProfilePage() {
                                 name="shield"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">Bảo mật & mật khẩu</span>
+                            <span className="text-sm font-medium">Bảo mật và mật khẩu</span>
                         </button>
                         <button
                             className="group flex w-full items-center gap-3 px-4 py-3 text-left text-stone-500 transition-colors hover:text-green-600"
@@ -124,7 +179,7 @@ export function AccountProfilePage() {
                                 name="gavel"
                                 className="text-xl transition-transform group-hover:scale-110"
                             />
-                            <span className="text-sm font-medium">Khiếu nại & hỗ trợ</span>
+                            <span className="text-sm font-medium">Khiếu nại và hỗ trợ</span>
                         </button>
                     </div>
                 </aside>
@@ -132,7 +187,7 @@ export function AccountProfilePage() {
                 <div className="flex-1 space-y-12">
                     <div className="flex flex-col justify-between gap-6 border-b border-outline-variant/15 pb-8 sm:flex-row sm:items-end">
                         <div>
-                            <h1 className="text-3xl font-bold tracking-tight text-on-surface">
+                            <h1 className="text-2xl font-bold tracking-tight text-on-surface">
                                 Thông tin cá nhân
                             </h1>
                             <p className="mt-2 text-on-surface-variant">
@@ -140,10 +195,11 @@ export function AccountProfilePage() {
                             </p>
                         </div>
                         <button
-                            className="flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3 font-medium text-on-primary shadow-lg transition-all active:scale-95"
-                            onClick={handleSaveChanges}
+                            className="flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3 font-medium text-on-primary shadow-lg transition-all active:scale-95 disabled:opacity-60"
+                            disabled={isSaving}
+                            onClick={() => void handleSaveChanges()}
                         >
-                            Lưu thay đổi
+                            {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
                         </button>
                     </div>
 
@@ -165,14 +221,13 @@ export function AccountProfilePage() {
                                 className="hidden"
                                 type="file"
                                 accept="image/png,image/jpeg,image/gif"
-                                onChange={(event) => handleAvatarChange(event.target.files?.[0])}
+                                onChange={(event) => void handleAvatarChange(event.target.files?.[0])}
                             />
                         </div>
                         <div>
                             <h3 className="text-lg font-semibold text-on-surface">Ảnh đại diện</h3>
                             <p className="mb-3 text-sm text-on-surface-variant">
-                                Hỗ trợ JPG, GIF hoặc PNG. Ảnh được lưu cục bộ trong localStorage của
-                                app demo.
+                                Hỗ trợ JPG, GIF hoặc PNG. Ảnh sẽ được lưu vào tài khoản backend.
                             </p>
                             <div className="flex gap-3">
                                 <button
@@ -183,12 +238,15 @@ export function AccountProfilePage() {
                                 </button>
                                 <button
                                     className="rounded-lg px-4 py-2 text-sm font-semibold text-error transition-colors hover:bg-error/5"
-                                    onClick={() => {
-                                        removeAvatar();
-                                        setForm((current) => ({
-                                            ...current,
-                                            avatar: "",
-                                        }));
+                                    onClick={async () => {
+                                        const result = await removeAvatar();
+
+                                        pushToast({
+                                            tone: result.success ? "success" : "warning",
+                                            message: result.success
+                                                ? "Đã gỡ ảnh đại diện."
+                                                : (result.error ?? "Không thể gỡ ảnh đại diện."),
+                                        });
                                     }}
                                 >
                                     Gỡ ảnh
@@ -260,15 +318,11 @@ export function AccountProfilePage() {
                     <section className="space-y-8 rounded-xl bg-surface-container-lowest p-8">
                         <div className="flex items-center gap-3">
                             <span className="h-6 w-1 rounded-full bg-primary" />
-                            <h2 className="text-xl font-bold text-on-surface">
-                                Tùy chọn thông báo nhanh
-                            </h2>
+                            <h2 className="text-xl font-bold text-on-surface">Tùy chọn thông báo nhanh</h2>
                         </div>
                         <label className="flex items-center justify-between gap-4 rounded-xl bg-surface-container-low p-4">
                             <span>
-                                <span className="block font-medium">
-                                    Nhận email về bộ sưu tập mới
-                                </span>
+                                <span className="block font-medium">Nhận email về bộ sưu tập mới</span>
                                 <span className="text-sm text-on-surface-variant">
                                     Cập nhật mùa vụ, đặc sản mới và ưu đãi hội viên.
                                 </span>
@@ -276,17 +330,13 @@ export function AccountProfilePage() {
                             <input
                                 checked={form.newsletter}
                                 className="h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary"
-                                onChange={(event) =>
-                                    updateField("newsletter", event.target.checked)
-                                }
+                                onChange={(event) => updateField("newsletter", event.target.checked)}
                                 type="checkbox"
                             />
                         </label>
                         <label className="flex items-center justify-between gap-4 rounded-xl bg-surface-container-low p-4">
                             <span>
-                                <span className="block font-medium">
-                                    Nhận SMS về cập nhật đơn hàng
-                                </span>
+                                <span className="block font-medium">Nhận SMS về cập nhật đơn hàng</span>
                                 <span className="text-sm text-on-surface-variant">
                                     Dùng cho các đơn cần giao nhanh hoặc đơn quà tặng.
                                 </span>

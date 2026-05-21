@@ -27,6 +27,8 @@ export function StorefrontHeader() {
     const [search, setSearch] = useState("");
     const variant = getVariant(location.pathname);
     const accountTarget = session ? redirectForRole(session.user.role) : routes.login;
+    const isCustomerSession = session?.user.role === "customer";
+    const canUseStorefrontActions = !session || isCustomerSession;
 
     const navItems =
         variant === "catalog"
@@ -65,10 +67,7 @@ export function StorefrontHeader() {
                         : "max-w-7xl",
                 )}
             >
-                <Link
-                    to={routes.home}
-                    className="text-xl font-bold tracking-tighter text-green-900"
-                >
+                <Link to={routes.home} className="text-xl font-bold tracking-tighter text-green-900">
                     Heritage Harvest
                 </Link>
 
@@ -85,7 +84,7 @@ export function StorefrontHeader() {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     {variant === "home" ? (
                         <form
                             className="hidden items-center rounded-full bg-surface-container-low px-3 py-1.5 sm:flex"
@@ -109,33 +108,45 @@ export function StorefrontHeader() {
                         </button>
                     ) : null}
 
-                    <Link
-                        to={routes.checkout}
-                        className="relative rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary"
-                        aria-label="Giỏ hàng"
-                    >
-                        <Icon name="shopping_cart" />
-                        {cartCount > 0 && variant === "catalog" ? (
-                            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-tertiary text-[10px] font-bold text-on-tertiary">
-                                {cartCount}
-                            </span>
-                        ) : null}
-                    </Link>
+                    {canUseStorefrontActions ? (
+                        <Link
+                            to={routes.checkout}
+                            className="relative rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary"
+                            aria-label="Giỏ hàng"
+                        >
+                            <Icon name="shopping_cart" />
+                            {cartCount > 0 && variant === "catalog" ? (
+                                <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-tertiary text-[10px] font-bold text-on-tertiary">
+                                    {cartCount}
+                                </span>
+                            ) : null}
+                        </Link>
+                    ) : null}
 
                     <Link
                         to={accountTarget}
                         className={cn(
-                            "flex items-center gap-2 rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary",
+                            "rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary",
                             (location.pathname.startsWith("/account") ||
                                 location.pathname.startsWith("/admin") ||
                                 location.pathname.startsWith("/supplier") ||
                                 location.pathname.startsWith("/warehouse")) &&
-                                "border-b-2 border-green-800 pb-1 text-green-800",
+                                "text-green-800",
                         )}
                         aria-label={session ? "Khu vực tài khoản" : "Đăng nhập"}
                     >
                         <Icon name="person" />
                     </Link>
+
+                    {session ? (
+                        <Link
+                            to={routes.logout}
+                            className="rounded-full p-2 text-zinc-600 transition hover:bg-zinc-50 hover:text-primary"
+                            aria-label="Đăng xuất"
+                        >
+                            <Icon name="logout" />
+                        </Link>
+                    ) : null}
                 </div>
             </div>
         </nav>

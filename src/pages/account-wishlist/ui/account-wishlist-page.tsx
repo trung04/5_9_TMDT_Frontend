@@ -11,12 +11,16 @@ export function AccountWishlistPage() {
     const addItem = useCartStore((state) => state.addItem);
     const wishlistIds = useShopStore((state) => state.wishlistIds);
     const recentlyViewedIds = useShopStore((state) => state.recentlyViewedIds);
+    const isWishlistLoading = useShopStore((state) => state.isWishlistLoading);
+    const wishlistError = useShopStore((state) => state.error);
+    const loadWishlist = useShopStore((state) => state.loadWishlist);
     const products = useStorefrontCatalogStore((state) => state.products);
     const loadCatalog = useStorefrontCatalogStore((state) => state.loadCatalog);
 
     useEffect(() => {
         void loadCatalog();
-    }, [loadCatalog]);
+        void loadWishlist();
+    }, [loadCatalog, loadWishlist]);
 
     const wishlistProducts = wishlistIds
         .map((productId) => products.find((product) => product.id === productId))
@@ -30,16 +34,22 @@ export function AccountWishlistPage() {
         <div className="mx-auto max-w-7xl px-6 pb-16 pt-24">
             <div className="space-y-6">
                 <div>
-                    <h1 className="font-headline text-4xl font-bold tracking-tight">
-                        Danh sách yêu thích
-                    </h1>
+                    <h1 className="font-headline text-2xl font-bold tracking-tight">Danh sách yêu thích</h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Wishlist chỉ hiển thị sản phẩm còn tồn tại trong cửa hàng. Các mục cũ không còn
-                        hợp lệ sẽ được bỏ qua.
+                        Danh sách này được đồng bộ với tài khoản backend của bạn và chỉ hiển thị sản
+                        phẩm còn tồn tại trong cửa hàng.
                     </p>
                 </div>
 
-                {wishlistProducts.length > 0 ? (
+                {isWishlistLoading ? (
+                    <SurfaceCard className="text-center text-on-surface-variant">
+                        Đang tải danh sách yêu thích...
+                    </SurfaceCard>
+                ) : wishlistError ? (
+                    <SurfaceCard className="text-center text-on-surface-variant">
+                        {wishlistError}
+                    </SurfaceCard>
+                ) : wishlistProducts.length > 0 ? (
                     <div className="grid gap-6 xl:grid-cols-2">
                         {wishlistProducts.map((product) => (
                             <ProductCard

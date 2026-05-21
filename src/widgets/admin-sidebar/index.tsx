@@ -19,9 +19,6 @@ export function AdminSidebar() {
                 <h2 className="font-headline text-xl font-bold tracking-tight text-primary">
                     Heritage Admin
                 </h2>
-                <p className="mt-1 text-[10px] uppercase tracking-widest text-on-surface-variant/60">
-                    Điều phối hệ sinh thái
-                </p>
             </div>
 
             <SidebarNav items={adminItems} />

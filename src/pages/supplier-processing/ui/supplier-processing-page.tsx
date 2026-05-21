@@ -16,15 +16,6 @@ export function SupplierProcessingPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Xử lý đơn phía nhà cung cấp
-                </h2>
-                <p className="mt-1 text-on-surface-variant">
-                    Đẩy đơn từ giai đoạn đang xử lý sang sẵn sàng giao và khóa các cập nhật quan
-                    trọng trước khi bàn giao kho.
-                </p>
-            </section>
 
             <div className="grid gap-6 xl:grid-cols-[1fr_0.9fr]">
                 <SurfaceCard className="space-y-3">

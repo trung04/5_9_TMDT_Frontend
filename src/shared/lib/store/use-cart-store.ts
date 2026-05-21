@@ -53,7 +53,7 @@ const initialState = {
     error: null as string | null,
 };
 
-const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap lai.";
+const SESSION_EXPIRED_MESSAGE = "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
 
 function authState() {
     return useAuthStore.getState();
@@ -129,6 +129,10 @@ export const useCartStore = create<CartState>()(
                     };
                 } catch (error) {
                     if (isUnauthorizedApiError(error)) {
+                        set({
+                            isLoading: false,
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
                         useAuthStore.getState().clearSession();
 
                         return {
@@ -199,6 +203,9 @@ export const useCartStore = create<CartState>()(
                     };
                 } catch (error) {
                     if (isUnauthorizedApiError(error)) {
+                        set({
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
                         useAuthStore.getState().clearSession();
 
                         return {
@@ -268,6 +275,9 @@ export const useCartStore = create<CartState>()(
                     };
                 } catch (error) {
                     if (isUnauthorizedApiError(error)) {
+                        set({
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
                         useAuthStore.getState().clearSession();
 
                         return {
@@ -326,6 +336,9 @@ export const useCartStore = create<CartState>()(
                     };
                 } catch (error) {
                     if (isUnauthorizedApiError(error)) {
+                        set({
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
                         useAuthStore.getState().clearSession();
 
                         return {
@@ -403,6 +416,10 @@ export const useCartStore = create<CartState>()(
                     return get().loadCart();
                 } catch (error) {
                     if (isUnauthorizedApiError(error)) {
+                        set({
+                            isSyncing: false,
+                            error: SESSION_EXPIRED_MESSAGE,
+                        });
                         useAuthStore.getState().clearSession();
 
                         return {

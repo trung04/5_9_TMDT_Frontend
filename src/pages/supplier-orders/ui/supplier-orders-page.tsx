@@ -49,15 +49,6 @@ export function SupplierOrdersPage() {
     return (
         <div className="space-y-8">
             <section className="flex items-end justify-between gap-6">
-                <div>
-                    <h2 className="font-headline text-3xl font-bold tracking-tight">
-                        Đơn hàng phía nhà cung cấp
-                    </h2>
-                    <p className="mt-1 text-on-surface-variant">
-                        Theo dõi đơn mới, đơn chờ bàn giao và chi tiết từng line item trong cùng một
-                        workspace.
-                    </p>
-                </div>
             </section>
 
             <section className="grid gap-6 lg:grid-cols-3">

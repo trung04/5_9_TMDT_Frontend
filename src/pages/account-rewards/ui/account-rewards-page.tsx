@@ -1,4 +1,5 @@
-import { accountRepository } from "@/shared/api/mock-repositories";
+import { useEffect } from "react";
+
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, SurfaceCard } from "@/shared/ui";
@@ -13,7 +14,13 @@ export function AccountRewardsPage() {
     const rewardSnapshot = useAccountStore((state) => state.rewardSnapshot);
     const history = useAccountStore((state) => state.profile.rewardHistory);
     const redeemReward = useAccountStore((state) => state.redeemReward);
+    const loadProfile = useAccountStore((state) => state.loadProfile);
+    const isSaving = useAccountStore((state) => state.isSaving);
     const pushToast = useFeedbackStore((state) => state.pushToast);
+
+    useEffect(() => {
+        void loadProfile();
+    }, [loadProfile]);
 
     return (
         <div className="mx-auto max-w-6xl px-6 pb-16 pt-24">
@@ -24,16 +31,13 @@ export function AccountRewardsPage() {
                     </p>
                     <h1 className="font-headline text-5xl font-bold">{rewardSnapshot.points}</h1>
                     <p className="text-on-surface-variant">
-                        Hạng {rewardSnapshot.tier}. Còn{" "}
-                        {rewardSnapshot.nextTierPoints - rewardSnapshot.points} điểm để chạm mốc
-                        tiếp theo.
+                        Hạng {rewardSnapshot.tier || "Chưa xác định"}. Còn{" "}
+                        {Math.max(0, rewardSnapshot.nextTierPoints - rewardSnapshot.points)} điểm để chạm
+                        mốc tiếp theo.
                     </p>
                     <div className="space-y-3">
                         {rewardSnapshot.perks.map((perk) => (
-                            <div
-                                key={perk}
-                                className="rounded-3xl bg-surface-container-low p-4 text-sm"
-                            >
+                            <div key={perk} className="rounded-3xl bg-surface-container-low p-4 text-sm">
                                 {perk}
                             </div>
                         ))}
@@ -56,11 +60,9 @@ export function AccountRewardsPage() {
                                     <Button
                                         className="mt-4 w-full"
                                         size="sm"
-                                        onClick={() => {
-                                            const result = redeemReward(
-                                                option.title,
-                                                option.points,
-                                            );
+                                        disabled={isSaving}
+                                        onClick={async () => {
+                                            const result = await redeemReward(option.title, option.points);
 
                                             pushToast({
                                                 tone: result.success ? "success" : "warning",
@@ -81,16 +83,12 @@ export function AccountRewardsPage() {
                         <h2 className="font-headline text-2xl font-bold">Lịch sử đổi thưởng</h2>
                         {history.length === 0 ? (
                             <p className="text-sm text-on-surface-variant">
-                                Chưa có lượt đổi thưởng nào. Hãy bắt đầu từ một trong các ưu đãi
-                                phía trên.
+                                Chưa có lượt đổi thưởng nào. Hãy bắt đầu từ một trong các ưu đãi phía trên.
                             </p>
                         ) : (
                             <div className="space-y-3">
                                 {history.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        className="rounded-3xl bg-surface-container-low p-4"
-                                    >
+                                    <div key={item.id} className="rounded-3xl bg-surface-container-low p-4">
                                         <p className="font-semibold">{item.title}</p>
                                         <p className="mt-1 text-sm text-on-surface-variant">
                                             {item.pointsUsed} điểm ·{" "}
@@ -100,10 +98,6 @@ export function AccountRewardsPage() {
                                 ))}
                             </div>
                         )}
-                        <p className="text-xs text-on-surface-variant">
-                            Tổng số đơn đồng bộ với tài khoản:{" "}
-                            {accountRepository.listOrders().length}
-                        </p>
                     </SurfaceCard>
                 </div>
             </div>

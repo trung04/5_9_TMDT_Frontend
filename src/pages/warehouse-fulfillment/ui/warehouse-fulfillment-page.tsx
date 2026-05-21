@@ -57,13 +57,7 @@ export function WarehouseFulfillmentPage() {
     return (
         <div className="space-y-8">
             <section className="space-y-1">
-                <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Điều phối fulfillment
-                </h2>
-                <p className="text-on-surface-variant">
-                    Theo dõi pick, pack và bàn giao vận chuyển cho toàn bộ đội kho trong một bảng
-                    điều phối.
-                </p>
+               
             </section>
 
             <section className="grid gap-6 xl:grid-cols-3">

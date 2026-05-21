@@ -32,7 +32,7 @@ export function StoryPage() {
                 <SurfaceCard className="space-y-6">
                     <Badge tone="primary">Câu chuyện Heritage Harvest</Badge>
                     <div>
-                        <h1 className="font-headline text-5xl font-bold tracking-tight text-on-surface">
+                        <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
                             Một storefront dành cho đặc sản Việt, không chỉ để trưng bày mà để kể
                             đúng câu chuyện.
                         </h1>
@@ -72,12 +72,12 @@ export function StoryPage() {
                 </SurfaceCard>
             </section>
 
-            <section className="mt-16 grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+            <section className="mt-16 grid gap-8 xl:grid-cols-[1fr_0.9fr]">
                 <SurfaceCard tone="low" className="space-y-4">
                     <p className="text-xs uppercase tracking-widest text-on-surface-variant">
                         Quy trình tuyển chọn
                     </p>
-                    <h2 className="font-headline text-3xl font-bold text-on-surface">
+                    <h2 className="font-headline text-2xl font-bold text-on-surface">
                         Từ nhà sản xuất đến một trải nghiệm mua sắm đủ đầu-cuối.
                     </h2>
                     <div className="space-y-3">
@@ -99,7 +99,7 @@ export function StoryPage() {
                     <p className="text-xs uppercase tracking-widest text-on-surface-variant">
                         Frontend system
                     </p>
-                    <h2 className="font-headline text-3xl font-bold text-on-surface">
+                    <h2 className="font-headline text-2xl font-bold text-on-surface">
                         Các phần đã được kết nối lại thành một luồng e-commerce hoàn chỉnh hơn.
                     </h2>
                     <div className="grid gap-4 md:grid-cols-2">

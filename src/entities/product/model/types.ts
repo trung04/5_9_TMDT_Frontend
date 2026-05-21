@@ -30,6 +30,7 @@ export interface Product {
     rating: number;
     reviewCount: number;
     stockStatus: ProductStockStatus;
+    stockQuantity?: number;
     badge?: string;
     tag?: string;
     image: string;

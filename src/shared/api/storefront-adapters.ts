@@ -1,9 +1,22 @@
 import type { Product, ProductStockStatus } from "@/entities/product/model/types";
-import type { AuthSession, AuthUser, UserRole } from "@/entities/user/model/types";
 import type {
+    AccountComplaint,
+    AccountNotification,
+    AuthSession,
+    AuthUser,
+    RewardRedemption,
+    RewardSnapshot,
+    UserAddress,
+    UserProfile,
+    UserRole,
+} from "@/entities/user/model/types";
+import type {
+    BackendAccountProfile,
     BackendCart,
     BackendCartItem,
     BackendCategory,
+    BackendComplaint,
+    BackendNotification,
     BackendOrderDetail,
     BackendOrderItem,
     BackendOrderStatusHistory,
@@ -48,6 +61,7 @@ export interface CustomerPaymentView {
     gatewayName: string | null;
     gatewayReference: string | null;
     paidAt: string | null;
+    rawPayload?: Record<string, unknown> | null;
     createdAt?: string;
     updatedAt?: string;
 }
@@ -90,11 +104,14 @@ export interface CustomerOrderDetailView extends CustomerOrderSummaryView {
     recipientPhone: string;
     shippingAddress: string;
     note: string;
+    shippingCode?: string | null;
+    shippingCarrier?: string | null;
+    shippedAt?: string | null;
+    deliveredAt?: string | null;
+    cancelledAt?: string | null;
     items: CustomerOrderItemView[];
     statusHistory: CustomerOrderStatusHistoryView[];
 }
-
-const fallbackImages = seedProducts.slice(0, 6).map((product) => product.image);
 
 function fallbackProduct(index: number) {
     return seedProducts[index % seedProducts.length] ?? seedProducts[0];
@@ -166,6 +183,93 @@ export function adaptBackendCategory(category: BackendCategory) {
     };
 }
 
+export function adaptBackendUserAddress(address: BackendAccountProfile["addresses"][number]): UserAddress {
+    return {
+        id: String(address.id),
+        label: address.label,
+        recipient: address.recipient,
+        phone: address.phone,
+        line1: address.line1,
+        city: address.city,
+        note: address.note ?? "",
+        isDefault: address.is_default,
+    };
+}
+
+export function adaptBackendRewardSnapshot(snapshot: BackendAccountProfile["reward_snapshot"]): RewardSnapshot {
+    return {
+        tier: snapshot.tier,
+        points: snapshot.points,
+        nextTierPoints: snapshot.next_tier_points,
+        perks: snapshot.perks,
+    };
+}
+
+export function adaptBackendRewardRedemption(
+    item: BackendAccountProfile["reward_history"][number],
+): RewardRedemption {
+    return {
+        id: String(item.id),
+        title: item.title,
+        pointsUsed: item.points_used,
+        createdAt: item.created_at,
+        status: item.status,
+    };
+}
+
+export function adaptBackendAccountProfile(profile: BackendAccountProfile): UserProfile {
+    return {
+        id: String(profile.id),
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address ?? "",
+        city: profile.city ?? "",
+        favoriteRegion: profile.favorite_region ?? "",
+        avatar: profile.avatar ?? "",
+        memberSince: profile.member_since,
+        newsletter: profile.newsletter,
+        smsAlerts: profile.sms_alerts,
+        orderEmail: profile.order_email,
+        securityAlerts: profile.security_alerts,
+        addresses: profile.addresses.map(adaptBackendUserAddress),
+        rewardHistory: profile.reward_history.map(adaptBackendRewardRedemption),
+    };
+}
+
+export function adaptBackendNotification(notification: BackendNotification): AccountNotification {
+    return {
+        id: String(notification.id),
+        title: notification.title,
+        message: notification.message,
+        channel: notification.channel,
+        status: notification.status,
+        sentAt: notification.sent_at ?? "",
+        readAt: notification.read_at ?? "",
+        createdAt: notification.created_at ?? "",
+    };
+}
+
+export function adaptBackendComplaint(complaint: BackendComplaint): AccountComplaint {
+    return {
+        id: String(complaint.id),
+        reason: complaint.reason,
+        content: complaint.content,
+        imageUrl: complaint.image_url ?? "",
+        status: complaint.status,
+        resolutionNote: complaint.resolution_note ?? "",
+        createdAt: complaint.created_at,
+        orderId: complaint.order ? String(complaint.order.id) : "",
+        orderNo: complaint.order?.order_no ?? "",
+        orderStatus: complaint.order?.status ?? "",
+        orderTotalAmount: numberValue(complaint.order?.total_amount ?? 0),
+        productId: complaint.product ? String(complaint.product.id) : "",
+        productName: complaint.product?.name ?? "",
+        productSku: complaint.product?.sku ?? "",
+        resolverName: complaint.resolver?.full_name ?? "",
+    };
+}
+
 export function adaptBackendSupplierOption(supplier: BackendSupplier): StorefrontSupplierOption {
     return {
         id: String(supplier.id),
@@ -178,7 +282,7 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
     const fallback = fallbackProduct(index);
     const supplierName = product.supplier?.name ?? `Nhà cung cấp #${product.supplier_id}`;
     const categoryName = product.category?.name ?? `Danh mục #${product.category_id}`;
-    const image = fallbackImages[index % fallbackImages.length] ?? fallback.image;
+    const image = product.image_url?.trim() || fallback.image;
 
     return {
         id: String(product.id),
@@ -197,6 +301,7 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
         rating: fallback.rating,
         reviewCount: fallback.reviewCount,
         stockStatus: stockStatusForProduct(product),
+        stockQuantity: product.stock_quantity,
         badge: fallback.badge ?? categoryName,
         tag: product.sku,
         image,
@@ -287,6 +392,7 @@ function adaptPayment(payment: BackendPayment): CustomerPaymentView {
         gatewayName: payment.gateway_name,
         gatewayReference: payment.gateway_reference,
         paidAt: payment.paid_at,
+        rawPayload: payment.raw_payload ?? null,
         createdAt: payment.created_at,
         updatedAt: payment.updated_at,
     };
@@ -340,6 +446,11 @@ export function adaptBackendOrderDetail(order: BackendOrderDetail): CustomerOrde
         recipientPhone: order.recipient_phone,
         shippingAddress: order.shipping_address,
         note: order.note ?? "",
+        shippingCode: order.shipping_code ?? null,
+        shippingCarrier: order.shipping_carrier ?? null,
+        shippedAt: order.shipped_at ?? null,
+        deliveredAt: order.delivered_at ?? null,
+        cancelledAt: order.cancelled_at ?? null,
         items: order.items.map(adaptOrderItem),
         statusHistory: order.status_history.map(adaptStatusHistory),
     };

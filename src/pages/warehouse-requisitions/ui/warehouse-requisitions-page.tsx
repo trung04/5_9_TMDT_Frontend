@@ -12,11 +12,8 @@ export function WarehouseRequisitionsPage() {
     return (
         <div className="space-y-8">
             <section>
-                <h2 className="font-headline text-3xl font-bold tracking-tight">
-                    Điều phối phiếu tái nhập
-                </h2>
                 <p className="mt-1 text-on-surface-variant">
-                    Duyệt nội bộ, hủy hoặc xác nhận đã nhập kho cho các phiếu đang luân chuyển.
+                    Duyệt nội bộ, hủy hoặc xác nhận đã nhập kho cho các phiếu đang luân chuyển
                 </p>
             </section>
 

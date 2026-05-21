@@ -1,195 +1,797 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+    CartesianGrid,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
-import { adminRepository } from "@/shared/api/mock-repositories";
-import { downloadTextFile } from "@/shared/lib/download";
-import { formatCurrency } from "@/shared/lib/format";
+import { apiRequest } from "@/shared/api/backend-client";
+import { routes } from "@/shared/config/routes";
+import { formatCurrency, formatDate } from "@/shared/lib/format";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
+import type { MetricCardData } from "@/shared/types/ui";
 import { Button, StatCard, SurfaceCard } from "@/shared/ui";
-import { OrderTable } from "@/widgets/order-table";
 
-type PeriodFilter = "all" | "last30";
+interface DashboardOrderItem {
+    id: number;
+    order_no: string;
+    status: string;
+    payment_method: string;
+    payment_status: string | null;
+    total_amount: number | string;
+    created_at: string;
+    customer: {
+        id: number;
+        full_name: string;
+        email: string;
+    } | null;
+}
+
+interface RevenueChartItem {
+    period: string;
+    label: string;
+    revenue: number;
+    successful_orders: number;
+}
+
+interface AdminDashboardResponse {
+    message: string;
+    data: {
+        metrics: {
+            revenue: number;
+            today_revenue: number;
+            monthly_revenue: number;
+            range_revenue: number;
+            successful_orders: number;
+            processing_orders: number;
+            pending_orders: number;
+            bank_transfer_pending: number;
+            customer_reported_transfer: number;
+            shipping_orders: number;
+            delivery_failed_orders: number;
+            low_stock_products: number;
+            low_stock_threshold: number;
+            supplier_count: number;
+            product_count: number;
+            average_order_value: number;
+            complaint_count: number;
+        };
+        filters: {
+            date_from: string;
+            date_to: string;
+            chart_range: "7d" | "30d" | "this_month" | "custom" | string;
+        };
+        recent_orders: DashboardOrderItem[];
+        work_queue: Array<{
+            key: string;
+            label: string;
+            count: number;
+            orders: DashboardOrderItem[];
+        }>;
+        featured_products: Array<{
+            id: number | null;
+            name: string;
+            sku: string;
+            description: string | null;
+            sale_price: number | string;
+            stock_quantity: number;
+            sold_quantity: number;
+            revenue: number;
+        }>;
+        low_stock_products: Array<{
+            id: number;
+            name: string;
+            sku: string;
+            stock_quantity: number;
+            sale_price: number;
+        }>;
+        top_customers: Array<{
+            id: number;
+            full_name: string;
+            email: string;
+            successful_orders: number;
+            total_revenue: number;
+            last_delivered_at: string | null;
+        }>;
+        revenue_chart: RevenueChartItem[];
+    };
+}
+
+const orderStatusLabels: Record<string, string> = {
+    PENDING: "Chờ xác nhận",
+    CONFIRMED: "Đã xác nhận",
+    PACKED: "Đã đóng gói",
+    SHIPPED: "Đang giao",
+    DELIVERED: "Đã giao",
+    DELIVERY_FAILED: "Giao thất bại",
+    CANCELLED: "Đã hủy",
+};
+
+const paymentStatusLabels: Record<string, string> = {
+    PENDING: "Chờ thanh toán",
+    SUCCESS: "Thanh toán thành công",
+    FAILED: "Thanh toán thất bại",
+    REFUNDED: "Đã hoàn tiền",
+};
+
+const paymentMethodLabels: Record<string, string> = {
+    COD: "Thanh toán khi nhận hàng",
+    BANK_TRANSFER: "Chuyển khoản ngân hàng",
+};
+
+function numberValue(value: number | string) {
+    return Number(value ?? 0);
+}
+
+function formatStatus(value: string | null | undefined, labels: Record<string, string>) {
+    if (!value) {
+        return "Chưa có";
+    }
+
+    return labels[value] ?? value;
+}
+
+function badgeClassForOrder(status: string) {
+    switch (status) {
+        case "PENDING":
+            return "bg-sky-50 text-sky-700";
+        case "CONFIRMED":
+            return "bg-indigo-50 text-indigo-700";
+        case "PACKED":
+            return "bg-violet-50 text-violet-700";
+        case "SHIPPED":
+            return "bg-amber-50 text-amber-800";
+        case "DELIVERED":
+            return "bg-emerald-50 text-emerald-700";
+        case "DELIVERY_FAILED":
+            return "bg-orange-50 text-orange-800";
+        case "CANCELLED":
+            return "bg-rose-50 text-rose-700";
+        default:
+            return "bg-slate-100 text-slate-700";
+    }
+}
+
+function badgeClassForPayment(status: string | null) {
+    switch (status) {
+        case "SUCCESS":
+            return "bg-emerald-50 text-emerald-700";
+        case "FAILED":
+            return "bg-rose-50 text-rose-700";
+        case "REFUNDED":
+            return "bg-amber-50 text-amber-800";
+        default:
+            return "bg-slate-100 text-slate-700";
+    }
+}
+
+function todayIso() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function firstDayOfMonthIso() {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1).toISOString().slice(0, 10);
+}
+
+function formatCompactCurrency(value: number) {
+    if (value >= 1_000_000_000) {
+        return `${(value / 1_000_000_000).toFixed(value % 1_000_000_000 === 0 ? 0 : 1)}B`;
+    }
+
+    if (value >= 1_000_000) {
+        return `${(value / 1_000_000).toFixed(value % 1_000_000 === 0 ? 0 : 1)}M`;
+    }
+
+    if (value >= 1_000) {
+        return `${(value / 1_000).toFixed(value % 1_000 === 0 ? 0 : 1)}k`;
+    }
+
+    return `${value}`;
+}
+
+function RevenueTooltip({
+    active,
+    payload,
+    label,
+}: {
+    active?: boolean;
+    payload?: Array<{ value: number; payload: RevenueChartItem }>;
+    label?: string;
+}) {
+    if (!active || !payload?.length) {
+        return null;
+    }
+
+    const point = payload[0]?.payload;
+
+    if (!point) {
+        return null;
+    }
+
+    return (
+        <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 shadow-xl">
+            <p className="text-sm font-semibold text-slate-900">{label}</p>
+            <p className="mt-2 text-sm text-slate-700">Doanh thu: {formatCurrency(point.revenue)}</p>
+            <p className="mt-1 text-sm text-slate-700">{point.successful_orders} đơn thành công</p>
+        </div>
+    );
+}
 
 export function AdminDashboardPage() {
-    const [period, setPeriod] = useState<PeriodFilter>("last30");
+    const navigate = useNavigate();
+    const accessToken = useAuthStore((state) => state.accessToken);
     const pushToast = useFeedbackStore((state) => state.pushToast);
-    const allOrders = adminRepository.listOrders();
-    const suppliers = adminRepository.listSuppliers();
-    const products = adminRepository.listProducts().slice(0, 3);
+    const [dashboard, setDashboard] = useState<AdminDashboardResponse["data"] | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [dateFrom, setDateFrom] = useState(firstDayOfMonthIso());
+    const [dateTo, setDateTo] = useState(todayIso());
+    const [appliedDateFrom, setAppliedDateFrom] = useState(firstDayOfMonthIso());
+    const [appliedDateTo, setAppliedDateTo] = useState(todayIso());
+    const [chartRange, setChartRange] = useState<"7d" | "30d" | "this_month" | "custom">("30d");
 
-    const filteredOrders = useMemo(() => {
-        if (period === "all") return allOrders;
+    useEffect(() => {
+        if (!accessToken) {
+            setIsLoading(false);
+            setError("Bạn cần đăng nhập admin để xem dashboard.");
+            return;
+        }
 
-        const latestTimestamp = Math.max(
-            ...allOrders.map((order) => new Date(order.date).getTime()),
-        );
-        const threshold = latestTimestamp - 30 * 24 * 60 * 60 * 1000;
+        let cancelled = false;
 
-        return allOrders.filter((order) => new Date(order.date).getTime() >= threshold);
-    }, [allOrders, period]);
+        async function loadDashboard() {
+            setIsLoading(true);
+            setError(null);
 
-    const metrics = useMemo(() => {
-        const revenue = filteredOrders.reduce((sum, order) => sum + order.total, 0);
-        const delivered = filteredOrders.filter(
-            (order) => order.deliveryStatus === "delivered",
-        ).length;
-        const processing = filteredOrders.filter(
-            (order) => order.deliveryStatus === "processing",
-        ).length;
-        const average = filteredOrders.length > 0 ? Math.round(revenue / filteredOrders.length) : 0;
+            const params = new URLSearchParams();
+            if (appliedDateFrom) {
+                params.set("date_from", appliedDateFrom);
+            }
+            if (appliedDateTo) {
+                params.set("date_to", appliedDateTo);
+            }
+            params.set("chart_range", chartRange);
+
+            try {
+                const response = await apiRequest<AdminDashboardResponse>(
+                    `/admin/dashboard?${params.toString()}`,
+                    {
+                        token: accessToken,
+                    },
+                );
+
+                if (cancelled) {
+                    return;
+                }
+
+                setDashboard(response.data);
+                setDateFrom(response.data.filters.date_from);
+                setDateTo(response.data.filters.date_to);
+                setChartRange(
+                    (response.data.filters.chart_range as "7d" | "30d" | "this_month" | "custom") ?? "30d",
+                );
+                setIsLoading(false);
+            } catch (nextError) {
+                if (cancelled) {
+                    return;
+                }
+
+                setError(nextError instanceof Error ? nextError.message : "Không thể tải dashboard.");
+                setIsLoading(false);
+            }
+        }
+
+        void loadDashboard();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [accessToken, appliedDateFrom, appliedDateTo, chartRange]);
+
+    const metrics = useMemo<MetricCardData[]>(() => {
+        if (!dashboard) {
+            return [];
+        }
 
         return [
             {
-                id: "metric-sales",
-                label: "Doanh thu hiển thị",
-                value: formatCurrency(revenue),
-                delta: `${delivered} đơn đã giao`,
-                tone: "primary" as const,
+                id: "metric-revenue",
+                label: "Doanh thu thực thu",
+                value: formatCurrency(dashboard.metrics.revenue),
+                delta: `${dashboard.metrics.successful_orders} đơn DELIVERED + SUCCESS`,
+                tone: "primary",
                 icon: "payments",
-                helperText: "được tính theo bộ lọc hiện tại",
             },
             {
-                id: "metric-orders",
-                label: "Đơn trong phạm vi",
-                value: `${filteredOrders.length}`,
-                delta: `${processing} đơn đang xử lý`,
-                tone: "secondary" as const,
+                id: "metric-processing",
+                label: "Đơn đang xử lý",
+                value: `${dashboard.metrics.processing_orders}`,
+                delta: "PENDING, CONFIRMED, PACKED, SHIPPED",
+                tone: "secondary",
                 icon: "shopping_bag",
-                helperText: "bao gồm đơn seed và đơn phát sinh runtime",
             },
             {
-                id: "metric-suppliers",
-                label: "Đối tác hoạt động",
-                value: `${suppliers.length}`,
-                delta: `${products.length} sản phẩm nổi bật`,
-                tone: "tertiary" as const,
-                icon: "handshake",
-                helperText: "đối tác đang hiển thị trên hệ sinh thái",
+                id: "metric-pending",
+                label: "Chờ xác nhận",
+                value: `${dashboard.metrics.pending_orders}`,
+                delta: "Đơn mới cần admin duyệt",
+                tone: "tertiary",
+                icon: "pending_actions",
+            },
+            {
+                id: "metric-transfer",
+                label: "Chờ xác nhận chuyển khoản",
+                value: `${dashboard.metrics.bank_transfer_pending}`,
+                delta: `${dashboard.metrics.customer_reported_transfer} khách đã báo chuyển khoản`,
+                tone: "tertiary",
+                icon: "account_balance",
+            },
+            {
+                id: "metric-shipping",
+                label: "Đang giao",
+                value: `${dashboard.metrics.shipping_orders}`,
+                delta: "Đơn đã bàn giao cho vận chuyển",
+                tone: "success",
+                icon: "local_shipping",
+            },
+            {
+                id: "metric-failed",
+                label: "Giao thất bại",
+                value: `${dashboard.metrics.delivery_failed_orders}`,
+                delta: "Cần giao lại hoặc hủy đơn",
+                tone: "secondary",
+                icon: "report_problem",
+            },
+            {
+                id: "metric-low-stock",
+                label: "Sản phẩm sắp hết hàng",
+                value: `${dashboard.metrics.low_stock_products}`,
+                delta: `Ngưỡng cảnh báo <= ${dashboard.metrics.low_stock_threshold}`,
+                tone: "secondary",
+                icon: "inventory_2",
             },
             {
                 id: "metric-aov",
                 label: "Giá trị đơn trung bình",
-                value: formatCurrency(average),
-                delta: `${adminRepository.listComplaints().length} khiếu nại đã ghi nhận`,
-                tone: "success" as const,
+                value: formatCurrency(dashboard.metrics.average_order_value),
+                delta: `Hôm nay: ${formatCurrency(dashboard.metrics.today_revenue)}`,
+                tone: "success",
                 icon: "sell",
-                helperText: "cập nhật theo dữ liệu runtime hiện tại",
             },
         ];
-    }, [filteredOrders, products.length, suppliers.length]);
+    }, [dashboard]);
 
-    const recentOrders = filteredOrders.slice(0, 3);
+    const hasRevenueData = useMemo(
+        () => (dashboard?.revenue_chart ?? []).some((item) => item.revenue > 0),
+        [dashboard],
+    );
 
     function handleExportReport() {
-        const payload = {
-            period,
-            generatedAt: new Date().toISOString(),
-            totals: {
-                orders: filteredOrders.length,
-                revenue: filteredOrders.reduce((sum, order) => sum + order.total, 0),
-            },
-            orders: filteredOrders,
-            suppliers: suppliers.slice(0, 5),
-        };
+        if (!dashboard) {
+            return;
+        }
 
-        downloadTextFile(
-            "admin-dashboard-report.json",
-            JSON.stringify(payload, null, 2),
-            "application/json",
+        const payload = JSON.stringify(
+            {
+                generatedAt: new Date().toISOString(),
+                ...dashboard,
+            },
+            null,
+            2,
         );
+
+        const blob = new Blob([payload], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "admin-dashboard-report.json";
+        link.click();
+        URL.revokeObjectURL(url);
+
         pushToast({
             tone: "success",
-            message: "Đã xuất báo cáo dashboard theo bộ lọc hiện tại.",
+            message: "Đã xuất báo cáo dashboard từ dữ liệu backend.",
         });
+    }
+
+    function handleApplyDateRange() {
+        setAppliedDateFrom(dateFrom);
+        setAppliedDateTo(dateTo);
+        setChartRange("custom");
+    }
+
+    function handleChartPreset(nextRange: "7d" | "30d" | "this_month") {
+        setChartRange(nextRange);
     }
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                <div className="space-y-1">
-                    <h2 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
-                        Toàn cảnh hệ sinh thái
-                    </h2>
-                    <p className="text-on-surface-variant">
-                        Theo dõi doanh thu, đơn hàng và đối tác trên cùng một bảng điều phối quản
-                        trị.
-                    </p>
-                </div>
-                <div className="flex gap-3">
-                    <Button
-                        variant="secondary"
-                        onClick={() =>
-                            setPeriod((current) => (current === "last30" ? "all" : "last30"))
-                        }
-                    >
-                        {period === "last30"
-                            ? "Đang xem 30 ngày gần nhất"
-                            : "Đang xem toàn bộ dữ liệu"}
-                    </Button>
-                    <Button onClick={handleExportReport}>Xuất báo cáo</Button>
-                </div>
-            </section>
-
-            <section className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                {metrics.map((metric) => (
-                    <StatCard key={metric.id} metric={metric} />
-                ))}
-            </section>
-
-            <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-                <SurfaceCard className="overflow-hidden p-0">
-                    <div className="border-b border-outline-variant/15 px-6 py-5">
-                        <h3 className="font-headline text-2xl font-bold">Đơn hàng gần đây</h3>
-                    </div>
-                    <div className="p-6">
-                        <OrderTable
-                            orders={recentOrders}
-                            activeOrderId={recentOrders[0]?.id}
-                            mode="admin"
-                        />
-                    </div>
-                </SurfaceCard>
-
-                <SurfaceCard className="space-y-4">
-                    <div>
-                        <h3 className="font-headline text-2xl font-bold">Đối tác nổi bật</h3>
+            <section className="rounded-[1.75rem] bg-surface-container-low p-4 shadow-sm ring-1 ring-black/5">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                    {/* <div className="min-w-0 xl:flex-1">
+                        <h1 className="font-headline text-3xl font-bold">Admin Dashboard</h1>
                         <p className="mt-2 text-sm text-on-surface-variant">
-                            Nhóm nhà cung cấp có nhịp phản hồi tốt và đang đóng góp ổn định cho danh
-                            mục.
+                            Doanh thu chỉ được ghi nhận khi đơn đã giao thành công và thanh toán thành công.
                         </p>
-                    </div>
-                    {suppliers.map((supplier) => (
-                        <div key={supplier.id} className="rounded-2xl bg-surface-container-low p-5">
-                            <p className="font-headline text-lg font-semibold">{supplier.name}</p>
-                            <p className="mt-1 text-sm text-on-surface-variant">
-                                {supplier.location} · {supplier.partnerTier}
-                            </p>
+                    </div> */}
+
+                    <div className="flex min-w-0 flex-1 flex-col gap-3 xl:max-w-[74rem]">
+                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.45fr_1fr_1fr_0.68fr_0.68fr_0.78fr] lg:items-end">
+                            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/80 p-2 shadow-sm">
+                                <Button
+                                    size="sm"
+                                    className="whitespace-nowrap"
+                                    variant={chartRange === "7d" ? "primary" : "secondary"}
+                                    onClick={() => handleChartPreset("7d")}
+                                >
+                                    7 ngày
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    className="whitespace-nowrap"
+                                    variant={chartRange === "30d" ? "primary" : "secondary"}
+                                    onClick={() => handleChartPreset("30d")}
+                                >
+                                    30 ngày
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    className="whitespace-nowrap"
+                                    variant={chartRange === "this_month" ? "primary" : "secondary"}
+                                    onClick={() => handleChartPreset("this_month")}
+                                >
+                                    Tháng này
+                                </Button>
+                            </div>
+
+                            <label className="flex min-w-0 flex-col gap-2 text-sm">
+                                <input
+                                    type="date"
+                                    className="min-w-0 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                    value={dateFrom}
+                                    onChange={(event) => setDateFrom(event.target.value)}
+                                />
+                            </label>
+
+                            <label className="flex min-w-0 flex-col gap-2 text-sm">
+                                <input
+                                    type="date"
+                                    className="min-w-0 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                    value={dateTo}
+                                    onChange={(event) => setDateTo(event.target.value)}
+                                />
+                            </label>
+
+                            <Button size="sm" variant="secondary" className="whitespace-nowrap px-3" onClick={handleApplyDateRange}>
+                                Áp dụng
+                            </Button>
+                            <Button size="sm" variant="secondary" className="whitespace-nowrap px-3" onClick={() => window.location.reload()}>
+                                Tải lại
+                            </Button>
+                            <Button size="sm" className="whitespace-nowrap px-3" onClick={handleExportReport} disabled={!dashboard}>
+                                Xuất báo cáo
+                            </Button>
                         </div>
-                    ))}
-                </SurfaceCard>
+                    </div>
+                </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-3">
-                {products.map((product) => (
-                    <SurfaceCard key={product.id} className="overflow-hidden p-0">
-                        <img
-                            src={product.image}
-                            alt={product.name}
-                            className="aspect-[4/3] w-full object-cover"
-                        />
-                        <div className="p-6">
-                            <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Kho sản phẩm
-                            </p>
-                            <h3 className="mt-2 font-headline text-xl font-semibold">
-                                {product.name}
-                            </h3>
-                            <p className="mt-3 text-sm leading-6 text-on-surface-variant">
-                                {product.shortDescription}
-                            </p>
-                        </div>
-                    </SurfaceCard>
-                ))}
-            </section>
+            {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
+
+            {isLoading ? (
+                <SurfaceCard className="text-sm text-on-surface-variant">
+                    Đang tải dữ liệu dashboard...
+                </SurfaceCard>
+            ) : null}
+
+            {dashboard ? (
+                <>
+                    <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+                        {metrics.map((metric) => (
+                            <StatCard key={metric.id} metric={metric} />
+                        ))}
+                    </section>
+
+                    <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+                        <SurfaceCard className="space-y-6">
+                            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-outline-variant/15 pb-4">
+                                <div>
+                                    <h3 className="font-headline text-2xl font-bold">Biểu đồ doanh thu</h3>
+                                </div>
+                            </div>
+
+                            {hasRevenueData ? (
+                                <div className="h-[22rem] rounded-[1.75rem] bg-gradient-to-br from-emerald-50 via-white to-sky-50 p-4">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart
+                                            data={dashboard.revenue_chart}
+                                            margin={{ top: 16, right: 16, left: 8, bottom: 8 }}
+                                        >
+                                            <CartesianGrid stroke="#dbe7df" strokeDasharray="3 3" vertical={false} />
+                                            <XAxis
+                                                dataKey="label"
+                                                tickLine={false}
+                                                axisLine={false}
+                                                tick={{ fill: "#64748b", fontSize: 12 }}
+                                            />
+                                            <YAxis
+                                                tickLine={false}
+                                                axisLine={false}
+                                                width={52}
+                                                tick={{ fill: "#64748b", fontSize: 12 }}
+                                                tickFormatter={(value: number) => formatCompactCurrency(value)}
+                                            />
+                                            <Tooltip content={<RevenueTooltip />} cursor={{ stroke: "#0f766e", strokeOpacity: 0.12 }} />
+                                            <Line
+                                                type="monotone"
+                                                dataKey="revenue"
+                                                stroke="#0f766e"
+                                                strokeWidth={3}
+                                                dot={{ r: 4, fill: "#0f766e", stroke: "#ecfdf5", strokeWidth: 2 }}
+                                                activeDot={{ r: 6, fill: "#065f46", stroke: "#d1fae5", strokeWidth: 3 }}
+                                            />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="flex h-[22rem] items-center justify-center rounded-[1.75rem] bg-surface-container-low text-center">
+                                    <div>
+                                        <p className="font-semibold text-on-surface">
+                                            Chưa có doanh thu thành công trong khoảng thời gian này.
+                                        </p>
+                                        <p className="mt-2 text-sm text-on-surface-variant">
+                                            Hệ thống chỉ ghi nhận khi đơn đã giao thành công và thanh toán thành công.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                        </SurfaceCard>
+
+                        <SurfaceCard className="space-y-4">
+                            <div className="border-b border-outline-variant/15 pb-4">
+                                <h3 className="font-headline text-2xl font-bold">Khách hàng chi tiêu cao</h3>
+                            </div>
+                            <div className="space-y-3">
+                                {dashboard.top_customers.map((customer) => (
+                                    <div key={customer.id} className="rounded-2xl bg-surface-container-low p-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p className="font-semibold text-on-surface">{customer.full_name}</p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">{customer.email}</p>
+                                                <p className="mt-2 text-xs text-on-surface-variant">
+                                                    {customer.successful_orders} đơn thành công
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-primary">
+                                                    {formatCurrency(customer.total_revenue)}
+                                                </p>
+                                                <p className="mt-1 text-xs text-on-surface-variant">
+                                                    {customer.last_delivered_at
+                                                        ? formatDate(customer.last_delivered_at)
+                                                        : "Chưa có"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </SurfaceCard>
+                    </section>
+
+                    <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+                        <SurfaceCard className="space-y-4">
+                            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-outline-variant/15 pb-4">
+                                <div>
+                                    <h3 className="font-headline text-2xl font-bold">Đơn cần xử lý</h3>
+                                    <p className="mt-1 text-sm text-on-surface-variant">
+                                        Các đầu việc admin cần theo dõi trong ngày.
+                                    </p>
+                                </div>
+                                <Button variant="secondary" onClick={() => navigate(routes.adminLogistics)}>
+                                    Mở logistics
+                                </Button>
+                            </div>
+
+                            <div className="space-y-5">
+                                {dashboard.work_queue.map((queue) => (
+                                    <div key={queue.key} className="space-y-3 rounded-2xl bg-surface-container-low p-4">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div>
+                                                <p className="font-semibold text-on-surface">{queue.label}</p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">
+                                                    {queue.count} đơn cần theo dõi
+                                                </p>
+                                            </div>
+                                            <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-primary shadow-sm">
+                                                {queue.count}
+                                            </span>
+                                        </div>
+
+                                        {queue.orders.length === 0 ? (
+                                            <div className="rounded-2xl bg-white px-4 py-4 text-sm text-on-surface-variant">
+                                                Hiện không có đơn trong nhóm này.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {queue.orders.map((order) => (
+                                                    <div key={order.id} className="rounded-2xl bg-white px-4 py-4 shadow-sm">
+                                                        <div className="flex flex-wrap items-start justify-between gap-4">
+                                                            <div>
+                                                                <p className="font-semibold text-on-surface">
+                                                                    {order.order_no}
+                                                                </p>
+                                                                <p className="mt-1 text-sm text-on-surface-variant">
+                                                                    {order.customer?.full_name ?? "Khách hàng không rõ"} ·{" "}
+                                                                    {formatDate(order.created_at)}
+                                                                </p>
+                                                                <p className="mt-1 text-sm text-on-surface-variant">
+                                                                    {paymentMethodLabels[order.payment_method] ?? order.payment_method}
+                                                                    {" · "}
+                                                                    {formatStatus(order.payment_status, paymentStatusLabels)}
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="font-semibold text-primary">
+                                                                    {formatCurrency(numberValue(order.total_amount))}
+                                                                </p>
+                                                                <div className="mt-2 flex flex-wrap justify-end gap-2">
+                                                                    <span
+                                                                        className={`rounded-full px-3 py-1 text-xs font-medium ${badgeClassForOrder(order.status)}`}
+                                                                    >
+                                                                        {formatStatus(order.status, orderStatusLabels)}
+                                                                    </span>
+                                                                    <Button
+                                                                        variant="secondary"
+                                                                        onClick={() => navigate(routes.adminLogistics)}
+                                                                    >
+                                                                        Xem / Xử lý
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </SurfaceCard>
+
+                        <SurfaceCard className="space-y-4">
+                            <div className="border-b border-outline-variant/15 pb-4">
+                                <h3 className="font-headline text-2xl font-bold">Cảnh báo tồn kho</h3>
+                            </div>
+                            <div className="grid gap-3 rounded-2xl bg-surface-container-low px-4 py-4 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-on-surface-variant">Tổng sản phẩm đang bán</span>
+                                    <span className="font-semibold">{dashboard.metrics.product_count}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-on-surface-variant">Sản phẩm sắp hết hàng</span>
+                                    <span className="font-semibold">{dashboard.metrics.low_stock_products}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-on-surface-variant">Ngưỡng cảnh báo</span>
+                                    <span className="font-semibold">≤ {dashboard.metrics.low_stock_threshold}</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                {dashboard.low_stock_products.map((product) => (
+                                    <div key={product.id} className="rounded-2xl bg-surface-container-low p-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p className="font-semibold text-on-surface">{product.name}</p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">{product.sku}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-primary">
+                                                    {formatCurrency(product.sale_price)}
+                                                </p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">
+                                                    Tồn kho: {product.stock_quantity}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </SurfaceCard>
+                    </section>
+
+                    <section className="grid gap-6 xl:grid-cols-2">
+                        <SurfaceCard className="space-y-4">
+                            <div className="border-b border-outline-variant/15 pb-4">
+                                <h3 className="font-headline text-2xl font-bold">Sản phẩm bán chạy</h3>
+                            </div>
+                            <div className="space-y-3">
+                                {dashboard.featured_products.map((product) => (
+                                    <div key={product.id ?? product.sku} className="rounded-2xl bg-surface-container-low p-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <p className="font-semibold text-on-surface">{product.name}</p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">{product.sku}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-primary">
+                                                    {formatCurrency(product.revenue)}
+                                                </p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">
+                                                    {product.sold_quantity} sản phẩm
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 grid gap-2 rounded-2xl bg-white px-4 py-4 text-sm shadow-sm">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-on-surface-variant">Doanh thu sản phẩm</span>
+                                                <span>{formatCurrency(product.revenue)}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-on-surface-variant">Số lượng đã bán</span>
+                                                <span>{product.sold_quantity}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-on-surface-variant">Tồn kho hiện tại</span>
+                                                <span>{product.stock_quantity}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </SurfaceCard>
+
+                        <SurfaceCard className="space-y-4">
+                            <div className="border-b border-outline-variant/15 pb-4">
+                                <h3 className="font-headline text-2xl font-bold">Đơn gần đây</h3>
+                            </div>
+                            <div className="space-y-3">
+                                {dashboard.recent_orders.map((order) => (
+                                    <div key={order.id} className="rounded-2xl bg-surface-container-low p-4">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <p className="font-semibold text-on-surface">{order.order_no}</p>
+                                                <p className="mt-1 text-sm text-on-surface-variant">
+                                                    {order.customer?.full_name ?? "Khách hàng không rõ"} ·{" "}
+                                                    {formatDate(order.created_at)}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-semibold text-primary">
+                                                    {formatCurrency(numberValue(order.total_amount))}
+                                                </p>
+                                                <p className="mt-1 text-xs text-on-surface-variant">
+                                                    {paymentMethodLabels[order.payment_method] ?? order.payment_method}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-xs font-medium ${badgeClassForOrder(order.status)}`}
+                                            >
+                                                {formatStatus(order.status, orderStatusLabels)}
+                                            </span>
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-xs font-medium ${badgeClassForPayment(order.payment_status)}`}
+                                            >
+                                                {formatStatus(order.payment_status, paymentStatusLabels)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </SurfaceCard>
+                    </section>
+                </>
+            ) : null}
         </div>
     );
 }

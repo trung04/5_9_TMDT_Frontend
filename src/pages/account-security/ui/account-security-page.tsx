@@ -1,31 +1,35 @@
 import { useState } from "react";
 
-import { useAuthStore } from "@/shared/lib/store/use-auth-store";
+import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 export function AccountSecurityPage() {
-    const changePassword = useAuthStore((state) => state.changePassword);
+    const changePassword = useAccountStore((state) => state.changePassword);
+    const isSaving = useAccountStore((state) => state.isSaving);
     const pushToast = useFeedbackStore((state) => state.pushToast);
-    const [currentPassword, setCurrentPassword] = useState("123456");
-    const [nextPassword, setNextPassword] = useState("123456");
-    const [confirmPassword, setConfirmPassword] = useState("123456");
+    const [currentPassword, setCurrentPassword] = useState("");
+    const [nextPassword, setNextPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
     const [message, setMessage] = useState("");
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (nextPassword !== confirmPassword) {
             setMessage("Mật khẩu xác nhận chưa khớp.");
             return;
         }
 
-        const result = changePassword(currentPassword, nextPassword);
+        const result = await changePassword(currentPassword, nextPassword, confirmPassword);
 
         if (!result.success) {
             setMessage(result.error ?? "Không thể đổi mật khẩu.");
             return;
         }
 
-        setMessage("Mật khẩu demo đã được cập nhật.");
+        setMessage("Mật khẩu đã được cập nhật.");
+        setCurrentPassword("");
+        setNextPassword("");
+        setConfirmPassword("");
         pushToast({
             tone: "success",
             message: "Đã lưu thay đổi bảo mật.",
@@ -36,9 +40,9 @@ export function AccountSecurityPage() {
         <div className="mx-auto max-w-4xl px-6 pb-16 pt-24">
             <div className="space-y-8">
                 <div>
-                    <h1 className="font-headline text-4xl font-bold">Bảo mật tài khoản</h1>
+                    <h1 className="font-headline text-2xl font-bold">Bảo mật tài khoản</h1>
                     <p className="mt-2 text-on-surface-variant">
-                        Quản lý mật khẩu demo và các nguyên tắc bảo vệ phiên đăng nhập.
+                        Quản lý mật khẩu và các nguyên tắc bảo vệ phiên đăng nhập.
                     </p>
                 </div>
 
@@ -71,7 +75,9 @@ export function AccountSecurityPage() {
                         />
                     </label>
                     {message ? <p className="text-sm text-primary">{message}</p> : null}
-                    <Button onClick={handleSubmit}>Lưu mật khẩu mới</Button>
+                    <Button onClick={() => void handleSubmit()} disabled={isSaving}>
+                        {isSaving ? "Đang lưu..." : "Lưu mật khẩu mới"}
+                    </Button>
                 </SurfaceCard>
             </div>
         </div>

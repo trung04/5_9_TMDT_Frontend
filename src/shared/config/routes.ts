@@ -28,6 +28,7 @@ function withQuery(path: string, options: ProductQueryOptions = {}) {
 export const routes = {
     home: "/",
     login: "/login",
+    register: "/register",
     logout: "/logout",
     unauthorized: "/unauthorized",
     products: "/products",
@@ -44,6 +45,7 @@ export const routes = {
     accountRewards: "/account/rewards",
     accountDisputes: "/account/disputes",
     accountOrders: "/account/orders",
+    accountOrderDetail: (orderId = ":orderId") => `/account/orders/${orderId}`,
     accountWishlist: "/account/wishlist",
     adminDashboard: "/admin/dashboard",
     adminCommunity: "/admin/community",

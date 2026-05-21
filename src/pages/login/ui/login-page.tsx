@@ -1,26 +1,32 @@
 import { useMemo, useState } from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { canAccessRoute } from "@/shared/lib/auth";
 import { routes } from "@/shared/config/routes";
 import { redirectForRole, useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, SurfaceCard } from "@/shared/ui";
+
+type AuthFormMode = "login" | "register";
 
 export function LoginPage() {
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
     const session = useAuthStore((state) => state.session);
     const credentials = useAuthStore((state) => state.credentials);
     const login = useAuthStore((state) => state.login);
+    const register = useAuthStore((state) => state.register);
     const loginAsRole = useAuthStore((state) => state.loginAsRole);
     const isSubmitting = useAuthStore((state) => state.isSubmitting);
     const syncGuestCart = useCartStore((state) => state.syncGuestCart);
-    const pushToast = useFeedbackStore((state) => state.pushToast);
+    const [fullName, setFullName] = useState("");
+    const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [passwordConfirmation, setPasswordConfirmation] = useState("");
     const [error, setError] = useState("");
+    const mode: AuthFormMode = location.pathname === routes.register ? "register" : "login";
     const redirectTarget = useMemo(() => searchParams.get("redirect") ?? "", [searchParams]);
 
     if (session) {
@@ -40,9 +46,18 @@ export function LoginPage() {
         return redirectForRole(role);
     }
 
-    async function handleSubmit() {
-        setError("");
+    async function finalizeCustomerSignIn() {
+        const syncResult = await syncGuestCart();
 
+        if (!syncResult.success) {
+            setError(syncResult.error ?? "Không thể đồng bộ giỏ hàng sau khi đăng nhập.");
+            return false;
+        }
+
+        return true;
+    }
+
+    async function handleLogin() {
         const result = await login(email, password);
 
         if (!result.success) {
@@ -50,89 +65,145 @@ export function LoginPage() {
             return;
         }
 
-        const syncResult = await syncGuestCart();
+        const nextSession = useAuthStore.getState().session;
+        const role = nextSession?.user.role;
 
-        if (!syncResult.success) {
-            setError(syncResult.error ?? "Không thể đồng bộ giỏ hàng sau đăng nhập.");
+        if (!role) {
+            setError("Không xác định được vai trò sau khi đăng nhập.");
             return;
         }
 
-        pushToast({
-            tone: "success",
-            message: "Đăng nhập khách hàng thành công và đã đồng bộ giỏ hàng.",
+        if (role === "customer") {
+            const synced = await finalizeCustomerSignIn();
+
+            if (!synced) {
+                return;
+            }
+        }
+
+        void navigate(resolveRedirect(role), { replace: true });
+    }
+
+    async function handleRegister() {
+        if (!fullName.trim() || !phone.trim() || !email.trim() || !password || !passwordConfirmation) {
+            setError("Vui lòng nhập đầy đủ thông tin đăng ký.");
+            return;
+        }
+
+        if (password !== passwordConfirmation) {
+            setError("Mật khẩu xác nhận chưa khớp.");
+            return;
+        }
+
+        const result = await register({
+            fullName,
+            phone,
+            email,
+            password,
+            passwordConfirmation,
         });
+
+        if (!result.success) {
+            setError(result.error ?? "Đăng ký thất bại.");
+            return;
+        }
+
+        const synced = await finalizeCustomerSignIn();
+
+        if (!synced) {
+            return;
+        }
+
         void navigate(resolveRedirect("customer"), { replace: true });
     }
 
     return (
         <div className="mx-auto flex min-h-[calc(100vh-9rem)] max-w-6xl items-center px-6 py-24">
-            <div className="grid w-full gap-8 lg:grid-cols-[1fr_0.95fr]">
-                <SurfaceCard className="space-y-6">
-                    <div>
-                        <p className="text-xs uppercase tracking-widest text-primary">
-                            Đăng nhập hệ thống
-                        </p>
-                        <h1 className="mt-3 font-headline text-4xl font-bold">
-                            Đăng nhập khách hàng thực tế
-                        </h1>
-                        <p className="mt-4 text-sm leading-7 text-on-surface-variant">
-                            Form bên phải dùng tài khoản khách hàng để đồng bộ giỏ hàng và tiếp tục mua sắm.
-                            Các workspace quản trị, nhà cung cấp và kho vẫn có lối vào nhanh cho demo.
-                        </p>
-                    </div>
+            <div
+                className={`grid w-full gap-8 ${
+                    mode === "register" ? "mx-auto max-w-xl lg:grid-cols-1" : "lg:grid-cols-[1fr_0.95fr]"
+                }`}
+            >
+                {mode === "login" ? (
+                    <SurfaceCard className="space-y-6 text-center">
+                        <div>
+                            <p className="text-xs uppercase tracking-widest text-primary">
+                                Đăng nhập hệ thống
+                            </p>
+                        </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                        {credentials.map((credential) => (
-                            <button
-                                key={credential.id}
-                                className="rounded-3xl border border-outline-variant/20 bg-surface-container-low p-4 text-left transition hover:border-primary/30 hover:bg-primary/5"
-                                onClick={() => {
-                                    const result = loginAsRole(credential.role);
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {credentials.map((credential) => (
+                                <button
+                                    key={credential.id}
+                                    className="rounded-3xl border border-outline-variant/20 bg-surface-container-low p-4 text-left transition hover:border-primary/30 hover:bg-primary/5"
+                                    onClick={() => {
+                                        const result = loginAsRole(credential.role);
 
-                                    if (!result.success) {
-                                        setError(result.error ?? "Không thể đăng nhập nhanh.");
-                                        return;
-                                    }
+                                        if (!result.success) {
+                                            setError(result.error ?? "Không thể đăng nhập nhanh.");
+                                            return;
+                                        }
 
-                                    pushToast({
-                                        tone: "success",
-                                        message: `Đã vào workspace ${credential.displayName.toLowerCase()}.`,
-                                    });
-                                    void navigate(resolveRedirect(credential.role), {
-                                        replace: true,
-                                    });
-                                }}
-                            >
-                                <p className="text-xs uppercase tracking-widest text-primary">
-                                    {credential.role}
-                                </p>
-                                <p className="mt-2 font-headline text-xl font-semibold">
-                                    {credential.displayName}
-                                </p>
-                                <p className="mt-2 text-sm text-on-surface-variant">
-                                    {credential.email}
-                                </p>
-                            </button>
-                        ))}
-                    </div>
-                </SurfaceCard>
+                                        void navigate(resolveRedirect(credential.role), { replace: true });
+                                    }}
+                                >
+                                    <p className="text-xs uppercase tracking-widest text-primary">
+                                        {credential.role}
+                                    </p>
+                                    <p className="mt-2 font-headline text-xl font-semibold">
+                                        {credential.displayName}
+                                    </p>
+                                    <p className="mt-2 text-sm text-on-surface-variant">
+                                        {credential.email}
+                                    </p>
+                                </button>
+                            ))}
+                        </div>
+                    </SurfaceCard>
+                ) : null}
 
-                <SurfaceCard tone="low" className="space-y-6">
-                    <div>
-                        <h2 className="font-headline text-2xl font-bold">Đăng nhập khách hàng</h2>
-                        <p className="mt-2 text-sm text-on-surface-variant">
-                            Nhập email và mật khẩu khách hàng để đăng nhập và tiếp tục mua sắm cùng giỏ hàng của bạn.
-                        </p>
-                    </div>
-
+                <SurfaceCard
+                    tone="low"
+                    className={`space-y-6 ${mode === "register" ? "mx-auto w-full max-w-xl" : ""}`}
+                >
                     <div className="space-y-4">
+                        {mode === "register" ? (
+                            <>
+                                <div className="text-center">
+                                    <p className="text-xs uppercase tracking-widest text-primary">
+                                        Đăng ký tài khoản
+                                    </p>
+                                </div>
+
+                                <label className="block space-y-2 text-sm">
+                                    <span className="font-medium text-on-surface">Họ và tên</span>
+                                    <input
+                                        className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
+                                        value={fullName}
+                                        onChange={(event) => setFullName(event.target.value)}
+                                        placeholder="Nguyễn Văn A"
+                                    />
+                                </label>
+                                <label className="block space-y-2 text-sm">
+                                    <span className="font-medium text-on-surface">Số điện thoại</span>
+                                    <input
+                                        className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
+                                        value={phone}
+                                        onChange={(event) => setPhone(event.target.value)}
+                                        placeholder="0901234567"
+                                    />
+                                </label>
+                            </>
+                        ) : null}
+
                         <label className="block space-y-2 text-sm">
                             <span className="font-medium text-on-surface">Email</span>
                             <input
                                 className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                                 value={email}
                                 onChange={(event) => setEmail(event.target.value)}
-                                placeholder="customer1@shop.local"
+                                placeholder="customer@example.com"
                             />
                         </label>
                         <label className="block space-y-2 text-sm">
@@ -142,19 +213,48 @@ export function LoginPage() {
                                 type="password"
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
-                                placeholder="••••••••"
+                                placeholder="Tối thiểu 8 ký tự"
                             />
                         </label>
+
+                        {mode === "register" ? (
+                            <label className="block space-y-2 text-sm">
+                                <span className="font-medium text-on-surface">Xác nhận mật khẩu</span>
+                                <input
+                                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
+                                    type="password"
+                                    value={passwordConfirmation}
+                                    onChange={(event) => setPasswordConfirmation(event.target.value)}
+                                    placeholder="Nhập lại mật khẩu"
+                                />
+                            </label>
+                        ) : null}
+
                         {error ? <p className="text-sm text-error">{error}</p> : null}
-                        <Button className="w-full" onClick={() => void handleSubmit()} disabled={isSubmitting}>
-                            {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập khách hàng"}
+
+                        <Button
+                            className="w-full"
+                            onClick={() => void (mode === "register" ? handleRegister() : handleLogin())}
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting
+                                ? mode === "register"
+                                    ? "Đang tạo tài khoản..."
+                                    : "Đang đăng nhập..."
+                                : mode === "register"
+                                  ? "Đăng ký"
+                                  : "Đăng nhập"}
                         </Button>
                     </div>
 
-                    <div className="rounded-3xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                        Nếu bạn được chuyển từ route bảo vệ như <strong>/checkout</strong> hoặc{" "}
-                        <strong>/account/orders</strong>, hệ thống sẽ quay lại đúng màn hình sau khi
-                        đăng nhập hợp lệ.
+                    <div className="border-t border-outline-variant/15 pt-4 text-center text-sm text-on-surface-variant">
+                        {mode === "register" ? "Đã có tài khoản?" : "Chưa có tài khoản?"}{" "}
+                        <Link
+                            to={mode === "register" ? routes.login : routes.register}
+                            className="font-semibold text-primary hover:underline"
+                        >
+                            {mode === "register" ? "Đăng nhập ngay" : "Đăng ký tại đây"}
+                        </Link>
                     </div>
                 </SurfaceCard>
             </div>
