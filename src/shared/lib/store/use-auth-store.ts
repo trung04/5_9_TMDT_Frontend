@@ -80,6 +80,16 @@ function createDemoSession(credential: DemoCredential): AuthSession {
             name: credential.displayName,
             email: credential.email,
             role: credential.role,
+            adminRole:
+                credential.role === "admin"
+                    ? {
+                          id: "demo-super-admin",
+                          name: "Super Admin",
+                          slug: "super_admin",
+                          isSuper: true,
+                      }
+                    : null,
+            permissions: [],
         },
         loggedInAt: new Date().toISOString(),
     };

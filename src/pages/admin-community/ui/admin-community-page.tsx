@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { apiRequest } from "@/shared/api/backend-client";
+import { hasAdminPermission } from "@/shared/lib/auth";
 import { downloadTextFile } from "@/shared/lib/download";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
@@ -69,7 +70,9 @@ export function AdminCommunityPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState("");
     const accessToken = useAuthStore((state) => state.accessToken);
+    const user = useAuthStore((state) => state.session?.user ?? null);
     const pushToast = useFeedbackStore((state) => state.pushToast);
+    const canCreateInvitation = hasAdminPermission(user, "admin.community.invitation.create");
 
     useEffect(() => {
         if (!accessToken) {
@@ -239,7 +242,10 @@ export function AdminCommunityPage() {
                     >
                         Xuất dữ liệu
                     </Button>
-                    <Button onClick={() => setInviteOpen((current) => !current)}>
+                    <Button
+                        disabled={!canCreateInvitation}
+                        onClick={() => setInviteOpen((current) => !current)}
+                    >
                         Mời nhà cung cấp
                     </Button>
                 </div>
@@ -296,7 +302,10 @@ export function AdminCommunityPage() {
                         <Button variant="outline" onClick={() => setInviteOpen(false)}>
                             Hủy
                         </Button>
-                        <Button disabled={isSaving} onClick={() => void handleSubmitInvite()}>
+                        <Button
+                            disabled={isSaving || !canCreateInvitation}
+                            onClick={() => void handleSubmitInvite()}
+                        >
                             {isSaving ? "Đang gửi..." : "Gửi lời mời"}
                         </Button>
                     </div>

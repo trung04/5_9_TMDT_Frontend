@@ -6,6 +6,13 @@ export interface AuthUser {
     name: string;
     email: string;
     role: UserRole;
+    adminRole?: {
+        id: string;
+        name: string;
+        slug: string;
+        isSuper: boolean;
+    } | null;
+    permissions?: string[];
 }
 
 export interface AuthSession {

@@ -52,6 +52,7 @@ export const routes = {
     adminRepository: "/admin/repository",
     adminLogistics: "/admin/logistics",
     adminSettings: "/admin/settings",
+    adminAccess: "/admin/access",
     supplierInventory: "/supplier/inventory",
     supplierRequisitions: "/supplier/requisitions",
     supplierProcessing: "/supplier/processing",

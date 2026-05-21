@@ -6,8 +6,82 @@ export interface BackendUser {
     role: string;
     status: string;
     is_active: boolean;
+    admin_role?: BackendAdminRoleSummary | null;
+    permissions?: string[];
     created_at?: string;
     updated_at?: string;
+}
+
+export interface BackendAdminRoleSummary {
+    id: number;
+    name: string;
+    slug: string;
+    is_super: boolean;
+}
+
+export interface BackendAdminPermission {
+    id: number;
+    key: string;
+    name: string;
+    group: string;
+    description: string | null;
+}
+
+export interface BackendAdminRole {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    is_super: boolean;
+    is_system: boolean;
+    users_count: number;
+    permissions: BackendAdminPermission[];
+    permission_keys: string[];
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendAdminAccount {
+    id: number;
+    full_name: string;
+    email: string;
+    phone: string;
+    role: string;
+    status: string;
+    is_active: boolean;
+    admin_role: BackendAdminRoleSummary | null;
+    created_by_admin: {
+        id: number;
+        full_name: string;
+        email: string;
+    } | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendAdminPermissionsResponse {
+    message: string;
+    data: BackendAdminPermission[];
+}
+
+export interface BackendAdminRolesResponse {
+    message: string;
+    data: BackendAdminRole[];
+}
+
+export interface BackendAdminRoleResponse {
+    message: string;
+    data: BackendAdminRole;
+}
+
+export interface BackendAdminAccountsResponse {
+    message: string;
+    data: BackendAdminAccount[];
+}
+
+export interface BackendAdminAccountResponse {
+    message: string;
+    data: BackendAdminAccount;
 }
 
 export interface BackendUserAddress {

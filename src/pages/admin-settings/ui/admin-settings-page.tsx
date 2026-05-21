@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { routes } from "@/shared/config/routes";
+import { hasAdminPermission } from "@/shared/lib/auth";
 import { downloadTextFile } from "@/shared/lib/download";
 import {
     useAdminSettingsStore,
     type AdminSettingsForm,
 } from "@/shared/lib/store/use-admin-settings-store";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
@@ -19,7 +21,9 @@ export function AdminSettingsPage() {
     const error = useAdminSettingsStore((state) => state.error);
     const loadSettings = useAdminSettingsStore((state) => state.loadSettings);
     const saveSettings = useAdminSettingsStore((state) => state.saveSettings);
+    const user = useAuthStore((state) => state.session?.user ?? null);
     const [form, setForm] = useState<AdminSettingsForm>(settings);
+    const canUpdateSettings = hasAdminPermission(user, "admin.settings.update");
 
     useEffect(() => {
         void loadSettings();
@@ -166,7 +170,7 @@ export function AdminSettingsPage() {
                     </label>
                 ))}
                 <div className="flex flex-wrap gap-3 lg:col-span-2">
-                    <Button disabled={isSaving} onClick={() => void handleSave()}>
+                    <Button disabled={isSaving || !canUpdateSettings} onClick={() => void handleSave()}>
                         {isSaving ? "Đang lưu..." : "Lưu cấu hình"}
                     </Button>
                     <Button variant="secondary" onClick={handleExport}>

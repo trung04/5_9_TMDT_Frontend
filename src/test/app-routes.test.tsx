@@ -73,34 +73,27 @@ describe("customer commerce routes", () => {
                 return jsonResponse(
                     {
                         data: {
-                            user: {
-                                id: 1,
-                                full_name: "Nguyen Van A",
-                                email: "customer@example.com",
-                                phone: "0909123456",
-                                address: "123 Nguyen Trai",
-                                city: "Ha Noi",
-                                favorite_region: "Thai Nguyen",
-                                avatar: null,
-                                loyalty_points: 0,
-                                loyalty_tier: "Member",
-                                next_tier_points: 100,
-                                preferences: {
-                                    newsletter: false,
-                                    sms_alerts: false,
-                                    order_email: true,
-                                    security_alerts: true,
-                                },
-                                addresses: [],
-                                reward_history: [],
-                                created_at: "2026-04-20T00:00:00.000000Z",
-                            },
+                            id: 1,
+                            name: "Nguyen Van A",
+                            email: "customer@example.com",
+                            phone: "0909123456",
+                            address: "123 Nguyen Trai",
+                            city: "Ha Noi",
+                            favorite_region: "Thai Nguyen",
+                            avatar: null,
+                            member_since: "2026-04-20T00:00:00.000000Z",
+                            newsletter: false,
+                            sms_alerts: false,
+                            order_email: true,
+                            security_alerts: true,
+                            addresses: [],
                             reward_snapshot: {
                                 tier: "Member",
                                 points: 0,
                                 next_tier_points: 100,
                                 perks: [],
                             },
+                            reward_history: [],
                         },
                     },
                     { status: 200 },
@@ -136,17 +129,17 @@ describe("customer commerce routes", () => {
         const user = userEvent.setup();
         renderApp(routes.checkout);
 
-        expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: /Dang nhap de dat hang/i })).toBeInTheDocument();
+        expect(await screen.findByText(/Tóm tắt đơn hàng/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Đăng nhập để đặt hàng/i })).toBeInTheDocument();
 
-        await user.click(screen.getByRole("button", { name: /Dang nhap de dat hang/i }));
+        await user.click(screen.getByRole("button", { name: /Đăng nhập để đặt hàng/i }));
         expect(await screen.findByLabelText(/Email/i)).toBeInTheDocument();
 
         await user.type(screen.getByLabelText(/Email/i), "customer@example.com");
         await user.type(screen.getByLabelText(/Mật khẩu/i), "secret123");
         await user.click(screen.getByRole("button", { name: /^Đăng nhập$/i }));
 
-        expect(await screen.findByText(/Tom tat don hang/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Tóm tắt đơn hàng/i)).toBeInTheDocument();
 
         const syncCall = fetchMock.mock.calls.find(([input, init]) => {
             return (
@@ -216,6 +209,43 @@ describe("customer commerce routes", () => {
                 return jsonResponse(createCartResponse(0));
             }
 
+            if (path.endsWith("/api/account/profile")) {
+                return jsonResponse({
+                    data: {
+                        id: 1,
+                        name: "Nguyen Van A",
+                        email: "customer@example.com",
+                        phone: "0909123456",
+                        address: "123 Nguyen Trai",
+                        city: "Ha Noi",
+                        favorite_region: "Thai Nguyen",
+                        avatar: null,
+                        member_since: "2026-04-20T00:00:00.000000Z",
+                        newsletter: false,
+                        sms_alerts: false,
+                        order_email: true,
+                        security_alerts: true,
+                        addresses: [],
+                        reward_snapshot: {
+                            tier: "Member",
+                            points: 0,
+                            next_tier_points: 100,
+                            perks: [],
+                        },
+                        reward_history: [],
+                    },
+                });
+            }
+
+            if (path.endsWith("/api/account/wishlist")) {
+                return jsonResponse({
+                    data: {
+                        product_ids: [],
+                        products: [],
+                    },
+                });
+            }
+
             if (path.endsWith("/api/orders") && (!init?.method || init.method === "GET")) {
                 return jsonResponse(createOrdersResponse(orderDetail));
             }
@@ -240,10 +270,12 @@ describe("customer commerce routes", () => {
         const user = userEvent.setup();
         renderApp(routes.accountOrders);
 
-        expect(await screen.findByText(/Tra huu co/i)).toBeInTheDocument();
+        expect(await screen.findByText(/ORD-9001/i)).toBeInTheDocument();
 
         await user.click(screen.getByRole("button", { name: /Xem chi tiết/i }));
         await user.click(await screen.findByRole("button", { name: /Thêm lại vào giỏ/i }));
+
+        expect(await screen.findByText(/Tra huu co/i)).toBeInTheDocument();
 
         await waitFor(() => {
             const reorderCall = fetchMock.mock.calls.find(([input, init]) => {

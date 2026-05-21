@@ -161,6 +161,15 @@ export function adaptBackendUserToAuthUser(user: BackendUser): AuthUser | null {
         name: user.full_name,
         email: user.email,
         role,
+        adminRole: user.admin_role
+            ? {
+                  id: String(user.admin_role.id),
+                  name: user.admin_role.name,
+                  slug: user.admin_role.slug,
+                  isSuper: user.admin_role.is_super,
+              }
+            : null,
+        permissions: user.permissions ?? [],
     };
 }
 

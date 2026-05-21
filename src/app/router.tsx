@@ -14,6 +14,7 @@ import { AccountProfilePage } from "@/pages/account-profile/ui/account-profile-p
 import { AccountRewardsPage } from "@/pages/account-rewards/ui/account-rewards-page";
 import { AccountSecurityPage } from "@/pages/account-security/ui/account-security-page";
 import { AdminCommunityPage } from "@/pages/admin-community/ui/admin-community-page";
+import { AdminAccessPage } from "@/pages/admin-access/ui/admin-access-page";
 import { AdminDashboardPage } from "@/pages/admin-dashboard/ui/admin-dashboard-page";
 import { AdminLogisticsPage } from "@/pages/admin-logistics/ui/admin-logistics-page";
 import { AdminRepositoryPage } from "@/pages/admin-repository/ui/admin-repository-page";
@@ -97,6 +98,7 @@ export function AppRoutes() {
                 <Route path={appRoutes.adminRepository} element={<AdminRepositoryPage />} />
                 <Route path={appRoutes.adminLogistics} element={<AdminLogisticsPage />} />
                 <Route path={appRoutes.adminSettings} element={<AdminSettingsPage />} />
+                <Route path={appRoutes.adminAccess} element={<AdminAccessPage />} />
             </Route>
 
             <Route
