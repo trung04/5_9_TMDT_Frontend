@@ -1,4 +1,4 @@
-import type { Product, ProductStockStatus } from "@/entities/product/model/types";
+import type { Product, ProductStockStatus, Region } from "@/entities/product/model/types";
 import type {
     AccountComplaint,
     AccountNotification,
@@ -23,10 +23,10 @@ import type {
     BackendOrderSummary,
     BackendPayment,
     BackendProduct,
+    BackendRegion,
     BackendSupplier,
     BackendUser,
 } from "@/shared/api/backend-types";
-import { products as seedProducts } from "@/shared/api/mock-data";
 
 export interface StorefrontSupplierOption {
     id: string;
@@ -113,8 +113,14 @@ export interface CustomerOrderDetailView extends CustomerOrderSummaryView {
     statusHistory: CustomerOrderStatusHistoryView[];
 }
 
-function fallbackProduct(index: number) {
-    return seedProducts[index % seedProducts.length] ?? seedProducts[0];
+function fallbackProduct(_index: number) {
+    return {
+        image: "",
+        rating: 4.8,
+        reviewCount: 0,
+        badge: undefined as string | undefined,
+        gallery: [] as Array<{ src: string; alt: string }>,
+    };
 }
 
 export function slugify(input: string) {
@@ -189,6 +195,14 @@ export function adaptBackendCategory(category: BackendCategory) {
         id: String(category.id),
         name: category.name,
         description: category.description,
+    };
+}
+
+export function adaptBackendRegion(region: BackendRegion): Region {
+    return {
+        id: String(region.id),
+        name: region.name,
+        description: region.description ?? "",
     };
 }
 
@@ -295,16 +309,16 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
 
     return {
         id: String(product.id),
-        slug: buildStorefrontSlug(product.id, product.name),
+        slug: product.slug?.trim() || buildStorefrontSlug(product.id, product.name),
         name: product.name,
         detailTitle: product.name,
         subtitle: `${categoryName} · ${supplierName}`,
         categoryId: String(product.category_id),
         categoryName,
-        regionId: String(product.supplier_id),
-        regionName: supplierName,
+        regionId: String(product.region_id ?? product.region?.id ?? product.supplier_id ?? product.id),
+        regionName: product.region?.name ?? product.origin ?? supplierName,
         description: product.description,
-        shortDescription: product.description,
+        shortDescription: product.short_description ?? product.description,
         price: numberValue(product.sale_price),
         originalPrice: undefined,
         rating: fallback.rating,
@@ -324,11 +338,11 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
                 alt: fallback.gallery[0]?.alt ?? product.name,
             },
         ],
-        origin: supplierName,
+        origin: product.origin ?? supplierName,
         weight: "Theo cấu hình nhà bán",
         shelfLife:
             product.stock_quantity > 0 ? `Tồn kho ${product.stock_quantity} sản phẩm` : "Tạm hết hàng",
-        certifications: [categoryName, product.sku],
+        certifications: product.certifications?.length ? product.certifications : [categoryName, product.sku],
         shippingNotice: {
             title: product.stock_quantity > 0 ? "Sẵn sàng giao hàng" : "Cần xác nhận tồn kho",
             description:

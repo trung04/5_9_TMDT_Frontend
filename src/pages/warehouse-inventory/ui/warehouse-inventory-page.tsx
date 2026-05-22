@@ -1,46 +1,38 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { InventoryItem } from "@/entities/inventory/model/types";
-import { catalogRepository, operationsRepository } from "@/shared/api/mock-repositories";
 import { formatCurrency } from "@/shared/lib/format";
 import { inventoryHealthLabels, requisitionStatusLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { useOperationsStore } from "@/shared/lib/store/use-operations-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { useUiStore } from "@/shared/lib/store/use-ui-store";
-import { Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
+import { AdminDrawer, Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
 import type { TableColumn } from "@/shared/types/ui";
 import { RequisitionDrawer } from "@/widgets/requisition-drawer";
 
 export function WarehouseInventoryPage() {
     const [query, setQuery] = useState("");
     const [drawerOpen, setDrawerOpen] = useState(false);
+    const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
     const [confirmation, setConfirmation] = useState("");
     const selectedWarehouseSku = useUiStore((state) => state.selectedWarehouseSku);
     const setSelectedWarehouseSku = useUiStore((state) => state.setSelectedWarehouseSku);
-    const createRequisition = useOperationsStore((state) => state.createRequisition);
+    const inventory = useOperationsDataStore((state) => state.inventory);
+    const requisitions = useOperationsDataStore((state) => state.requisitions);
+    const supplierRecords = useOperationsDataStore((state) => state.suppliers);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
+    const createRequisition = useOperationsDataStore((state) => state.createRequisition);
     const pushToast = useFeedbackStore((state) => state.pushToast);
-    const inventory = operationsRepository.listInventory();
-    const requisitions = operationsRepository.listRequisitions();
 
-    const supplierRecords = useMemo(
-        () => [
-            ...new Map(
-                inventory
-                    .map((item) => operationsRepository.getSupplierById(item.supplierId))
-                    .filter((supplier): supplier is NonNullable<typeof supplier> =>
-                        Boolean(supplier),
-                    )
-                    .map((supplier) => [supplier.id, supplier]),
-            ).values(),
-        ],
-        [inventory],
-    );
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
 
     const filteredInventory = inventory.filter((item) =>
         [
             item.sku,
-            catalogRepository.getProductById(item.productId)?.name ?? "",
-            operationsRepository.getSupplierById(item.supplierId)?.name ?? "",
+            item.productName ?? "",
+            item.supplierName ?? "",
         ].some((value) => value.toLowerCase().includes(query.toLowerCase())),
     );
 
@@ -72,7 +64,7 @@ export function WarehouseInventoryPage() {
             title: "Sản phẩm",
             render: (item) => (
                 <span className="text-on-surface-variant">
-                    {catalogRepository.getProductById(item.productId)?.name ?? item.productId}
+                    {item.productName ?? item.productId}
                 </span>
             ),
         },
@@ -95,7 +87,15 @@ export function WarehouseInventoryPage() {
             title: "Thao tác",
             align: "right",
             render: (item) => (
-                <Button variant="ghost" size="sm" onClick={() => setSelectedWarehouseSku(item.sku)}>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedWarehouseSku(item.sku);
+                        setDetailDrawerOpen(true);
+                    }}
+                >
                     Xem chi tiết
                 </Button>
             ),
@@ -155,7 +155,7 @@ export function WarehouseInventoryPage() {
                 <SurfaceCard className="text-sm text-primary">{confirmation}</SurfaceCard>
             ) : null}
 
-            <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
+            <section>
                 <SurfaceCard className="overflow-hidden p-0">
                     <div className="border-b border-outline-variant/15 px-6 py-5">
                         <h3 className="font-headline text-xl font-semibold">Danh mục tồn kho</h3>
@@ -165,89 +165,113 @@ export function WarehouseInventoryPage() {
                             rows={filteredInventory}
                             columns={columns}
                             getRowKey={(item) => item.sku}
+                            pagination={{ pageSize: 8, itemLabel: "mat hang" }}
                             rowClassName={(item) =>
                                 item.sku === activeItem?.sku
                                     ? "border-l-4 border-primary bg-primary/5"
                                     : undefined
                             }
+                            onRowClick={(item) => {
+                                setSelectedWarehouseSku(item.sku);
+                                setDetailDrawerOpen(true);
+                            }}
                         />
                     </div>
                 </SurfaceCard>
+            </section>
 
+            <AdminDrawer
+                open={detailDrawerOpen && Boolean(activeItem)}
+                mode="view"
+                title={
+                    activeItem
+                        ? (activeItem.productName ?? activeItem.sku)
+                        : "Chi tiet ton kho"
+                }
+                subtitle={activeItem?.sku}
+                onClose={() => setDetailDrawerOpen(false)}
+                footer={
+                    <div className="flex justify-end gap-3">
+                        <Button variant="outline" onClick={() => setDetailDrawerOpen(false)}>
+                            Dong
+                        </Button>
+                        <Button onClick={() => setDrawerOpen(true)}>Tao phieu nhap hang</Button>
+                    </div>
+                }
+            >
                 {activeItem ? (
-                    <SurfaceCard className="space-y-5">
-                        <div>
-                            <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Sản phẩm đang chọn
-                            </p>
-                            <h2 className="mt-2 font-headline text-2xl font-bold">
-                                {catalogRepository.getProductById(activeItem.productId)?.name ??
-                                    activeItem.sku}
-                            </h2>
-                            <p className="mt-2 text-sm text-on-surface-variant">{activeItem.sku}</p>
+                    <div className="space-y-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Vi tri ke</p>
+                                <p className="mt-2 font-semibold">{activeItem.aisle}</p>
+                            </div>
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Nguong nhap lai</p>
+                                <p className="mt-2 font-semibold">{activeItem.reorderPoint}</p>
+                            </div>
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Gia nhap hien tai</p>
+                                <p className="mt-2 font-semibold">{formatCurrency(activeItem.purchasePrice)}</p>
+                            </div>
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Nha cung cap</p>
+                                <p className="mt-2 font-semibold">
+                                    {activeItem.supplierName ?? activeItem.supplierId}
+                                </p>
+                            </div>
                         </div>
-                        <div className="space-y-3 text-sm text-on-surface-variant">
-                            <p>Vị trí kệ: {activeItem.aisle}</p>
-                            <p>Ngưỡng nhập lại: {activeItem.reorderPoint}</p>
-                            <p>Giá nhập hiện tại: {formatCurrency(activeItem.purchasePrice)}</p>
-                            <p>
-                                Nhà cung cấp:{" "}
-                                {operationsRepository.getSupplierById(activeItem.supplierId)
-                                    ?.name ?? activeItem.supplierId}
-                            </p>
-                        </div>
-                        <Button onClick={() => setDrawerOpen(true)}>Tạo phiếu nhập hàng</Button>
                         <div>
-                            <h3 className="font-headline text-lg font-semibold">Phiếu liên quan</h3>
+                            <h3 className="font-headline text-lg font-semibold">Phieu lien quan</h3>
                             <div className="mt-3 space-y-3">
                                 {requisitions
-                                    .filter(
-                                        (requisition) =>
-                                            requisition.inventorySku === activeItem.sku,
-                                    )
+                                    .filter((requisition) => requisition.inventorySku === activeItem.sku)
                                     .map((requisition) => (
                                         <div
                                             key={requisition.id}
                                             className="rounded-2xl bg-surface-container-low p-4 text-sm"
                                         >
-                                            <p className="font-semibold text-on-surface">
-                                                {requisition.id}
-                                            </p>
+                                            <p className="font-semibold text-on-surface">{requisition.id}</p>
                                             <p className="text-on-surface-variant">
-                                                {requisition.inventorySku} · SL{" "}
-                                                {requisition.requestedQty} ·{" "}
+                                                {requisition.inventorySku} / SL {requisition.requestedQty} /{" "}
                                                 {requisitionStatusLabels[requisition.status]}
                                             </p>
                                         </div>
                                     ))}
                             </div>
                         </div>
-                    </SurfaceCard>
+                    </div>
                 ) : null}
-            </section>
+            </AdminDrawer>
 
             <RequisitionDrawer
                 open={drawerOpen}
                 inventoryItem={activeItem}
                 suppliers={supplierRecords}
                 onClose={() => setDrawerOpen(false)}
-                onSubmit={(draft) => {
+                onSubmit={async (draft) => {
                     if (!activeItem) return;
 
-                    const requisition = createRequisition({
-                        inventorySku: activeItem.sku,
-                        supplierId: draft.supplierId,
+                    const result = await createRequisition({
+                        productId: activeItem.productId,
                         requestedQty: draft.requestedQty,
-                        etaDays: draft.etaDays,
                         note: draft.note,
                     });
 
+                    if (!result.success || !result.data) {
+                        pushToast({
+                            tone: "warning",
+                            message: result.error ?? "Khong the tao phieu nhap hang.",
+                        });
+                        return;
+                    }
+
                     setConfirmation(
-                        `Đã gửi phiếu ${requisition.id} cho ${draft.requestedQty} đơn vị, ETA ${draft.etaDays} ngày.`,
+                        `Đã gửi phiếu ${result.data.id} cho ${draft.requestedQty} đơn vị, ETA ${draft.etaDays} ngày.`,
                     );
                     pushToast({
                         tone: "success",
-                        message: `Phiếu nhập ${requisition.id} đã được ghi vào trạng thái runtime.`,
+                        message: `Phiếu nhập ${result.data.id} đã được ghi về database.`,
                     });
                 }}
             />

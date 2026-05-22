@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { BackendAdminCustomer } from "@/shared/api/backend-types";
-import { downloadTextFile } from "@/shared/lib/download";
 import { hasAdminPermission } from "@/shared/lib/auth";
+import { downloadTextFile } from "@/shared/lib/download";
 import {
     type AdminCustomerPayload,
     useAdminUserStore,
 } from "@/shared/lib/store/use-admin-user-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { Badge, Button, StatCard, SurfaceCard } from "@/shared/ui";
-import type { StatusTone } from "@/shared/types/ui";
+import { AdminDrawer, Badge, Button, DataTable, Icon, StatCard, SurfaceCard, cn } from "@/shared/ui";
+import type { StatusTone, TableColumn } from "@/shared/types/ui";
+
+type DrawerMode = "view" | "create" | "edit";
 
 const emptyCustomerForm = {
     fullName: "",
@@ -24,7 +26,6 @@ const emptyCustomerForm = {
     rewardPoints: "0",
     rewardTier: "Bronze",
     nextTierPoints: "500",
-    status: "ACTIVE",
     isActive: true,
     newsletter: false,
     smsAlerts: false,
@@ -40,9 +41,12 @@ const notificationFields = [
 ];
 
 function statusTone(customer: BackendAdminCustomer): StatusTone {
-    if (!customer.is_active || customer.status === "BLOCKED") return "danger";
-    if (customer.status === "INACTIVE") return "warning";
-    return "success";
+    if (customer.is_active && !customer.is_deleted) return "success";
+    return customer.is_deleted ? "danger" : "warning";
+}
+
+function statusLabel(customer: BackendAdminCustomer) {
+    return customer.is_active && !customer.is_deleted ? "ACTIVE" : "INACTIVE";
 }
 
 function initials(name: string) {
@@ -54,10 +58,59 @@ function initials(name: string) {
         .join("");
 }
 
+function FieldValue({ label, value }: { label: string; value: string | number | null | undefined }) {
+    return (
+        <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+            <p className="text-xs font-label uppercase tracking-[0.14em] text-on-surface-variant">
+                {label}
+            </p>
+            <p className="mt-2 font-medium text-on-surface">{value || "Chua cap nhat"}</p>
+        </div>
+    );
+}
+
+function ActionButton({
+    label,
+    icon,
+    disabled,
+    onClick,
+    tone = "neutral",
+}: {
+    label: string;
+    icon: string;
+    disabled?: boolean;
+    onClick: () => void;
+    tone?: "neutral" | "danger" | "primary";
+}) {
+    return (
+        <button
+            type="button"
+            className={cn(
+                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
+                tone === "danger"
+                    ? "text-error hover:bg-error-container/40"
+                    : tone === "primary"
+                      ? "text-primary hover:bg-primary/10"
+                      : "text-on-surface-variant hover:bg-surface-container-low",
+            )}
+            aria-label={label}
+            title={label}
+            disabled={disabled}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+            }}
+        >
+            <Icon name={icon} className="text-xl" />
+        </button>
+    );
+}
+
 export function AdminUsersPage() {
     const [query, setQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [activeCustomerId, setActiveCustomerId] = useState("");
+    const [drawerMode, setDrawerMode] = useState<DrawerMode | null>(null);
     const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
     const user = useAuthStore((state) => state.session?.user ?? null);
     const customers = useAdminUserStore((state) => state.customers);
@@ -86,10 +139,8 @@ export function AdminUsersPage() {
         return customers.filter((customer) => {
             const matchesStatus =
                 statusFilter === "all" ||
-                (statusFilter === "active" && customer.status === "ACTIVE" && customer.is_active) ||
-                (statusFilter === "blocked" &&
-                    (customer.status === "BLOCKED" || !customer.is_active)) ||
-                (statusFilter === "inactive" && customer.status === "INACTIVE");
+                (statusFilter === "active" && statusLabel(customer) === "ACTIVE") ||
+                (statusFilter === "inactive" && statusLabel(customer) === "INACTIVE");
 
             if (!matchesStatus) return false;
             if (keyword.length === 0) return true;
@@ -110,15 +161,13 @@ export function AdminUsersPage() {
     }, [customers, query, statusFilter]);
 
     const activeCustomer =
-        activeCustomerId === "new"
-            ? undefined
-            : (filteredCustomers.find((customer) => String(customer.id) === activeCustomerId) ??
-              filteredCustomers[0]);
+        activeCustomerId && activeCustomerId !== "new"
+            ? customers.find((customer) => String(customer.id) === activeCustomerId)
+            : undefined;
 
     useEffect(() => {
-        if (!activeCustomer) return;
+        if (!activeCustomer || drawerMode === "create") return;
 
-        setActiveCustomerId(String(activeCustomer.id));
         setCustomerForm({
             fullName: activeCustomer.full_name,
             email: activeCustomer.email,
@@ -131,14 +180,13 @@ export function AdminUsersPage() {
             rewardPoints: String(activeCustomer.reward_points),
             rewardTier: activeCustomer.reward_tier,
             nextTierPoints: String(activeCustomer.next_tier_points),
-            status: activeCustomer.status,
             isActive: activeCustomer.is_active,
             newsletter: activeCustomer.newsletter,
             smsAlerts: activeCustomer.sms_alerts,
             orderEmail: activeCustomer.order_email,
             securityAlerts: activeCustomer.security_alerts,
         });
-    }, [activeCustomer]);
+    }, [activeCustomer, drawerMode]);
 
     const stats = [
         {
@@ -153,7 +201,7 @@ export function AdminUsersPage() {
             id: "admin-users-active",
             label: "Dang hoat dong",
             value: canViewUsers
-                ? `${customers.filter((customer) => customer.status === "ACTIVE" && customer.is_active).length}`
+                ? `${customers.filter((customer) => statusLabel(customer) === "ACTIVE").length}`
                 : "-",
             tone: "success" as const,
             icon: "verified_user",
@@ -171,9 +219,19 @@ export function AdminUsersPage() {
         },
     ];
 
-    function resetCustomerForm() {
+    function openCreateDrawer() {
         setActiveCustomerId("new");
         setCustomerForm(emptyCustomerForm);
+        setDrawerMode("create");
+    }
+
+    function openCustomerDrawer(customer: BackendAdminCustomer, mode: DrawerMode) {
+        setActiveCustomerId(String(customer.id));
+        setDrawerMode(mode);
+    }
+
+    function closeDrawer() {
+        setDrawerMode(null);
     }
 
     function buildPayload(includePassword: boolean): AdminCustomerPayload {
@@ -196,8 +254,8 @@ export function AdminUsersPage() {
             reward_points: Number.isFinite(rewardPoints) ? rewardPoints : 0,
             reward_tier: customerForm.rewardTier.trim() || "Bronze",
             next_tier_points: Number.isFinite(nextTierPoints) ? nextTierPoints : 500,
-            status: customerForm.status,
             is_active: customerForm.isActive,
+            is_deleted: false,
         };
     }
 
@@ -223,6 +281,7 @@ export function AdminUsersPage() {
         }
 
         setActiveCustomerId(String(result.data.id));
+        setDrawerMode("view");
         pushToast({ tone: "success", message: `Da tao user ${result.data.full_name}.` });
     }
 
@@ -236,21 +295,121 @@ export function AdminUsersPage() {
             return;
         }
 
+        setDrawerMode("view");
         pushToast({ tone: "success", message: `Da cap nhat user ${result.data.full_name}.` });
     }
 
-    async function handleBlockCustomer() {
-        if (!activeCustomer) return;
+    async function handleBlockCustomer(customer = activeCustomer) {
+        if (!customer) return;
 
-        const result = await blockCustomer(activeCustomer.id);
+        const result = await blockCustomer(customer.id);
 
         if (!result.success || !result.data) {
             pushToast({ tone: "warning", message: result.error ?? "Khong the khoa user." });
             return;
         }
 
+        setActiveCustomerId(String(result.data.id));
+        setDrawerMode("view");
         pushToast({ tone: "success", message: `Da khoa user ${result.data.full_name}.` });
     }
+
+    const columns: TableColumn<BackendAdminCustomer>[] = [
+        {
+            key: "identity",
+            title: "User Identity",
+            width: "24%",
+            render: (customer) => (
+                <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-xs font-bold text-on-primary-fixed">
+                        {initials(customer.full_name) || "U"}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="truncate font-medium text-on-surface">{customer.full_name}</p>
+                        <p className="truncate text-xs text-on-surface-variant">{customer.email}</p>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: "region",
+            title: "Region",
+            width: "22%",
+            render: (customer) => (
+                <div>
+                    <p>{customer.city ?? "Chua cap nhat"}</p>
+                    <p className="text-xs text-on-surface-variant">
+                        {customer.favorite_region ?? "Chua co vung yeu thich"}
+                    </p>
+                </div>
+            ),
+        },
+        {
+            key: "orders",
+            title: "Orders",
+            align: "right",
+            width: "9%",
+            nowrap: true,
+            render: (customer) => <span className="font-semibold">{customer.orders_count}</span>,
+        },
+        {
+            key: "reward",
+            title: "Reward",
+            width: "15%",
+            render: (customer) => (
+                <div>
+                    <p className="font-medium">{customer.reward_tier}</p>
+                    <p className="text-xs text-on-surface-variant">{customer.reward_points} diem</p>
+                </div>
+            ),
+        },
+        {
+            key: "status",
+            title: "Status",
+            width: "14%",
+            nowrap: true,
+            render: (customer) => (
+                <Badge tone={statusTone(customer)}>{statusLabel(customer)}</Badge>
+            ),
+        },
+        {
+            key: "actions",
+            title: "Actions",
+            align: "right",
+            width: "16%",
+            nowrap: true,
+            render: (customer) => (
+                <div className="flex justify-end gap-1">
+                    <ActionButton
+                        label={`Xem ${customer.full_name}`}
+                        icon="visibility"
+                        onClick={() => openCustomerDrawer(customer, "view")}
+                    />
+                    <ActionButton
+                        label={`Sua ${customer.full_name}`}
+                        icon="edit"
+                        tone="primary"
+                        disabled={!canUpdateUser}
+                        onClick={() => openCustomerDrawer(customer, "edit")}
+                    />
+                    <ActionButton
+                        label={`Khoa ${customer.full_name}`}
+                        icon="block"
+                        tone="danger"
+                        disabled={!canDeleteUser || !customer.is_active}
+                        onClick={() => void handleBlockCustomer(customer)}
+                    />
+                </div>
+            ),
+        },
+    ];
+
+    const drawerTitle =
+        drawerMode === "create"
+            ? "Tao customer"
+            : drawerMode === "edit"
+              ? "Chinh sua customer"
+              : "Ho so customer";
 
     return (
         <div className="space-y-8">
@@ -281,7 +440,7 @@ export function AdminUsersPage() {
                     >
                         Export
                     </Button>
-                    <Button disabled={!canCreateUser} onClick={resetCustomerForm}>
+                    <Button disabled={!canCreateUser} onClick={openCreateDrawer}>
                         Tao user
                     </Button>
                 </div>
@@ -293,295 +452,248 @@ export function AdminUsersPage() {
                 ))}
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-                <SurfaceCard className="space-y-5">
-                    <div className="flex flex-col gap-3 lg:flex-row">
-                        <input
-                            className="min-w-0 flex-1 rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Search users, region, email or phone..."
-                            value={query}
-                            onChange={(event) => setQuery(event.target.value)}
-                        />
-                        <select
-                            className="rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            value={statusFilter}
-                            onChange={(event) => setStatusFilter(event.target.value)}
-                        >
-                            <option value="all">Tat ca trang thai</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="blocked">Blocked</option>
-                        </select>
-                    </div>
+            <SurfaceCard className="space-y-5">
+                <div className="flex flex-col gap-3 lg:flex-row">
+                    <input
+                        className="min-w-0 flex-1 rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                        placeholder="Search users, region, email or phone..."
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                    />
+                    <select
+                        className="rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value)}
+                    >
+                        <option value="all">Tat ca trang thai</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
 
-                    {error ? <p className="text-sm text-error">{error}</p> : null}
-                    {!canViewUsers ? (
-                        <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                            Ban chua co quyen xem danh sach users.
-                        </p>
-                    ) : null}
-                    {isLoading && canViewUsers ? (
-                        <p className="text-sm text-on-surface-variant">Dang tai users...</p>
-                    ) : null}
-                    {!isLoading && canViewUsers && filteredCustomers.length === 0 ? (
-                        <p className="text-sm text-on-surface-variant">
-                            Khong co user phu hop bo loc hien tai.
-                        </p>
-                    ) : null}
+                {error ? <p className="text-sm text-error">{error}</p> : null}
+                {!canViewUsers ? (
+                    <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                        Ban chua co quyen xem danh sach users.
+                    </p>
+                ) : null}
 
-                    {canViewUsers ? (
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[760px] border-collapse text-left">
-                                <thead>
-                                    <tr className="border-b border-outline-variant/10 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                                        <th className="px-3 py-3">User Identity</th>
-                                        <th className="px-3 py-3">Region</th>
-                                        <th className="px-3 py-3 text-right">Orders</th>
-                                        <th className="px-3 py-3">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-outline-variant/10">
-                                    {filteredCustomers.map((customer) => (
-                                        <tr
-                                            key={customer.id}
-                                            className={`cursor-pointer transition hover:bg-surface-container-low ${
-                                                activeCustomer?.id === customer.id
-                                                    ? "bg-primary/5"
-                                                    : ""
-                                            }`}
-                                            onClick={() => setActiveCustomerId(String(customer.id))}
-                                        >
-                                            <td className="px-3 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-fixed text-xs font-bold text-on-primary-fixed">
-                                                        {initials(customer.full_name) || "U"}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="truncate font-medium">
-                                                            {customer.full_name}
-                                                        </p>
-                                                        <p className="truncate text-xs text-on-surface-variant">
-                                                            {customer.email}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-3 py-4 text-sm text-on-surface-variant">
-                                                <p>{customer.city ?? "Chua cap nhat"}</p>
-                                                <p className="text-xs">
-                                                    {customer.favorite_region ?? "Chua co vung yeu thich"}
-                                                </p>
-                                            </td>
-                                            <td className="px-3 py-4 text-right text-sm font-semibold">
-                                                {customer.orders_count}
-                                            </td>
-                                            <td className="px-3 py-4">
-                                                <Badge tone={statusTone(customer)}>
-                                                    {customer.is_active ? customer.status : "BLOCKED"}
-                                                </Badge>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ) : null}
-                </SurfaceCard>
+                {canViewUsers ? (
+                    <DataTable
+                        rows={filteredCustomers}
+                        columns={columns}
+                        getRowKey={(customer) => String(customer.id)}
+                        isLoading={isLoading}
+                        emptyMessage="Khong co user phu hop bo loc hien tai."
+                        minWidth="920px"
+                        pagination={{ pageSize: 5, itemLabel: "users" }}
+                        rowClassName={(customer) =>
+                            activeCustomerId === String(customer.id) ? "border-l-4 border-primary bg-primary/5" : undefined
+                        }
+                        onRowClick={(customer) => openCustomerDrawer(customer, "view")}
+                    />
+                ) : null}
+            </SurfaceCard>
 
-                <SurfaceCard className="space-y-5">
-                    <div className="flex items-start justify-between gap-3">
-                        <div>
-                            <h2 className="font-headline text-2xl font-bold">
-                                {activeCustomerId === "new" ? "Tao customer" : "Ho so customer"}
-                            </h2>
-                            <p className="mt-1 text-sm text-on-surface-variant">
-                                Xoa user se khoa mem tai khoan va giu nguyen don hang.
-                            </p>
-                        </div>
-                        {activeCustomer ? (
-                            <Badge tone={statusTone(activeCustomer)}>
-                                {activeCustomer.is_active ? activeCustomer.status : "BLOCKED"}
-                            </Badge>
+            <AdminDrawer
+                open={drawerMode !== null}
+                mode={drawerMode ?? "view"}
+                title={drawerTitle}
+                subtitle={
+                    drawerMode === "create"
+                        ? "Nhap thong tin de tao tai khoan customer moi."
+                        : activeCustomer
+                          ? `${activeCustomer.email} / ${activeCustomer.phone}`
+                          : undefined
+                }
+                onClose={closeDrawer}
+                footer={
+                    <div className="flex flex-wrap justify-end gap-3">
+                        <Button variant="outline" onClick={closeDrawer}>
+                            Dong
+                        </Button>
+                        {drawerMode === "create" ? (
+                            <Button disabled={isSaving || !canCreateUser} onClick={() => void handleCreateCustomer()}>
+                                Tao user
+                            </Button>
+                        ) : null}
+                        {drawerMode === "view" && activeCustomer ? (
+                            <>
+                                <Button
+                                    variant="secondary"
+                                    disabled={!canUpdateUser}
+                                    onClick={() => setDrawerMode("edit")}
+                                >
+                                    Sua
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    disabled={isSaving || !canDeleteUser || !activeCustomer.is_active}
+                                    onClick={() => void handleBlockCustomer()}
+                                >
+                                    Khoa user
+                                </Button>
+                            </>
+                        ) : null}
+                        {drawerMode === "edit" ? (
+                            <Button disabled={!activeCustomer || isSaving || !canUpdateUser} onClick={() => void handleUpdateCustomer()}>
+                                Luu chinh sua
+                            </Button>
                         ) : null}
                     </div>
+                }
+            >
+                {drawerMode === "view" && activeCustomer ? (
+                    <div className="space-y-5">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-4">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary-fixed text-sm font-bold text-on-primary-fixed">
+                                    {initials(activeCustomer.full_name) || "U"}
+                                </div>
+                                <div>
+                                    <h3 className="font-headline text-xl font-bold">{activeCustomer.full_name}</h3>
+                                    <p className="text-sm text-on-surface-variant">{activeCustomer.email}</p>
+                                </div>
+                            </div>
+                            <Badge tone={statusTone(activeCustomer)}>{statusLabel(activeCustomer)}</Badge>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <FieldValue label="Phone" value={activeCustomer.phone} />
+                            <FieldValue label="City" value={activeCustomer.city} />
+                            <FieldValue label="Favorite region" value={activeCustomer.favorite_region} />
+                            <FieldValue label="Address" value={activeCustomer.address} />
+                            <FieldValue label="Orders" value={activeCustomer.orders_count} />
+                            <FieldValue label="Reward" value={`${activeCustomer.reward_tier} / ${activeCustomer.reward_points} diem`} />
+                        </div>
+                    </div>
+                ) : null}
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Ho ten"
-                            value={customerForm.fullName}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({
-                                    ...current,
-                                    fullName: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="So dien thoai"
-                            value={customerForm.phone}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({ ...current, phone: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
-                            placeholder="Email"
-                            type="email"
-                            value={customerForm.email}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({ ...current, email: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
-                            placeholder="Mat khau moi khi tao user"
-                            type="password"
-                            value={customerForm.password}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({
-                                    ...current,
-                                    password: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Thanh pho"
-                            value={customerForm.city}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({ ...current, city: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Vung yeu thich"
-                            value={customerForm.favoriteRegion}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({
-                                    ...current,
-                                    favoriteRegion: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
-                            placeholder="Dia chi"
-                            value={customerForm.address}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({ ...current, address: event.target.value }))
-                            }
-                        />
-                        <select
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            value={customerForm.status}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({ ...current, status: event.target.value }))
-                            }
-                        >
-                            <option value="ACTIVE">ACTIVE</option>
-                            <option value="INACTIVE">INACTIVE</option>
-                            <option value="BLOCKED">BLOCKED</option>
-                        </select>
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Hang thuong"
-                            value={customerForm.rewardTier}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({
-                                    ...current,
-                                    rewardTier: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            min={0}
-                            placeholder="Diem"
-                            type="number"
-                            value={customerForm.rewardPoints}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({
-                                    ...current,
-                                    rewardPoints: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                            min={0}
-                            placeholder="Diem len hang tiep"
-                            type="number"
-                            value={customerForm.nextTierPoints}
-                            onChange={(event) =>
-                                setCustomerForm((current) => ({
-                                    ...current,
-                                    nextTierPoints: event.target.value,
-                                }))
-                            }
-                        />
-                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant md:col-span-2">
+                {(drawerMode === "create" || drawerMode === "edit") ? (
+                    <div className="space-y-5">
+                        <div className="grid gap-4 md:grid-cols-2">
                             <input
-                                type="checkbox"
-                                checked={customerForm.isActive}
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                placeholder="Ho ten"
+                                value={customerForm.fullName}
                                 onChange={(event) =>
-                                    setCustomerForm((current) => ({
-                                        ...current,
-                                        isActive: event.target.checked,
-                                    }))
+                                    setCustomerForm((current) => ({ ...current, fullName: event.target.value }))
                                 }
                             />
-                            User duoc phep dang nhap
-                        </label>
-                    </div>
-
-                    <div className="grid gap-3 text-sm text-on-surface-variant sm:grid-cols-2">
-                        {notificationFields.map((field) => (
-                            <label
-                                key={field.key}
-                                className="flex items-center gap-3 rounded-2xl bg-surface-container-low px-4 py-3"
-                            >
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                placeholder="So dien thoai"
+                                value={customerForm.phone}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, phone: event.target.value }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
+                                placeholder="Email"
+                                type="email"
+                                value={customerForm.email}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, email: event.target.value }))
+                                }
+                            />
+                            {drawerMode === "create" ? (
                                 <input
-                                    type="checkbox"
-                                    checked={customerForm[field.key]}
+                                    className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
+                                    placeholder="Mat khau moi khi tao user"
+                                    type="password"
+                                    value={customerForm.password}
                                     onChange={(event) =>
-                                        setCustomerForm((current) => ({
-                                            ...current,
-                                            [field.key]: event.target.checked,
-                                        }))
+                                        setCustomerForm((current) => ({ ...current, password: event.target.value }))
                                     }
                                 />
-                                {field.label}
+                            ) : null}
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                placeholder="Thanh pho"
+                                value={customerForm.city}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, city: event.target.value }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                placeholder="Vung yeu thich"
+                                value={customerForm.favoriteRegion}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, favoriteRegion: event.target.value }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
+                                placeholder="Dia chi"
+                                value={customerForm.address}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, address: event.target.value }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                placeholder="Hang thuong"
+                                value={customerForm.rewardTier}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, rewardTier: event.target.value }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                min={0}
+                                placeholder="Diem"
+                                type="number"
+                                value={customerForm.rewardPoints}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, rewardPoints: event.target.value }))
+                                }
+                            />
+                            <input
+                                className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                min={0}
+                                placeholder="Diem len hang tiep"
+                                type="number"
+                                value={customerForm.nextTierPoints}
+                                onChange={(event) =>
+                                    setCustomerForm((current) => ({ ...current, nextTierPoints: event.target.value }))
+                                }
+                            />
+                            <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant md:col-span-2">
+                                <input
+                                    type="checkbox"
+                                    checked={customerForm.isActive}
+                                    onChange={(event) =>
+                                        setCustomerForm((current) => ({ ...current, isActive: event.target.checked }))
+                                    }
+                                />
+                                User duoc phep dang nhap
                             </label>
-                        ))}
-                    </div>
+                        </div>
 
-                    <div className="flex flex-wrap justify-end gap-3">
-                        <Button
-                            variant="secondary"
-                            disabled={isSaving || !canCreateUser}
-                            onClick={() => void handleCreateCustomer()}
-                        >
-                            Tao user
-                        </Button>
-                        <Button
-                            variant="outline"
-                            disabled={!activeCustomer || isSaving || !canUpdateUser}
-                            onClick={() => void handleUpdateCustomer()}
-                        >
-                            Luu chinh sua
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            disabled={!activeCustomer || isSaving || !canDeleteUser}
-                            onClick={() => void handleBlockCustomer()}
-                        >
-                            Khoa user
-                        </Button>
+                        <div className="grid gap-3 text-sm text-on-surface-variant sm:grid-cols-2">
+                            {notificationFields.map((field) => (
+                                <label
+                                    key={field.key}
+                                    className="flex items-center gap-3 rounded-2xl bg-surface-container-low px-4 py-3"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={customerForm[field.key]}
+                                        onChange={(event) =>
+                                            setCustomerForm((current) => ({
+                                                ...current,
+                                                [field.key]: event.target.checked,
+                                            }))
+                                        }
+                                    />
+                                    {field.label}
+                                </label>
+                            ))}
+                        </div>
                     </div>
-                </SurfaceCard>
-            </section>
+                ) : null}
+            </AdminDrawer>
         </div>
     );
 }

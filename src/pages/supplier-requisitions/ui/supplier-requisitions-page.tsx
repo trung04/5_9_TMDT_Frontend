@@ -1,13 +1,19 @@
-import { operationsRepository } from "@/shared/api/mock-repositories";
+import { useEffect } from "react";
+
 import { requisitionStatusLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { useOperationsStore } from "@/shared/lib/store/use-operations-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 export function SupplierRequisitionsPage() {
-    const requisitions = operationsRepository.listRequisitions();
-    const updateRequisitionStatus = useOperationsStore((state) => state.updateRequisitionStatus);
+    const requisitions = useOperationsDataStore((state) => state.requisitions);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
+    const updateRequisitionStatus = useOperationsDataStore((state) => state.updateRequisitionStatus);
     const pushToast = useFeedbackStore((state) => state.pushToast);
+
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
 
     return (
         <div className="space-y-8">
@@ -50,12 +56,7 @@ export function SupplierRequisitionsPage() {
                             <Button
                                 size="sm"
                                 onClick={() => {
-                                    updateRequisitionStatus(
-                                        requisition.id,
-                                        "approved",
-                                        "supplier",
-                                        requisition.requestedQty,
-                                    );
+                                    void updateRequisitionStatus(requisition.id, "approved");
                                     pushToast({
                                         tone: "success",
                                         message: `Đã duyệt ${requisition.id}.`,
@@ -68,7 +69,7 @@ export function SupplierRequisitionsPage() {
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => {
-                                    updateRequisitionStatus(requisition.id, "received", "supplier");
+                                    void updateRequisitionStatus(requisition.id, "received");
                                     pushToast({
                                         tone: "success",
                                         message: `Đã xác nhận hoàn tất ${requisition.id}.`,
@@ -81,11 +82,7 @@ export function SupplierRequisitionsPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => {
-                                    updateRequisitionStatus(
-                                        requisition.id,
-                                        "cancelled",
-                                        "supplier",
-                                    );
+                                    void updateRequisitionStatus(requisition.id, "cancelled");
                                     pushToast({
                                         tone: "warning",
                                         message: `Đã hủy ${requisition.id}.`,

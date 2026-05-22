@@ -17,7 +17,6 @@ export function LoginPage() {
     const credentials = useAuthStore((state) => state.credentials);
     const login = useAuthStore((state) => state.login);
     const register = useAuthStore((state) => state.register);
-    const loginAsRole = useAuthStore((state) => state.loginAsRole);
     const isSubmitting = useAuthStore((state) => state.isSubmitting);
     const syncGuestCart = useCartStore((state) => state.syncGuestCart);
     const [fullName, setFullName] = useState("");
@@ -137,15 +136,16 @@ export function LoginPage() {
                                 <button
                                     key={credential.id}
                                     className="rounded-3xl border border-outline-variant/20 bg-surface-container-low p-4 text-left transition hover:border-primary/30 hover:bg-primary/5"
-                                    onClick={() => {
-                                        const result = loginAsRole(credential.role);
+                                    onClick={async () => {
+                                        const result = await login(credential.email, credential.password);
 
                                         if (!result.success) {
                                             setError(result.error ?? "Không thể đăng nhập nhanh.");
                                             return;
                                         }
 
-                                        void navigate(resolveRedirect(credential.role), { replace: true });
+                                        const role = useAuthStore.getState().session?.user.role ?? credential.role;
+                                        void navigate(resolveRedirect(role), { replace: true });
                                     }}
                                 >
                                     <p className="text-xs uppercase tracking-widest text-primary">

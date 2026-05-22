@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { adminRepository, operationsRepository } from "@/shared/api/mock-repositories";
-import { advanceFulfillmentTask } from "@/shared/lib/workflows";
 import { fulfillmentStatusLabels, shippingTierLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { Button, StatCard, SurfaceCard } from "@/shared/ui";
 import { FulfillmentQueue } from "@/widgets/fulfillment-queue";
 
@@ -15,13 +14,20 @@ const nextStatusLabel = {
 } as const;
 
 export function WarehouseFulfillmentPage() {
-    const tasks = operationsRepository.listFulfillmentTasks();
+    const tasks = useOperationsDataStore((state) => state.fulfillmentTasks);
+    const orders = useOperationsDataStore((state) => state.supplierOrders);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
+    const advanceFulfillmentTask = useOperationsDataStore((state) => state.advanceFulfillmentTask);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [selectedTaskId, setSelectedTaskId] = useState(tasks[0]?.id ?? "");
     const activeTask = tasks.find((task) => task.id === selectedTaskId) ?? tasks[0];
     const relatedOrder = activeTask
-        ? adminRepository.listOrders().find((order) => order.id === activeTask.orderId)
+        ? orders.find((order) => order.id === activeTask.orderId)
         : undefined;
+
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
 
     const stats = useMemo(
         () => [
@@ -93,12 +99,21 @@ export function WarehouseFulfillmentPage() {
                         <Button
                             disabled={activeTask.status === "shipped"}
                             onClick={() => {
-                                const nextTask = advanceFulfillmentTask(
+                                void (async () => {
+                                const result = await advanceFulfillmentTask(
                                     activeTask.id,
                                     "Cập nhật từ màn hình fulfillment.",
                                 );
 
-                                if (!nextTask) return;
+                                if (!result.success || !result.data) {
+                                    pushToast({
+                                        tone: "warning",
+                                        message: result.error ?? "Khong the cap nhat fulfillment.",
+                                    });
+                                    return;
+                                }
+
+                                const nextTask = result.data;
 
                                 pushToast({
                                     tone: "success",
@@ -107,6 +122,7 @@ export function WarehouseFulfillmentPage() {
                                             ? `Đơn ${nextTask.orderId} đã được bàn giao cho đơn vị vận chuyển.`
                                             : `Đơn ${nextTask.orderId} đã chuyển sang ${fulfillmentStatusLabels[nextTask.status]}.`,
                                 });
+                                })();
                             }}
                         >
                             {nextStatusLabel[activeTask.status]}

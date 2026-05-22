@@ -1,12 +1,10 @@
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { useCatalogStore } from "@/shared/lib/store/use-catalog-store";
 import { useCustomerOrdersStore } from "@/shared/lib/store/use-customer-orders-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useAdminUserStore } from "@/shared/lib/store/use-admin-user-store";
-import { useOperationsStore } from "@/shared/lib/store/use-operations-store";
-import { useOrderStore } from "@/shared/lib/store/use-order-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { usePostStore } from "@/shared/lib/store/use-post-store";
 import { useShopStore } from "@/shared/lib/store/use-shop-store";
 import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
@@ -15,9 +13,7 @@ import { useUiStore } from "@/shared/lib/store/use-ui-store";
 export function resetDemoState() {
     useAuthStore.getState().reset();
     useAccountStore.getState().reset();
-    useCatalogStore.getState().reset();
-    useOperationsStore.getState().reset();
-    useOrderStore.getState().reset();
+    useOperationsDataStore.getState().reset();
     useAdminUserStore.getState().reset();
     usePostStore.getState().reset();
     useCustomerOrdersStore.getState().reset();

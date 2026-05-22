@@ -1,9 +1,21 @@
-import { catalogRepository } from "@/shared/api/mock-repositories";
+import { useEffect } from "react";
+
 import { routes } from "@/shared/config/routes";
+import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
 import { ButtonLink, SurfaceCard } from "@/shared/ui";
 
 export function RegionsPage() {
-    const regions = catalogRepository.listRegions();
+    const regions = useStorefrontCatalogStore((state) => state.regions);
+    const products = useStorefrontCatalogStore((state) => state.products);
+    const status = useStorefrontCatalogStore((state) => state.status);
+    const error = useStorefrontCatalogStore((state) => state.error);
+    const loadCatalog = useStorefrontCatalogStore((state) => state.loadCatalog);
+
+    useEffect(() => {
+        void loadCatalog();
+    }, [loadCatalog]);
+
+    const isLoading = status === "idle" || status === "loading";
 
     return (
         <div className="mx-auto max-w-7xl px-6 pb-10 pt-24">
@@ -12,8 +24,13 @@ export function RegionsPage() {
             </section>
 
             <section className="mt-12 grid gap-6 xl:grid-cols-2">
+                {regions.length === 0 ? (
+                    <SurfaceCard className="xl:col-span-2">
+                        {isLoading ? "Dang tai vung mien..." : (error ?? "Chua co vung mien nao de hien thi.")}
+                    </SurfaceCard>
+                ) : null}
                 {regions.map((region, index) => {
-                    const regionProducts = catalogRepository.getProductsByRegion(region.id);
+                    const regionProducts = products.filter((product) => product.regionId === region.id);
                     const featuredProduct = regionProducts[index] ?? regionProducts[0];
 
                     return (

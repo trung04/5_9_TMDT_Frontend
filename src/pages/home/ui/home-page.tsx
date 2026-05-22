@@ -1,11 +1,10 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { catalogRepository } from "@/shared/api/mock-repositories";
+import { subscribeNewsletter } from "@/shared/api/newsletter";
 import { routes } from "@/shared/config/routes";
 import { formatCurrency } from "@/shared/lib/format";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
-import { useCatalogStore } from "@/shared/lib/store/use-catalog-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
 import { Icon } from "@/shared/ui";
@@ -23,14 +22,13 @@ function EmptyCatalogMessage({ message }: { message: string }) {
 
 export function HomePage() {
     const addItem = useCartStore((state) => state.addItem);
-    const subscribeNewsletter = useCatalogStore((state) => state.subscribeNewsletter);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const products = useStorefrontCatalogStore((state) => state.products);
     const categories = useStorefrontCatalogStore((state) => state.categories);
+    const regions = useStorefrontCatalogStore((state) => state.regions);
     const storefrontStatus = useStorefrontCatalogStore((state) => state.status);
     const storefrontError = useStorefrontCatalogStore((state) => state.error);
     const loadCatalog = useStorefrontCatalogStore((state) => state.loadCatalog);
-    const regions = catalogRepository.listRegions();
     const [newsletterEmail, setNewsletterEmail] = useState("");
 
     useEffect(() => {
@@ -41,7 +39,7 @@ export function HomePage() {
     const newArrivals = products.slice(1, 4);
     const isCatalogLoading = storefrontStatus === "loading" || storefrontStatus === "idle";
 
-    function handleSubscribeNewsletter(event?: FormEvent<HTMLFormElement>) {
+    async function handleSubscribeNewsletter(event?: FormEvent<HTMLFormElement>) {
         event?.preventDefault();
 
         if (newsletterEmail.trim().length === 0) {
@@ -52,7 +50,7 @@ export function HomePage() {
             return;
         }
 
-        subscribeNewsletter(newsletterEmail.trim(), "home-hero");
+        await subscribeNewsletter(newsletterEmail.trim(), "home-hero");
         setNewsletterEmail("");
         pushToast({
             tone: "success",
@@ -267,7 +265,7 @@ export function HomePage() {
                     <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-4">
                         {regions.map((region, index) => {
                             const product =
-                                catalogRepository.getProductsByRegion(region.id)[0] ?? products[index];
+                                products.find((item) => item.regionId === region.id) ?? products[index];
 
                             return (
                                 <Link

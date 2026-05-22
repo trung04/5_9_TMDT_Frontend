@@ -1,16 +1,18 @@
 import { create } from "zustand";
 
-import type { Category, Product } from "@/entities/product/model/types";
+import type { Category, Product, Region } from "@/entities/product/model/types";
 import type {
     BackendCategoryListResponse,
     BackendProductDetailResponse,
     BackendProductListResponse,
+    BackendRegionListResponse,
     BackendSupplierListResponse,
 } from "@/shared/api/backend-types";
 import { apiRequest } from "@/shared/api/backend-client";
 import {
     adaptBackendCategory,
     adaptBackendProduct,
+    adaptBackendRegion,
     adaptBackendSupplierOption,
     type StorefrontSupplierOption,
 } from "@/shared/api/storefront-adapters";
@@ -19,6 +21,7 @@ import { useShopStore } from "@/shared/lib/store/use-shop-store";
 
 interface StorefrontCatalogState {
     categories: Category[];
+    regions: Region[];
     suppliers: StorefrontSupplierOption[];
     products: Product[];
     productDetails: Record<string, Product>;
@@ -31,6 +34,7 @@ interface StorefrontCatalogState {
 
 const initialState = {
     categories: [] as Category[],
+    regions: [] as Region[],
     suppliers: [] as StorefrontSupplierOption[],
     products: [] as Product[],
     productDetails: {} as Record<string, Product>,
@@ -55,13 +59,15 @@ export const useStorefrontCatalogStore = create<StorefrontCatalogState>()((set, 
         });
 
         try {
-            const [productsResponse, categoriesResponse, suppliersResponse] = await Promise.all([
+            const [productsResponse, categoriesResponse, suppliersResponse, regionsResponse] = await Promise.all([
                 apiRequest<BackendProductListResponse>("/products"),
                 apiRequest<BackendCategoryListResponse>("/categories"),
                 apiRequest<BackendSupplierListResponse>("/suppliers"),
+                apiRequest<BackendRegionListResponse>("/regions"),
             ]);
 
             const categories = categoriesResponse.data.map(adaptBackendCategory);
+            const regions = regionsResponse.data.map(adaptBackendRegion);
             const suppliers = suppliersResponse.data.map(adaptBackendSupplierOption);
             const products = productsResponse.data.map((product, index) =>
                 adaptBackendProduct(product, index),
@@ -73,6 +79,7 @@ export const useStorefrontCatalogStore = create<StorefrontCatalogState>()((set, 
 
             set({
                 categories,
+                regions,
                 suppliers,
                 products,
                 productDetails: products.reduce<Record<string, Product>>((accumulator, product) => {

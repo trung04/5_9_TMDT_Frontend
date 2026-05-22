@@ -28,8 +28,12 @@ export interface MetricCardData {
 
 export interface TableColumn<T> {
     key: string;
-    title: string;
+    title: ReactNode;
     align?: "left" | "center" | "right";
+    width?: string;
+    nowrap?: boolean;
     className?: string;
+    headerClassName?: string;
+    cellClassName?: string;
     render: (row: T) => ReactNode;
 }

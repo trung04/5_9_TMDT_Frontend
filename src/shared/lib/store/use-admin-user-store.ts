@@ -31,8 +31,8 @@ export interface AdminCustomerPayload {
     reward_points?: number;
     reward_tier?: string;
     next_tier_points?: number;
-    status?: string;
     is_active?: boolean;
+    is_deleted?: boolean;
 }
 
 interface AdminUserState {
@@ -63,7 +63,7 @@ function token() {
     return useAuthStore.getState().accessToken;
 }
 
-export const useAdminUserStore = create<AdminUserState>()((set) => ({
+export const useAdminUserStore = create<AdminUserState>()((set, get) => ({
     ...initialState,
     loadCustomers: async () => {
         const accessToken = token();
@@ -114,6 +114,7 @@ export const useAdminUserStore = create<AdminUserState>()((set) => ({
                 isSaving: false,
                 error: null,
             }));
+            await get().loadCustomers();
             return { success: true, data: response.data };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
@@ -150,6 +151,7 @@ export const useAdminUserStore = create<AdminUserState>()((set) => ({
                 isSaving: false,
                 error: null,
             }));
+            await get().loadCustomers();
             return { success: true, data: response.data };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {
@@ -184,6 +186,7 @@ export const useAdminUserStore = create<AdminUserState>()((set) => ({
                 isSaving: false,
                 error: null,
             }));
+            await get().loadCustomers();
             return { success: true, data: response.data };
         } catch (error) {
             if (isUnauthorizedApiError(error)) {

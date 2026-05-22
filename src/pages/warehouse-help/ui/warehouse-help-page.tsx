@@ -1,21 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { operationsRepository } from "@/shared/api/mock-repositories";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { useOperationsStore } from "@/shared/lib/store/use-operations-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 export function WarehouseHelpPage() {
-    const createSupportTicket = useOperationsStore((state) => state.createSupportTicket);
-    const resolveSupportTicket = useOperationsStore((state) => state.resolveSupportTicket);
-    const tickets = operationsRepository
-        .listSupportTickets()
-        .filter((ticket) => ticket.channel === "warehouse");
+    const createSupportTicket = useOperationsDataStore((state) => state.createSupportTicket);
+    const resolveSupportTicket = useOperationsDataStore((state) => state.resolveSupportTicket);
+    const supportTickets = useOperationsDataStore((state) => state.supportTickets);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
+    const tickets = supportTickets.filter((ticket) => ticket.channel === "warehouse");
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [subject, setSubject] = useState("Cần bổ sung nhân sự ca tối");
     const [message, setMessage] = useState(
         "Khối lượng picking tăng nhanh, đề nghị điều phối thêm nhân sự cho ca 18h.",
     );
+
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
 
     return (
         <div className="space-y-8">
@@ -42,7 +45,7 @@ export function WarehouseHelpPage() {
                     </label>
                     <Button
                         onClick={() => {
-                            createSupportTicket({
+                            void createSupportTicket({
                                 subject,
                                 message,
                                 channel: "warehouse",
@@ -78,7 +81,7 @@ export function WarehouseHelpPage() {
                                     </div>
                                     <button
                                         className="text-sm font-medium text-primary hover:underline"
-                                        onClick={() => resolveSupportTicket(ticket.id)}
+                                        onClick={() => void resolveSupportTicket(ticket.id)}
                                     >
                                         Đánh dấu đã xử lý
                                     </button>

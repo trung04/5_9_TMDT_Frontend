@@ -13,7 +13,9 @@ export interface InventoryStatusEvent {
 export interface InventoryItem {
     sku: string;
     productId: string;
+    productName?: string;
     supplierId: string;
+    supplierName?: string;
     onHand: number;
     reserved: number;
     reorderPoint: number;
@@ -25,7 +27,10 @@ export interface InventoryItem {
 export interface PurchaseRequisition {
     id: string;
     inventorySku: string;
+    productId?: string;
+    productName?: string;
     supplierId: string;
+    supplierName?: string;
     requestedQty: number;
     approvedQty?: number;
     etaDays: number;

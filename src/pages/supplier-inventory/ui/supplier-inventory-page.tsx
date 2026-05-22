@@ -1,12 +1,19 @@
-import { catalogRepository, operationsRepository } from "@/shared/api/mock-repositories";
+import { useEffect } from "react";
+
 import { downloadTextFile } from "@/shared/lib/download";
 import { inventoryHealthLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 export function SupplierInventoryPage() {
-    const inventory = operationsRepository.listInventory();
+    const inventory = useOperationsDataStore((state) => state.inventory);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
     const pushToast = useFeedbackStore((state) => state.pushToast);
+
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
 
     return (
         <div className="space-y-8">
@@ -22,8 +29,7 @@ export function SupplierInventoryPage() {
                             ...inventory.map((item) =>
                                 [
                                     item.sku,
-                                    catalogRepository.getProductById(item.productId)?.name ??
-                                        item.productId,
+                                    item.productName ?? item.productId,
                                     inventoryHealthLabels[item.status],
                                     item.onHand,
                                     item.reserved,
@@ -51,8 +57,7 @@ export function SupplierInventoryPage() {
                                     {item.sku}
                                 </p>
                                 <h3 className="mt-2 font-headline text-2xl font-semibold">
-                                    {catalogRepository.getProductById(item.productId)?.name ??
-                                        item.productId}
+                                    {item.productName ?? item.productId}
                                 </h3>
                             </div>
                             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs uppercase tracking-widest text-primary">

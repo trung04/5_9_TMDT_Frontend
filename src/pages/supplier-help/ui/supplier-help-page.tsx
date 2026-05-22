@@ -1,20 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { operationsRepository } from "@/shared/api/mock-repositories";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { useOperationsStore } from "@/shared/lib/store/use-operations-store";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 export function SupplierHelpPage() {
-    const createSupportTicket = useOperationsStore((state) => state.createSupportTicket);
-    const tickets = operationsRepository
-        .listSupportTickets()
-        .filter((ticket) => ticket.channel === "supplier");
+    const createSupportTicket = useOperationsDataStore((state) => state.createSupportTicket);
+    const supportTickets = useOperationsDataStore((state) => state.supportTickets);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
+    const tickets = supportTickets.filter((ticket) => ticket.channel === "supplier");
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [subject, setSubject] = useState("Cần xác nhận ETA với kho");
     const [message, setMessage] = useState(
         "Nhờ đội điều phối kiểm tra lại lịch nhận hàng cho lô trà tuần này.",
     );
+
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
 
     return (
         <div className="space-y-8">
@@ -41,7 +44,7 @@ export function SupplierHelpPage() {
                     </label>
                     <Button
                         onClick={() => {
-                            createSupportTicket({
+                            void createSupportTicket({
                                 subject,
                                 message,
                                 channel: "supplier",

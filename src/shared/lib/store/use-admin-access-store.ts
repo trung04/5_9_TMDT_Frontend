@@ -33,7 +33,6 @@ export interface AdminAccountForm {
     email: string;
     phone: string;
     adminRoleId: number | "";
-    status: string;
     isActive: boolean;
     password: string;
 }
@@ -49,11 +48,7 @@ interface AdminAccessState {
     saveRole: (payload: AdminRoleForm) => Promise<AsyncResult<BackendAdminRole>>;
     deleteRole: (roleId: number) => Promise<AsyncResult>;
     saveAdmin: (payload: AdminAccountForm) => Promise<AsyncResult<BackendAdminAccount>>;
-    updateAdminStatus: (
-        adminId: number,
-        status: string,
-        isActive: boolean,
-    ) => Promise<AsyncResult<BackendAdminAccount>>;
+    updateAdminStatus: (adminId: number, isActive: boolean) => Promise<AsyncResult<BackendAdminAccount>>;
     updateAdminPassword: (adminId: number, password: string) => Promise<AsyncResult>;
     reset: () => void;
 }
@@ -195,8 +190,8 @@ export const useAdminAccessStore = create<AdminAccessState>()((set, get) => ({
                 email: payload.email.trim(),
                 phone: payload.phone.trim(),
                 admin_role_id: payload.adminRoleId,
-                status: payload.status,
                 is_active: payload.isActive,
+                is_deleted: false,
             };
 
             if (!payload.id || payload.password.trim()) {
@@ -226,7 +221,7 @@ export const useAdminAccessStore = create<AdminAccessState>()((set, get) => ({
             return { success: false, error: message };
         }
     },
-    updateAdminStatus: async (adminId, status, isActive) => {
+    updateAdminStatus: async (adminId, isActive) => {
         const tokenResult = tokenOrError();
 
         if ("error" in tokenResult) {
@@ -242,8 +237,8 @@ export const useAdminAccessStore = create<AdminAccessState>()((set, get) => ({
                     method: "PATCH",
                     token: tokenResult.token,
                     body: {
-                        status,
                         is_active: isActive,
+                        ...(isActive ? { is_deleted: false } : {}),
                     },
                 },
             );

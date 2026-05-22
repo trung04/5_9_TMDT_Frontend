@@ -23,10 +23,17 @@ const emptyAdminForm: AdminAccountForm = {
     email: "",
     phone: "",
     adminRoleId: "",
-    status: "ACTIVE",
     isActive: true,
     password: "",
 };
+
+function adminStatusLabel(admin: BackendAdminAccount) {
+    return admin.is_active && !admin.is_deleted ? "ACTIVE" : "INACTIVE";
+}
+
+function adminStatusTone(admin: BackendAdminAccount) {
+    return admin.is_active && !admin.is_deleted ? "success" : "warning";
+}
 
 export function AdminAccessPage() {
     const user = useAuthStore((state) => state.session?.user ?? null);
@@ -92,7 +99,6 @@ export function AdminAccessPage() {
             email: admin.email,
             phone: admin.phone,
             adminRoleId: admin.admin_role?.id ?? "",
-            status: admin.status,
             isActive: admin.is_active,
             password: "",
         });
@@ -402,38 +408,20 @@ export function AdminAccessPage() {
                                 }
                             />
                         </label>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            <label className="space-y-2 text-sm">
-                                <span className="font-medium">Trang thai</span>
-                                <Select
-                                    value={adminForm.status}
-                                    onChange={(event) =>
-                                        setAdminForm((current) => ({
-                                            ...current,
-                                            status: event.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="ACTIVE">ACTIVE</option>
-                                    <option value="INACTIVE">INACTIVE</option>
-                                    <option value="BLOCKED">BLOCKED</option>
-                                </Select>
-                            </label>
-                            <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4 text-sm">
-                                <input
-                                    className="h-4 w-4"
-                                    type="checkbox"
-                                    checked={adminForm.isActive}
-                                    onChange={(event) =>
-                                        setAdminForm((current) => ({
-                                            ...current,
-                                            isActive: event.target.checked,
-                                        }))
-                                    }
-                                />
-                                <span>Dang kich hoat</span>
-                            </label>
-                        </div>
+                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-low p-4 text-sm">
+                            <input
+                                className="h-4 w-4"
+                                type="checkbox"
+                                checked={adminForm.isActive}
+                                onChange={(event) =>
+                                    setAdminForm((current) => ({
+                                        ...current,
+                                        isActive: event.target.checked,
+                                    }))
+                                }
+                            />
+                            <span>Dang kich hoat</span>
+                        </label>
 
                         <Button
                             disabled={
@@ -465,10 +453,9 @@ export function AdminAccessPage() {
                                                 {admin.admin_role?.is_super ? (
                                                     <Badge tone="primary">super</Badge>
                                                 ) : null}
-                                                <Badge tone={admin.status === "ACTIVE" ? "success" : "warning"}>
-                                                    {admin.status}
+                                                <Badge tone={adminStatusTone(admin)}>
+                                                    {adminStatusLabel(admin)}
                                                 </Badge>
-                                                {!admin.is_active ? <Badge tone="danger">disabled</Badge> : null}
                                             </div>
                                             <p className="mt-1 text-sm text-on-surface-variant">
                                                 {admin.email} - {admin.phone}
@@ -493,12 +480,11 @@ export function AdminAccessPage() {
                                                 onClick={() =>
                                                     void updateAdminStatus(
                                                         admin.id,
-                                                        admin.status === "ACTIVE" ? "BLOCKED" : "ACTIVE",
-                                                        admin.status !== "ACTIVE",
+                                                        adminStatusLabel(admin) !== "ACTIVE",
                                                     )
                                                 }
                                             >
-                                                {admin.status === "ACTIVE" ? "Khoa" : "Mo khoa"}
+                                                {adminStatusLabel(admin) === "ACTIVE" ? "Khoa" : "Mo khoa"}
                                             </Button>
                                         </div>
                                     </div>

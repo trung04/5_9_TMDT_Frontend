@@ -435,14 +435,15 @@ describe("customer commerce routes", () => {
         const user = userEvent.setup();
         renderApp(routes.adminCommunity);
 
-        expect(await screen.findByText(/Danh sách bài viết/i)).toBeInTheDocument();
+        expect(await screen.findByText(/Danh sach bai viet/i)).toBeInTheDocument();
 
-        await user.type(screen.getByPlaceholderText(/Tiêu đề/i), "Bài viết admin mới");
-        await user.type(screen.getByPlaceholderText(/Nội dung bài viết/i), "Nội dung từ admin.");
+        await user.click(screen.getByRole("button", { name: /Bai moi/i }));
+        await user.type(screen.getByPlaceholderText(/Tieu de/i), "Bai viet admin moi");
+        await user.type(screen.getByPlaceholderText(/Noi dung bai viet/i), "Noi dung tu admin.");
         await user.selectOptions(screen.getByDisplayValue("DRAFT"), "PUBLISHED");
-        await user.click(screen.getByRole("button", { name: /Tạo mới/i }));
+        await user.click(screen.getByRole("button", { name: /Tao moi/i }));
 
-        expect(await screen.findByText(/Bài viết admin mới/i)).toBeInTheDocument();
+        expect((await screen.findAllByText(/Bai viet admin moi/i)).length).toBeGreaterThan(0);
 
         const createCall = fetchMock.mock.calls.find(([input, init]) => {
             return getRequestPath(input).endsWith("/api/admin/posts") && init?.method === "POST";

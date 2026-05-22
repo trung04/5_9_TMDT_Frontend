@@ -1,5 +1,6 @@
 import { MemoryRouter } from "react-router-dom";
 import { act, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppRoutes } from "@/app/router";
@@ -172,7 +173,7 @@ describe("admin RBAC frontend", () => {
         const fetchMock = vi.fn((input: RequestInfo | URL) => {
             const path = getRequestPath(input);
 
-            if (path.endsWith("/api/categories")) {
+            if (path.endsWith("/api/admin/categories")) {
                 return jsonResponse({
                     message: "Categories retrieved successfully.",
                     data: [],
@@ -196,7 +197,7 @@ describe("admin RBAC frontend", () => {
 
         renderApp(routes.adminDashboard);
 
-        expect(await screen.findByText("Danh muc storefront")).toBeInTheDocument();
+        expect(await screen.findByText(/Quan ly category storefront/i)).toBeInTheDocument();
         expect(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
     });
 
@@ -233,8 +234,8 @@ describe("admin RBAC frontend", () => {
                             reward_tier: "Silver",
                             next_tier_points: 1000,
                             role: "CUSTOMER",
-                            status: "ACTIVE",
                             is_active: true,
+                            is_deleted: false,
                             orders_count: 3,
                             created_at: "2026-05-22T00:00:00.000000Z",
                             updated_at: "2026-05-22T00:00:00.000000Z",
@@ -255,8 +256,11 @@ describe("admin RBAC frontend", () => {
         expect(await screen.findByRole("heading", { name: "Users" })).toBeInTheDocument();
         expect(screen.getByText("managed@example.com")).toBeInTheDocument();
         expect(screen.getAllByRole("button", { name: /Tao user/i }).every((button) => button.hasAttribute("disabled"))).toBe(true);
-        expect(screen.getByRole("button", { name: /Luu chinh sua/i })).toBeDisabled();
-        expect(screen.getByRole("button", { name: /Khoa user/i })).toBeDisabled();
+        expect(screen.getByRole("button", { name: /Sua Customer Managed/i })).toBeDisabled();
+        expect(screen.getByRole("button", { name: /Khoa Customer Managed/i })).toBeDisabled();
+
+        await userEvent.click(screen.getByRole("button", { name: /Xem Customer Managed/i }));
+        expect(screen.getByRole("dialog", { name: /Ho so customer/i })).toBeInTheDocument();
     });
 
     it("keeps the repository legacy route pointed at products", async () => {

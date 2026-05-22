@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import type {
     AuthSession,
     AuthSource,
-    DemoCredential,
+    SeedCredential,
     UserRole,
 } from "@/entities/user/model/types";
 import type { BackendAuthResponse, BackendMeResponse } from "@/shared/api/backend-types";
@@ -15,30 +15,38 @@ import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { runProtectedSessionCleanup } from "@/shared/lib/store/protected-session";
 import { useShopStore } from "@/shared/lib/store/use-shop-store";
 
-const demoCredentials: DemoCredential[] = [
+const seedCredentials: SeedCredential[] = [
     {
-        id: "demo-admin",
+        id: "seed-admin",
         role: "admin",
-        displayName: "Quản trị demo",
-        email: "admin@heritage.local",
-        password: "123456",
+        displayName: "Admin Heritage Harvest",
+        email: "admin@shop.local",
+        password: "password123",
         redirectTo: routes.adminDashboard,
     },
     {
-        id: "demo-supplier",
+        id: "seed-supplier",
         role: "supplier",
-        displayName: "Nhà cung cấp demo",
-        email: "supplier@heritage.local",
-        password: "123456",
+        displayName: "Nha cung cap",
+        email: "supplieruser@shop.local",
+        password: "password123",
         redirectTo: routes.supplierOrders,
     },
     {
-        id: "demo-warehouse",
+        id: "seed-warehouse",
         role: "warehouse",
-        displayName: "Kho demo",
-        email: "warehouse@heritage.local",
-        password: "123456",
+        displayName: "Nhan vien kho",
+        email: "warehouse@shop.local",
+        password: "password123",
         redirectTo: routes.warehouseInventory,
+    },
+    {
+        id: "seed-customer",
+        role: "customer",
+        displayName: "Khach hang",
+        email: "customer1@shop.local",
+        password: "password123",
+        redirectTo: routes.accountProfile,
     },
 ];
 
@@ -56,7 +64,7 @@ interface RegisterPayload {
 }
 
 interface AuthState {
-    credentials: DemoCredential[];
+    credentials: SeedCredential[];
     session: AuthSession | null;
     accessToken: string | null;
     accessTokenExpiresAt: string | null;
@@ -65,34 +73,11 @@ interface AuthState {
     isSubmitting: boolean;
     login: (email: string, password: string) => Promise<AuthActionResult>;
     register: (payload: RegisterPayload) => Promise<AuthActionResult>;
-    loginAsRole: (role: UserRole) => AuthActionResult;
     logout: () => Promise<void>;
     changePassword: (currentPassword: string, nextPassword: string) => AuthActionResult;
     hydrateSession: () => Promise<void>;
     clearSession: () => void;
     reset: () => void;
-}
-
-function createDemoSession(credential: DemoCredential): AuthSession {
-    return {
-        user: {
-            id: credential.id,
-            name: credential.displayName,
-            email: credential.email,
-            role: credential.role,
-            adminRole:
-                credential.role === "admin"
-                    ? {
-                          id: "demo-super-admin",
-                          name: "Super Admin",
-                          slug: "super_admin",
-                          isSuper: true,
-                      }
-                    : null,
-            permissions: [],
-        },
-        loggedInAt: new Date().toISOString(),
-    };
 }
 
 function isExpired(expiresAt: string | null) {
@@ -102,7 +87,7 @@ function isExpired(expiresAt: string | null) {
 }
 
 const initialState = {
-    credentials: demoCredentials,
+    credentials: seedCredentials,
     session: null as AuthSession | null,
     accessToken: null as string | null,
     accessTokenExpiresAt: null as string | null,
@@ -219,25 +204,6 @@ export const useAuthStore = create<AuthState>()(
                     };
                 }
             },
-            loginAsRole: (role) => {
-                const credential = get().credentials.find((item) => item.role === role);
-
-                if (!credential) {
-                    return {
-                        success: false,
-                        error: "Không có tài khoản demo cho vai trò này.",
-                    };
-                }
-
-                set({
-                    session: createDemoSession(credential),
-                    accessToken: null,
-                    accessTokenExpiresAt: null,
-                    authSource: "demo",
-                });
-
-                return { success: true };
-            },
             logout: async () => {
                 const currentToken = get().accessToken;
                 const authSource = get().authSource;
@@ -266,23 +232,7 @@ export const useAuthStore = create<AuthState>()(
                     return { success: false, error: "Bạn cần đăng nhập trước." };
                 }
 
-                if (get().authSource === "backend") {
-                    return {
-                        success: false,
-                        error: "Tính năng đổi mật khẩu backend đang được phát triển.",
-                    };
-                }
-
-                const matchedCredential = get().credentials.find(
-                    (credential) => credential.id === session.user.id,
-                );
-
-                if (!matchedCredential || matchedCredential.password !== currentPassword) {
-                    return {
-                        success: false,
-                        error: "Mật khẩu hiện tại chưa chính xác.",
-                    };
-                }
+                void currentPassword;
 
                 if (nextPassword.trim().length < 6) {
                     return {
@@ -291,15 +241,10 @@ export const useAuthStore = create<AuthState>()(
                     };
                 }
 
-                set((state) => ({
-                    credentials: state.credentials.map((credential) =>
-                        credential.id === matchedCredential.id
-                            ? { ...credential, password: nextPassword.trim() }
-                            : credential,
-                    ),
-                }));
-
-                return { success: true };
+                return {
+                    success: false,
+                    error: "Vui lòng đổi mật khẩu qua API tài khoản.",
+                };
             },
             hydrateSession: async () => {
                 const currentToken = get().accessToken;
@@ -355,7 +300,6 @@ export const useAuthStore = create<AuthState>()(
             name: "heritage-auth-store",
             storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
-                credentials: state.credentials,
                 session: state.session,
                 accessToken: state.accessToken,
                 accessTokenExpiresAt: state.accessTokenExpiresAt,

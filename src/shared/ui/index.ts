@@ -1,4 +1,5 @@
 export * from "@/shared/lib/cn";
+export * from "@/shared/ui/admin-drawer";
 export * from "@/shared/ui/badge";
 export * from "@/shared/ui/breadcrumbs";
 export * from "@/shared/ui/button";

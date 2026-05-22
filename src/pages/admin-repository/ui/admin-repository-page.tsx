@@ -1,17 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { formatCurrency } from "@/shared/lib/format";
+import type { BackendCategory, BackendProduct, BackendSupplier } from "@/shared/api/backend-types";
 import { hasAdminPermission } from "@/shared/lib/auth";
+import { formatCurrency } from "@/shared/lib/format";
 import { useAdminCatalogStore } from "@/shared/lib/store/use-admin-catalog-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { Button, StatCard, SurfaceCard } from "@/shared/ui";
+import { AdminDrawer, Badge, Button, DataTable, Icon, StatCard, SurfaceCard, cn } from "@/shared/ui";
+import type { StatusTone, TableColumn } from "@/shared/types/ui";
 
 type RepositoryTab = "products" | "categories" | "suppliers";
+type DrawerMode = "view" | "create" | "edit";
 
 interface AdminRepositoryPageProps {
     initialTab?: RepositoryTab;
     lockedTab?: RepositoryTab;
+}
+
+interface DrawerState {
+    entity: RepositoryTab;
+    mode: DrawerMode;
+    id?: string;
 }
 
 const emptyProductForm = {
@@ -29,6 +38,7 @@ const emptyProductForm = {
 const emptyCategoryForm = {
     name: "",
     description: "",
+    isActive: true,
 };
 
 const emptySupplierForm = {
@@ -41,15 +51,75 @@ const emptySupplierForm = {
     isActive: true,
 };
 
+function isAvailable(isActive: boolean | undefined, isDeleted: boolean | undefined) {
+    return isActive !== false && isDeleted !== true;
+}
+
+function activeTone(isActive: boolean | undefined, isDeleted: boolean | undefined): StatusTone {
+    return isAvailable(isActive, isDeleted) ? "success" : "warning";
+}
+
+function activeLabel(isActive: boolean | undefined, isDeleted: boolean | undefined) {
+    return isAvailable(isActive, isDeleted) ? "Dang hoat dong" : "Tam dung";
+}
+
+function FieldValue({ label, value }: { label: string; value: string | number | null | undefined }) {
+    return (
+        <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+            <p className="text-xs font-label uppercase tracking-[0.14em] text-on-surface-variant">
+                {label}
+            </p>
+            <p className="mt-2 font-medium text-on-surface">{value || "Chua cap nhat"}</p>
+        </div>
+    );
+}
+
+function ActionButton({
+    label,
+    icon,
+    disabled,
+    onClick,
+    tone = "neutral",
+}: {
+    label: string;
+    icon: string;
+    disabled?: boolean;
+    onClick: () => void;
+    tone?: "neutral" | "danger" | "primary" | "success";
+}) {
+    return (
+        <button
+            type="button"
+            className={cn(
+                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
+                tone === "danger"
+                    ? "text-error hover:bg-error-container/40"
+                    : tone === "primary"
+                      ? "text-primary hover:bg-primary/10"
+                      : tone === "success"
+                        ? "text-primary hover:bg-primary/10"
+                        : "text-on-surface-variant hover:bg-surface-container-low",
+            )}
+            aria-label={label}
+            title={label}
+            disabled={disabled}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+            }}
+        >
+            <Icon name={icon} className="text-xl" />
+        </button>
+    );
+}
+
 export function AdminRepositoryPage({
     initialTab = "products",
     lockedTab,
 }: AdminRepositoryPageProps = {}) {
     const [tab, setTab] = useState<RepositoryTab>(lockedTab ?? initialTab);
     const [query, setQuery] = useState("");
-    const [activeProductId, setActiveProductId] = useState("");
-    const [activeCategoryId, setActiveCategoryId] = useState("");
-    const [activeSupplierId, setActiveSupplierId] = useState("");
+    const [drawer, setDrawer] = useState<DrawerState | null>(null);
     const [productForm, setProductForm] = useState(emptyProductForm);
     const [categoryForm, setCategoryForm] = useState(emptyCategoryForm);
     const [supplierForm, setSupplierForm] = useState(emptySupplierForm);
@@ -82,50 +152,46 @@ export function AdminRepositoryPage({
     const canCreateSupplier = hasAdminPermission(user, "admin.suppliers.create");
     const canUpdateSupplier = hasAdminPermission(user, "admin.suppliers.update");
     const canDeleteSupplier = hasAdminPermission(user, "admin.suppliers.delete");
+    const canManageCategories = canCreateCategory || canUpdateCategory || canDeleteCategory;
+    const canManageSuppliers = canCreateSupplier || canUpdateSupplier || canDeleteSupplier;
 
     const visibleTabs = useMemo(() => {
         const tabs = [
-                {
-                    id: "products" as const,
-                    label: "San pham",
-                    visible:
-                        canViewProducts ||
-                        canCreateProduct ||
-                        canUpdateProduct ||
-                        canDeleteProduct,
-                },
-                {
-                    id: "categories" as const,
-                    label: "Danh muc",
-                    visible: canCreateCategory || canUpdateCategory || canDeleteCategory,
-                },
-                {
-                    id: "suppliers" as const,
-                    label: "Nha cung cap",
-                    visible: canCreateSupplier || canUpdateSupplier || canDeleteSupplier,
-                },
-            ].filter((item) => item.visible);
+            {
+                id: "products" as const,
+                label: "San pham",
+                visible: canViewProducts || canCreateProduct || canUpdateProduct || canDeleteProduct,
+            },
+            {
+                id: "categories" as const,
+                label: "Danh muc",
+                visible: canManageCategories,
+            },
+            {
+                id: "suppliers" as const,
+                label: "Nha cung cap",
+                visible: canManageSuppliers,
+            },
+        ].filter((item) => item.visible);
 
         return lockedTab ? tabs.filter((item) => item.id === lockedTab) : tabs;
-    },
-        [
-            canCreateCategory,
-            canCreateProduct,
-            canCreateSupplier,
-            canDeleteCategory,
-            canDeleteProduct,
-            canDeleteSupplier,
-            canUpdateCategory,
-            canUpdateProduct,
-            canUpdateSupplier,
-            canViewProducts,
-            lockedTab,
-        ],
-    );
+    }, [
+        canCreateProduct,
+        canDeleteProduct,
+        canManageCategories,
+        canManageSuppliers,
+        canUpdateProduct,
+        canViewProducts,
+        lockedTab,
+    ]);
 
     useEffect(() => {
-        void loadData({ includeProducts: canViewProducts });
-    }, [canViewProducts, loadData]);
+        void loadData({
+            includeProducts: canViewProducts,
+            includeInactiveCategories: canManageCategories,
+            includeInactiveSuppliers: canManageSuppliers,
+        });
+    }, [canManageCategories, canManageSuppliers, canViewProducts, loadData]);
 
     useEffect(() => {
         if (lockedTab) {
@@ -138,35 +204,30 @@ export function AdminRepositoryPage({
         }
     }, [lockedTab, tab, visibleTabs]);
 
+    const activeTab = lockedTab ?? (visibleTabs.some((item) => item.id === tab) ? tab : visibleTabs[0]?.id);
+    const keyword = query.trim().toLowerCase();
+
     const filteredProducts = useMemo(() => {
-        const keyword = query.trim().toLowerCase();
-
         return products.filter((product) => {
-            if (keyword.length === 0) return true;
-
+            if (!keyword) return true;
             return [product.name, product.sku, product.category?.name, product.supplier?.name]
                 .filter(Boolean)
                 .join(" ")
                 .toLowerCase()
                 .includes(keyword);
         });
-    }, [products, query]);
+    }, [keyword, products]);
 
     const filteredCategories = useMemo(() => {
-        const keyword = query.trim().toLowerCase();
-
         return categories.filter((category) => {
-            if (keyword.length === 0) return true;
-            return [category.name, category.description].join(" ").toLowerCase().includes(keyword);
+            if (!keyword) return true;
+            return [category.name, category.description].filter(Boolean).join(" ").toLowerCase().includes(keyword);
         });
-    }, [categories, query]);
+    }, [categories, keyword]);
 
     const filteredSuppliers = useMemo(() => {
-        const keyword = query.trim().toLowerCase();
-
         return suppliers.filter((supplier) => {
-            if (keyword.length === 0) return true;
-
+            if (!keyword) return true;
             return [
                 supplier.supplier_code,
                 supplier.name,
@@ -180,28 +241,24 @@ export function AdminRepositoryPage({
                 .toLowerCase()
                 .includes(keyword);
         });
-    }, [query, suppliers]);
+    }, [keyword, suppliers]);
 
     const activeProduct =
-        activeProductId === "new"
-            ? undefined
-            : (filteredProducts.find((product) => String(product.id) === activeProductId) ??
-              filteredProducts[0]);
+        drawer?.entity === "products" && drawer.id
+            ? products.find((product) => String(product.id) === drawer.id)
+            : undefined;
     const activeCategory =
-        activeCategoryId === "new"
-            ? undefined
-            : (filteredCategories.find((category) => String(category.id) === activeCategoryId) ??
-              filteredCategories[0]);
+        drawer?.entity === "categories" && drawer.id
+            ? categories.find((category) => String(category.id) === drawer.id)
+            : undefined;
     const activeSupplier =
-        activeSupplierId === "new"
-            ? undefined
-            : (filteredSuppliers.find((supplier) => String(supplier.id) === activeSupplierId) ??
-              filteredSuppliers[0]);
+        drawer?.entity === "suppliers" && drawer.id
+            ? suppliers.find((supplier) => String(supplier.id) === drawer.id)
+            : undefined;
 
     useEffect(() => {
-        if (!activeProduct) return;
+        if (!activeProduct || drawer?.mode === "create") return;
 
-        setActiveProductId(String(activeProduct.id));
         setProductForm({
             name: activeProduct.name,
             sku: activeProduct.sku,
@@ -211,24 +268,23 @@ export function AdminRepositoryPage({
             imageUrl: activeProduct.image_url ?? "",
             salePrice: String(activeProduct.sale_price),
             stockQuantity: String(activeProduct.stock_quantity),
-            isActive: activeProduct.is_active,
+            isActive: isAvailable(activeProduct.is_active, activeProduct.is_deleted),
         });
-    }, [activeProduct]);
+    }, [activeProduct, drawer?.mode]);
 
     useEffect(() => {
-        if (!activeCategory) return;
+        if (!activeCategory || drawer?.mode === "create") return;
 
-        setActiveCategoryId(String(activeCategory.id));
         setCategoryForm({
             name: activeCategory.name,
             description: activeCategory.description ?? "",
+            isActive: isAvailable(activeCategory.is_active, activeCategory.is_deleted),
         });
-    }, [activeCategory]);
+    }, [activeCategory, drawer?.mode]);
 
     useEffect(() => {
-        if (!activeSupplier) return;
+        if (!activeSupplier || drawer?.mode === "create") return;
 
-        setActiveSupplierId(String(activeSupplier.id));
         setSupplierForm({
             supplierCode: activeSupplier.supplier_code ?? "",
             name: activeSupplier.name,
@@ -236,9 +292,9 @@ export function AdminRepositoryPage({
             phone: activeSupplier.phone ?? "",
             email: activeSupplier.email ?? "",
             address: activeSupplier.address ?? "",
-            isActive: activeSupplier.is_active ?? true,
+            isActive: isAvailable(activeSupplier.is_active, activeSupplier.is_deleted),
         });
-    }, [activeSupplier]);
+    }, [activeSupplier, drawer?.mode]);
 
     const stats = [
         {
@@ -253,52 +309,42 @@ export function AdminRepositoryPage({
         },
         {
             id: "repository-categories",
-            label: "Danh muc storefront",
+            label: "Danh muc",
             value: `${categories.length}`,
             tone: "secondary" as const,
             icon: "category",
-            delta: `${suppliers.length} nha cung cap dang hoat dong`,
+            delta: `${categories.filter((category) => !isAvailable(category.is_active, category.is_deleted)).length} dang tam dung`,
         },
         {
-            id: "repository-inactive",
-            label: "San pham tam an",
-            value: canViewProducts
-                ? `${products.filter((product) => !product.is_active).length}`
-                : "-",
-            tone: "danger" as const,
-            icon: "visibility_off",
-            delta: "Khach hang se khong thay cac san pham nay",
+            id: "repository-suppliers",
+            label: "Nha cung cap",
+            value: `${suppliers.length}`,
+            tone: "tertiary" as const,
+            icon: "local_shipping",
+            delta: `${suppliers.filter((supplier) => !isAvailable(supplier.is_active, supplier.is_deleted)).length} dang tam dung`,
         },
     ];
 
-    function resetProductForm() {
-        setActiveProductId("new");
-        setProductForm(emptyProductForm);
+    function openCreateDrawer(entity: RepositoryTab) {
+        if (entity === "products") setProductForm(emptyProductForm);
+        if (entity === "categories") setCategoryForm(emptyCategoryForm);
+        if (entity === "suppliers") setSupplierForm(emptySupplierForm);
+        setDrawer({ entity, mode: "create" });
     }
 
-    function resetCategoryForm() {
-        setActiveCategoryId("new");
-        setCategoryForm(emptyCategoryForm);
+    function openRecordDrawer(entity: RepositoryTab, id: number, mode: DrawerMode) {
+        setDrawer({ entity, mode, id: String(id) });
     }
 
-    function resetSupplierForm() {
-        setActiveSupplierId("new");
-        setSupplierForm(emptySupplierForm);
+    function closeDrawer() {
+        setDrawer(null);
     }
 
-    async function handleCreateProduct() {
+    function productPayloadFromForm() {
         const salePrice = Number(productForm.salePrice);
         const stockQuantity = Number(productForm.stockQuantity);
 
-        if (!productForm.name.trim() || !productForm.sku.trim() || !productForm.categoryId) {
-            pushToast({
-                tone: "warning",
-                message: "Can nhap ten, SKU va danh muc cho san pham.",
-            });
-            return;
-        }
-
-        const result = await createProduct({
+        return {
             category_id: Number(productForm.categoryId),
             supplier_id: productForm.supplierId ? Number(productForm.supplierId) : null,
             sku: productForm.sku.trim(),
@@ -308,52 +354,82 @@ export function AdminRepositoryPage({
             sale_price: Number.isFinite(salePrice) ? salePrice : 0,
             stock_quantity: Number.isFinite(stockQuantity) ? stockQuantity : 0,
             is_active: productForm.isActive,
-        });
+            is_deleted: false,
+        };
+    }
+
+    function productPayloadFromRecord(product: BackendProduct, isActive: boolean) {
+        return {
+            category_id: product.category_id,
+            supplier_id: product.supplier_id,
+            sku: product.sku,
+            name: product.name,
+            description: product.description ?? "",
+            image_url: product.image_url ?? null,
+            sale_price: Number(product.sale_price),
+            stock_quantity: product.stock_quantity,
+            is_active: isActive,
+            is_deleted: isActive ? false : product.is_deleted,
+        };
+    }
+
+    async function handleCreateProduct() {
+        if (!productForm.name.trim() || !productForm.sku.trim() || !productForm.categoryId) {
+            pushToast({ tone: "warning", message: "Can nhap ten, SKU va danh muc cho san pham." });
+            return;
+        }
+
+        const result = await createProduct(productPayloadFromForm());
 
         if (!result.success || !result.data) {
             pushToast({ tone: "warning", message: result.error ?? "Khong the tao san pham." });
             return;
         }
 
-        setActiveProductId(String(result.data.id));
+        setDrawer({ entity: "products", mode: "view", id: String(result.data.id) });
         pushToast({ tone: "success", message: `Da tao san pham ${result.data.name}.` });
     }
 
     async function handleUpdateProduct() {
         if (!activeProduct) return;
 
-        const result = await updateProduct(activeProduct.id, {
-            category_id: Number(productForm.categoryId),
-            supplier_id: productForm.supplierId ? Number(productForm.supplierId) : null,
-            sku: productForm.sku.trim(),
-            name: productForm.name.trim(),
-            description: productForm.description.trim(),
-            image_url: productForm.imageUrl.trim() || null,
-            sale_price: Number(productForm.salePrice),
-            stock_quantity: Number(productForm.stockQuantity),
-            is_active: productForm.isActive,
-        });
+        const result = await updateProduct(activeProduct.id, productPayloadFromForm());
 
         if (!result.success || !result.data) {
             pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat san pham." });
             return;
         }
 
+        setDrawer({ entity: "products", mode: "view", id: String(result.data.id) });
         pushToast({ tone: "success", message: `Da cap nhat san pham ${result.data.name}.` });
     }
 
-    async function handleDeleteProduct() {
-        if (!activeProduct) return;
+    async function handleDeactivateProduct(product = activeProduct) {
+        if (!product) return;
 
-        const result = await deleteProduct(activeProduct.id);
+        const result = await deleteProduct(product.id);
 
         if (!result.success) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the xoa san pham." });
+            pushToast({ tone: "warning", message: result.error ?? "Khong the an san pham." });
             return;
         }
 
-        resetProductForm();
-        pushToast({ tone: "success", message: `Da xoa san pham ${activeProduct.name}.` });
+        setDrawer({ entity: "products", mode: "view", id: String(product.id) });
+        pushToast({ tone: "success", message: `Da an san pham ${product.name}.` });
+    }
+
+    async function handleRestoreProduct(product = activeProduct) {
+        if (!product) return;
+
+        const result = await updateProduct(product.id, productPayloadFromRecord(product, true));
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the khoi phuc san pham." });
+            return;
+        }
+
+        setDrawer({ entity: "products", mode: "view", id: String(result.data.id) });
+        pushToast({ tone: "success", message: `Da khoi phuc san pham ${result.data.name}.` });
     }
 
     async function handleCreateCategory() {
@@ -365,7 +441,8 @@ export function AdminRepositoryPage({
         const result = await createCategory({
             name: categoryForm.name.trim(),
             description: categoryForm.description.trim(),
-            is_active: true,
+            is_active: categoryForm.isActive,
+            is_deleted: false,
         });
 
         if (!result.success || !result.data) {
@@ -373,7 +450,7 @@ export function AdminRepositoryPage({
             return;
         }
 
-        setActiveCategoryId(String(result.data.id));
+        setDrawer({ entity: "categories", mode: "view", id: String(result.data.id) });
         pushToast({ tone: "success", message: `Da tao danh muc ${result.data.name}.` });
     }
 
@@ -383,7 +460,8 @@ export function AdminRepositoryPage({
         const result = await updateCategory(activeCategory.id, {
             name: categoryForm.name.trim(),
             description: categoryForm.description.trim(),
-            is_active: true,
+            is_active: categoryForm.isActive,
+            is_deleted: false,
         });
 
         if (!result.success || !result.data) {
@@ -391,21 +469,41 @@ export function AdminRepositoryPage({
             return;
         }
 
+        setDrawer({ entity: "categories", mode: "view", id: String(result.data.id) });
         pushToast({ tone: "success", message: `Da cap nhat danh muc ${result.data.name}.` });
     }
 
-    async function handleDeleteCategory() {
-        if (!activeCategory) return;
+    async function handleDeactivateCategory(category = activeCategory) {
+        if (!category) return;
 
-        const result = await deleteCategory(activeCategory.id);
+        const result = await deleteCategory(category.id);
 
         if (!result.success) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the xoa danh muc." });
+            pushToast({ tone: "warning", message: result.error ?? "Khong the an danh muc." });
             return;
         }
 
-        resetCategoryForm();
-        pushToast({ tone: "success", message: `Da an danh muc ${activeCategory.name}.` });
+        setDrawer({ entity: "categories", mode: "view", id: String(category.id) });
+        pushToast({ tone: "success", message: `Da an danh muc ${category.name}.` });
+    }
+
+    async function handleRestoreCategory(category = activeCategory) {
+        if (!category) return;
+
+        const result = await updateCategory(category.id, {
+            name: category.name,
+            description: category.description ?? "",
+            is_active: true,
+            is_deleted: false,
+        });
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the khoi phuc danh muc." });
+            return;
+        }
+
+        setDrawer({ entity: "categories", mode: "view", id: String(result.data.id) });
+        pushToast({ tone: "success", message: `Da khoi phuc danh muc ${result.data.name}.` });
     }
 
     async function handleCreateSupplier() {
@@ -422,6 +520,7 @@ export function AdminRepositoryPage({
             email: supplierForm.email.trim() || null,
             address: supplierForm.address.trim() || null,
             is_active: supplierForm.isActive,
+            is_deleted: false,
         });
 
         if (!result.success || !result.data) {
@@ -429,7 +528,7 @@ export function AdminRepositoryPage({
             return;
         }
 
-        setActiveSupplierId(String(result.data.id));
+        setDrawer({ entity: "suppliers", mode: "view", id: String(result.data.id) });
         pushToast({ tone: "success", message: `Da tao nha cung cap ${result.data.name}.` });
     }
 
@@ -444,451 +543,239 @@ export function AdminRepositoryPage({
             email: supplierForm.email.trim() || null,
             address: supplierForm.address.trim() || null,
             is_active: supplierForm.isActive,
+            is_deleted: false,
         });
 
         if (!result.success || !result.data) {
-            pushToast({
-                tone: "warning",
-                message: result.error ?? "Khong the cap nhat nha cung cap.",
-            });
+            pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat nha cung cap." });
             return;
         }
 
+        setDrawer({ entity: "suppliers", mode: "view", id: String(result.data.id) });
         pushToast({ tone: "success", message: `Da cap nhat nha cung cap ${result.data.name}.` });
     }
 
-    async function handleDeleteSupplier() {
-        if (!activeSupplier) return;
+    async function handleDeactivateSupplier(supplier = activeSupplier) {
+        if (!supplier) return;
 
-        const result = await deleteSupplier(activeSupplier.id);
+        const result = await deleteSupplier(supplier.id);
 
         if (!result.success) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the xoa nha cung cap." });
+            pushToast({ tone: "warning", message: result.error ?? "Khong the an nha cung cap." });
             return;
         }
 
-        resetSupplierForm();
-        pushToast({ tone: "success", message: `Da xoa nha cung cap ${activeSupplier.name}.` });
+        setDrawer({ entity: "suppliers", mode: "view", id: String(supplier.id) });
+        pushToast({ tone: "success", message: `Da an nha cung cap ${supplier.name}.` });
     }
 
-    function renderProductTab() {
-        return (
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <SurfaceCard className="space-y-4">
-                    {!canViewProducts ? (
-                        <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                            Ban chua co quyen xem danh sach san pham.
-                        </p>
-                    ) : null}
-                    {isLoading && canViewProducts ? (
-                        <p className="text-sm text-on-surface-variant">Dang tai san pham...</p>
-                    ) : null}
-                    {!isLoading && canViewProducts && filteredProducts.length === 0 ? (
-                        <p className="text-sm text-on-surface-variant">
-                            Khong co san pham phu hop bo loc hien tai.
-                        </p>
-                    ) : null}
-                    {canViewProducts
-                        ? filteredProducts.map((product) => (
-                              <button
-                                  key={product.id}
-                                  className={`w-full rounded-3xl p-4 text-left transition ${
-                                      product.id === activeProduct?.id
-                                          ? "bg-primary/5"
-                                          : "bg-surface-container-low hover:bg-surface-container"
-                                  }`}
-                                  onClick={() => setActiveProductId(String(product.id))}
-                              >
-                                  <div className="flex flex-wrap items-center justify-between gap-2">
-                                      <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                          {product.sku}
-                                      </p>
-                                      <span className="rounded-full bg-surface-container-highest px-3 py-1 text-xs text-on-surface-variant">
-                                          {product.is_active ? "Dang ban" : "Tam an"}
-                                      </span>
-                                  </div>
-                                  <h3 className="mt-2 font-headline text-xl font-semibold">
-                                      {product.name}
-                                  </h3>
-                                  <p className="mt-2 text-sm text-on-surface-variant">
-                                      {product.category?.name ?? `Danh muc #${product.category_id}`} -{" "}
-                                      {product.supplier?.name ?? "Chua gan nha cung cap"}
-                                  </p>
-                                  <p className="mt-3 text-sm font-semibold text-primary">
-                                      {formatCurrency(Number(product.sale_price))}
-                                  </p>
-                                  <p className="mt-1 text-sm text-on-surface-variant">
-                                      Ton kho: {product.stock_quantity}
-                                  </p>
-                              </button>
-                          ))
-                        : null}
-                </SurfaceCard>
+    async function handleRestoreSupplier(supplier = activeSupplier) {
+        if (!supplier) return;
 
-                <SurfaceCard className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <h3 className="font-headline text-2xl font-bold">Noi dung san pham</h3>
-                        <Button variant="outline" size="sm" onClick={resetProductForm}>
-                            Tao moi
-                        </Button>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Ten san pham"
-                            value={productForm.name}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, name: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="SKU"
-                            value={productForm.sku}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, sku: event.target.value }))
-                            }
-                        />
-                        <select
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
-                            value={productForm.categoryId}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, categoryId: event.target.value }))
-                            }
-                        >
-                            <option value="">Chon danh muc</option>
-                            {categories.map((category) => (
-                                <option key={category.id} value={category.id}>
-                                    {category.name}
-                                </option>
-                            ))}
-                        </select>
-                        <select
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
-                            value={productForm.supplierId}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, supplierId: event.target.value }))
-                            }
-                        >
-                            <option value="">Khong gan nha cung cap</option>
-                            {suppliers.map((supplier) => (
-                                <option key={supplier.id} value={supplier.id}>
-                                    {supplier.name}
-                                </option>
-                            ))}
-                        </select>
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Gia ban"
-                            type="number"
-                            min={0}
-                            value={productForm.salePrice}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, salePrice: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="So luong ton"
-                            type="number"
-                            min={0}
-                            value={productForm.stockQuantity}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, stockQuantity: event.target.value }))
-                            }
-                        />
-                        <textarea
-                            className="min-h-28 resize-none rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
-                            placeholder="Mo ta san pham"
-                            value={productForm.description}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, description: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2"
-                            placeholder="URL hinh anh san pham"
-                            value={productForm.imageUrl}
-                            onChange={(event) =>
-                                setProductForm((current) => ({ ...current, imageUrl: event.target.value }))
-                            }
-                        />
-                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant md:col-span-2">
-                            <input
-                                type="checkbox"
-                                checked={productForm.isActive}
-                                onChange={(event) =>
-                                    setProductForm((current) => ({ ...current, isActive: event.target.checked }))
-                                }
-                            />
-                            San pham dang hoat dong tren storefront
-                        </label>
-                    </div>
-                    <div className="flex flex-wrap justify-end gap-3">
-                        <Button
-                            variant="secondary"
-                            onClick={() => void handleCreateProduct()}
-                            disabled={isSaving || !canCreateProduct}
-                        >
-                            Tao san pham
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => void handleUpdateProduct()}
-                            disabled={!activeProduct || isSaving || !canUpdateProduct}
-                        >
-                            Luu chinh sua
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => void handleDeleteProduct()}
-                            disabled={!activeProduct || isSaving || !canDeleteProduct}
-                        >
-                            Xoa san pham
-                        </Button>
-                    </div>
-                </SurfaceCard>
-            </div>
-        );
+        const result = await updateSupplier(supplier.id, {
+            supplier_code: supplier.supplier_code ?? `SUP-${supplier.id}`,
+            name: supplier.name,
+            contact_name: supplier.contact_name ?? null,
+            phone: supplier.phone ?? "",
+            email: supplier.email ?? null,
+            address: supplier.address ?? null,
+            is_active: true,
+            is_deleted: false,
+        });
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the khoi phuc nha cung cap." });
+            return;
+        }
+
+        setDrawer({ entity: "suppliers", mode: "view", id: String(result.data.id) });
+        pushToast({ tone: "success", message: `Da khoi phuc nha cung cap ${result.data.name}.` });
     }
 
-    function renderCategoryTab() {
-        return (
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <SurfaceCard className="space-y-4">
-                    {isLoading ? (
-                        <p className="text-sm text-on-surface-variant">Dang tai danh muc...</p>
-                    ) : null}
-                    {!isLoading && filteredCategories.length === 0 ? (
-                        <p className="text-sm text-on-surface-variant">
-                            Khong co danh muc phu hop bo loc hien tai.
-                        </p>
-                    ) : null}
-                    {filteredCategories.map((category) => (
-                        <button
-                            key={category.id}
-                            className={`w-full rounded-3xl p-4 text-left transition ${
-                                category.id === activeCategory?.id
-                                    ? "bg-primary/5"
-                                    : "bg-surface-container-low hover:bg-surface-container"
-                            }`}
-                            onClick={() => setActiveCategoryId(String(category.id))}
-                        >
-                            <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Danh muc
-                            </p>
-                            <h3 className="mt-2 font-headline text-xl font-semibold">
-                                {category.name}
-                            </h3>
-                            <p className="mt-2 text-sm text-on-surface-variant">
-                                {category.description}
-                            </p>
-                        </button>
-                    ))}
-                </SurfaceCard>
-
-                <SurfaceCard className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <h3 className="font-headline text-2xl font-bold">Noi dung danh muc</h3>
-                        <Button variant="outline" size="sm" onClick={resetCategoryForm}>
-                            Tao moi
-                        </Button>
-                    </div>
-                    <input
-                        className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                        placeholder="Ten danh muc"
-                        value={categoryForm.name}
-                        onChange={(event) =>
-                            setCategoryForm((current) => ({ ...current, name: event.target.value }))
-                        }
-                    />
-                    <textarea
-                        className="min-h-28 w-full resize-none rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                        placeholder="Mo ta danh muc"
-                        value={categoryForm.description}
-                        onChange={(event) =>
-                            setCategoryForm((current) => ({ ...current, description: event.target.value }))
-                        }
-                    />
-                    <div className="flex flex-wrap justify-end gap-3">
-                        <Button
-                            variant="secondary"
-                            onClick={() => void handleCreateCategory()}
-                            disabled={isSaving || !canCreateCategory}
-                        >
-                            Tao danh muc
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => void handleUpdateCategory()}
-                            disabled={!activeCategory || isSaving || !canUpdateCategory}
-                        >
-                            Luu chinh sua
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => void handleDeleteCategory()}
-                            disabled={!activeCategory || isSaving || !canDeleteCategory}
-                        >
-                            An danh muc
-                        </Button>
-                    </div>
-                </SurfaceCard>
-            </div>
-        );
-    }
-
-    function renderSupplierTab() {
-        return (
-            <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                <SurfaceCard className="space-y-4">
-                    {isLoading ? (
-                        <p className="text-sm text-on-surface-variant">Dang tai nha cung cap...</p>
-                    ) : null}
-                    {!isLoading && filteredSuppliers.length === 0 ? (
-                        <p className="text-sm text-on-surface-variant">
-                            Khong co nha cung cap phu hop bo loc hien tai.
-                        </p>
-                    ) : null}
-                    {filteredSuppliers.map((supplier) => (
-                        <button
-                            key={supplier.id}
-                            className={`w-full rounded-3xl p-4 text-left transition ${
-                                supplier.id === activeSupplier?.id
-                                    ? "bg-primary/5"
-                                    : "bg-surface-container-low hover:bg-surface-container"
-                            }`}
-                            onClick={() => setActiveSupplierId(String(supplier.id))}
-                        >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    {supplier.supplier_code ?? `SUP-${supplier.id}`}
-                                </p>
-                                <span className="rounded-full bg-surface-container-highest px-3 py-1 text-xs text-on-surface-variant">
-                                    {supplier.is_active === false ? "Tam dung" : "Dang hoat dong"}
-                                </span>
+    const productColumns: TableColumn<BackendProduct>[] = [
+        {
+            key: "product",
+            title: "Product Details",
+            width: "28%",
+            render: (product) => (
+                <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-surface-container-low">
+                        {product.image_url ? (
+                            <img className="h-full w-full object-cover" src={product.image_url} alt="" />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-primary">
+                                <Icon name="inventory_2" />
                             </div>
-                            <h3 className="mt-2 font-headline text-xl font-semibold">
-                                {supplier.name}
-                            </h3>
-                            <p className="mt-2 text-sm text-on-surface-variant">
-                                {supplier.contact_name ?? "Chua co lien he"} - {supplier.phone ?? "Chua co SDT"}
-                            </p>
-                            <p className="mt-2 text-sm text-on-surface-variant">
-                                {supplier.email ?? "Chua co email"}
-                            </p>
-                            <p className="mt-1 text-sm text-on-surface-variant">
-                                {supplier.address ?? "Chua co dia chi"}
-                            </p>
-                        </button>
-                    ))}
-                </SurfaceCard>
+                        )}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="truncate font-semibold">{product.name}</p>
+                        <p className="truncate text-xs font-mono text-on-surface-variant">{product.sku}</p>
+                    </div>
+                </div>
+            ),
+        },
+        {
+            key: "category",
+            title: "Category",
+            width: "14%",
+            render: (product) => product.category?.name ?? `#${product.category_id}`,
+        },
+        {
+            key: "price",
+            title: "Price",
+            align: "right",
+            width: "12%",
+            nowrap: true,
+            render: (product) => <span className="font-semibold">{formatCurrency(Number(product.sale_price))}</span>,
+        },
+        {
+            key: "stock",
+            title: "Stock",
+            width: "9%",
+            nowrap: true,
+            render: (product) => `${product.stock_quantity} units`,
+        },
+        {
+            key: "supplier",
+            title: "Supplier",
+            width: "16%",
+            render: (product) => product.supplier?.name ?? "Chua gan",
+        },
+        {
+            key: "status",
+            title: "Status",
+            width: "11%",
+            nowrap: true,
+            render: (product) => (
+                <Badge tone={activeTone(product.is_active, product.is_deleted)}>
+                    {activeLabel(product.is_active, product.is_deleted)}
+                </Badge>
+            ),
+        },
+        {
+            key: "actions",
+            title: "Actions",
+            align: "right",
+            width: "10%",
+            nowrap: true,
+            render: (product) => (
+                <div className="flex justify-end gap-1">
+                    <ActionButton label={`Xem ${product.name}`} icon="visibility" onClick={() => openRecordDrawer("products", product.id, "view")} />
+                    <ActionButton label={`Sua ${product.name}`} icon="edit" tone="primary" disabled={!canUpdateProduct} onClick={() => openRecordDrawer("products", product.id, "edit")} />
+                    {isAvailable(product.is_active, product.is_deleted) ? (
+                        <ActionButton label={`An ${product.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteProduct} onClick={() => void handleDeactivateProduct(product)} />
+                    ) : (
+                        <ActionButton label={`Khoi phuc ${product.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateProduct} onClick={() => void handleRestoreProduct(product)} />
+                    )}
+                </div>
+            ),
+        },
+    ];
 
-                <SurfaceCard className="space-y-4">
-                    <div className="flex items-start justify-between gap-3">
-                        <h3 className="font-headline text-2xl font-bold">Noi dung nha cung cap</h3>
-                        <Button variant="outline" size="sm" onClick={resetSupplierForm}>
-                            Tao moi
-                        </Button>
-                    </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Ma nha cung cap"
-                            value={supplierForm.supplierCode}
-                            onChange={(event) =>
-                                setSupplierForm((current) => ({
-                                    ...current,
-                                    supplierCode: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Ten nha cung cap"
-                            value={supplierForm.name}
-                            onChange={(event) =>
-                                setSupplierForm((current) => ({ ...current, name: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Nguoi lien he"
-                            value={supplierForm.contactName}
-                            onChange={(event) =>
-                                setSupplierForm((current) => ({
-                                    ...current,
-                                    contactName: event.target.value,
-                                }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="So dien thoai"
-                            value={supplierForm.phone}
-                            onChange={(event) =>
-                                setSupplierForm((current) => ({ ...current, phone: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Email"
-                            value={supplierForm.email}
-                            onChange={(event) =>
-                                setSupplierForm((current) => ({ ...current, email: event.target.value }))
-                            }
-                        />
-                        <input
-                            className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
-                            placeholder="Dia chi"
-                            value={supplierForm.address}
-                            onChange={(event) =>
-                                setSupplierForm((current) => ({ ...current, address: event.target.value }))
-                            }
-                        />
-                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant md:col-span-2">
-                            <input
-                                type="checkbox"
-                                checked={supplierForm.isActive}
-                                onChange={(event) =>
-                                    setSupplierForm((current) => ({
-                                        ...current,
-                                        isActive: event.target.checked,
-                                    }))
-                                }
-                            />
-                            Nha cung cap dang hoat dong
-                        </label>
-                    </div>
-                    <div className="flex flex-wrap justify-end gap-3">
-                        <Button
-                            variant="secondary"
-                            onClick={() => void handleCreateSupplier()}
-                            disabled={isSaving || !canCreateSupplier}
-                        >
-                            Tao nha cung cap
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => void handleUpdateSupplier()}
-                            disabled={!activeSupplier || isSaving || !canUpdateSupplier}
-                        >
-                            Luu chinh sua
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            onClick={() => void handleDeleteSupplier()}
-                            disabled={!activeSupplier || isSaving || !canDeleteSupplier}
-                        >
-                            Xoa nha cung cap
-                        </Button>
-                    </div>
-                </SurfaceCard>
-            </div>
-        );
-    }
+    const categoryColumns: TableColumn<BackendCategory>[] = [
+        {
+            key: "name",
+            title: "Category",
+            width: "68%",
+            render: (category) => (
+                <div>
+                    <p className="font-semibold">{category.name}</p>
+                    <p className="line-clamp-1 text-xs text-on-surface-variant">{category.description || "Khong co mo ta"}</p>
+                </div>
+            ),
+        },
+        {
+            key: "status",
+            title: "Status",
+            width: "16%",
+            nowrap: true,
+            render: (category) => (
+                <Badge tone={activeTone(category.is_active, category.is_deleted)}>
+                    {activeLabel(category.is_active, category.is_deleted)}
+                </Badge>
+            ),
+        },
+        {
+            key: "actions",
+            title: "Actions",
+            align: "right",
+            width: "16%",
+            nowrap: true,
+            render: (category) => (
+                <div className="flex justify-end gap-1">
+                    <ActionButton label={`Xem ${category.name}`} icon="visibility" onClick={() => openRecordDrawer("categories", category.id, "view")} />
+                    <ActionButton label={`Sua ${category.name}`} icon="edit" tone="primary" disabled={!canUpdateCategory} onClick={() => openRecordDrawer("categories", category.id, "edit")} />
+                    {!isAvailable(category.is_active, category.is_deleted) ? (
+                        <ActionButton label={`Khoi phuc ${category.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateCategory} onClick={() => void handleRestoreCategory(category)} />
+                    ) : (
+                        <ActionButton label={`An ${category.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteCategory} onClick={() => void handleDeactivateCategory(category)} />
+                    )}
+                </div>
+            ),
+        },
+    ];
 
-    const activeTab = lockedTab ?? (visibleTabs.some((item) => item.id === tab) ? tab : visibleTabs[0]?.id);
+    const supplierColumns: TableColumn<BackendSupplier>[] = [
+        {
+            key: "supplier",
+            title: "Supplier",
+            width: "25%",
+            render: (supplier) => (
+                <div>
+                    <p className="font-semibold">{supplier.name}</p>
+                    <p className="text-xs font-mono text-on-surface-variant">{supplier.supplier_code ?? `SUP-${supplier.id}`}</p>
+                </div>
+            ),
+        },
+        {
+            key: "contact",
+            title: "Contact",
+            width: "22%",
+            render: (supplier) => (
+                <div>
+                    <p>{supplier.contact_name || "Chua co lien he"}</p>
+                    <p className="text-xs text-on-surface-variant">{supplier.phone || "Chua co SDT"}</p>
+                </div>
+            ),
+        },
+        {
+            key: "email",
+            title: "Email",
+            width: "23%",
+            render: (supplier) => supplier.email || "Chua co email",
+        },
+        {
+            key: "status",
+            title: "Status",
+            width: "14%",
+            nowrap: true,
+            render: (supplier) => (
+                <Badge tone={activeTone(supplier.is_active, supplier.is_deleted)}>
+                    {activeLabel(supplier.is_active, supplier.is_deleted)}
+                </Badge>
+            ),
+        },
+        {
+            key: "actions",
+            title: "Actions",
+            align: "right",
+            width: "16%",
+            nowrap: true,
+            render: (supplier) => (
+                <div className="flex justify-end gap-1">
+                    <ActionButton label={`Xem ${supplier.name}`} icon="visibility" onClick={() => openRecordDrawer("suppliers", supplier.id, "view")} />
+                    <ActionButton label={`Sua ${supplier.name}`} icon="edit" tone="primary" disabled={!canUpdateSupplier} onClick={() => openRecordDrawer("suppliers", supplier.id, "edit")} />
+                    {!isAvailable(supplier.is_active, supplier.is_deleted) ? (
+                        <ActionButton label={`Khoi phuc ${supplier.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateSupplier} onClick={() => void handleRestoreSupplier(supplier)} />
+                    ) : (
+                        <ActionButton label={`An ${supplier.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteSupplier} onClick={() => void handleDeactivateSupplier(supplier)} />
+                    )}
+                </div>
+            ),
+        },
+    ];
+
     const pageMeta = {
         products: {
             title: "Products",
@@ -904,6 +791,27 @@ export function AdminRepositoryPage({
         },
     }[activeTab ?? "products"];
 
+    const drawerTitle =
+        drawer?.entity === "products"
+            ? drawer.mode === "create"
+                ? "Tao san pham"
+                : drawer.mode === "edit"
+                  ? "Chinh sua san pham"
+                  : "Chi tiet san pham"
+            : drawer?.entity === "categories"
+              ? drawer.mode === "create"
+                  ? "Tao danh muc"
+                  : drawer.mode === "edit"
+                    ? "Chinh sua danh muc"
+                    : "Chi tiet danh muc"
+              : drawer?.entity === "suppliers"
+                ? drawer.mode === "create"
+                    ? "Tao nha cung cap"
+                    : drawer.mode === "edit"
+                      ? "Chinh sua nha cung cap"
+                      : "Chi tiet nha cung cap"
+                : "";
+
     return (
         <div className="space-y-8">
             <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
@@ -918,6 +826,18 @@ export function AdminRepositoryPage({
                         {pageMeta.description}
                     </p>
                 </div>
+                {activeTab ? (
+                    <Button
+                        disabled={
+                            (activeTab === "products" && !canCreateProduct) ||
+                            (activeTab === "categories" && !canCreateCategory) ||
+                            (activeTab === "suppliers" && !canCreateSupplier)
+                        }
+                        onClick={() => openCreateDrawer(activeTab)}
+                    >
+                        Tao moi
+                    </Button>
+                ) : null}
             </section>
 
             <section className="grid gap-6 xl:grid-cols-3">
@@ -931,11 +851,12 @@ export function AdminRepositoryPage({
                     {visibleTabs.map((item) => (
                         <button
                             key={item.id}
-                            className={`rounded-full px-4 py-2 text-sm font-medium ${
+                            className={cn(
+                                "rounded-full px-4 py-2 text-sm font-medium",
                                 activeTab === item.id
                                     ? "bg-primary text-on-primary"
-                                    : "bg-surface-container-low text-on-surface-variant"
-                            }`}
+                                    : "bg-surface-container-low text-on-surface-variant",
+                            )}
                             onClick={() => setTab(item.id)}
                         >
                             {item.label}
@@ -944,23 +865,284 @@ export function AdminRepositoryPage({
                 </div>
             ) : null}
 
-            <input
-                className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                placeholder="Loc theo ten, ma, danh muc hoac nha cung cap..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-            />
+            <SurfaceCard className="space-y-5">
+                <input
+                    className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                    placeholder="Loc theo ten, ma, danh muc hoac nha cung cap..."
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                />
 
-            {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
+                {error ? <p className="text-sm text-error">{error}</p> : null}
+                {visibleTabs.length === 0 ? (
+                    <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                        Ban chua co quyen thao tac trong kho san pham.
+                    </p>
+                ) : null}
 
-            {visibleTabs.length === 0 ? (
-                <SurfaceCard className="text-sm text-on-surface-variant">
-                    Ban chua co quyen thao tac trong kho san pham.
-                </SurfaceCard>
-            ) : null}
-            {activeTab === "products" ? renderProductTab() : null}
-            {activeTab === "categories" ? renderCategoryTab() : null}
-            {activeTab === "suppliers" ? renderSupplierTab() : null}
+                {activeTab === "products" ? (
+                    !canViewProducts ? (
+                        <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
+                            Ban chua co quyen xem danh sach san pham.
+                        </p>
+                    ) : (
+                        <DataTable
+                            rows={filteredProducts}
+                            columns={productColumns}
+                            getRowKey={(product) => String(product.id)}
+                            isLoading={isLoading}
+                            emptyMessage="Khong co san pham phu hop bo loc hien tai."
+                            minWidth="1120px"
+                            pagination={{ pageSize: 6, itemLabel: "san pham" }}
+                            rowClassName={(product) =>
+                                drawer?.entity === "products" && drawer.id === String(product.id)
+                                    ? "border-l-4 border-primary bg-primary/5"
+                                    : undefined
+                            }
+                            onRowClick={(product) => openRecordDrawer("products", product.id, "view")}
+                        />
+                    )
+                ) : null}
+                {activeTab === "categories" ? (
+                    <DataTable
+                        rows={filteredCategories}
+                        columns={categoryColumns}
+                        getRowKey={(category) => String(category.id)}
+                        isLoading={isLoading}
+                        emptyMessage="Khong co danh muc phu hop bo loc hien tai."
+                        minWidth="760px"
+                        pagination={{ pageSize: 6, itemLabel: "danh muc" }}
+                        rowClassName={(category) =>
+                            drawer?.entity === "categories" && drawer.id === String(category.id)
+                                ? "border-l-4 border-primary bg-primary/5"
+                                : undefined
+                        }
+                        onRowClick={(category) => openRecordDrawer("categories", category.id, "view")}
+                    />
+                ) : null}
+                {activeTab === "suppliers" ? (
+                    <DataTable
+                        rows={filteredSuppliers}
+                        columns={supplierColumns}
+                        getRowKey={(supplier) => String(supplier.id)}
+                        isLoading={isLoading}
+                        emptyMessage="Khong co nha cung cap phu hop bo loc hien tai."
+                        minWidth="920px"
+                        pagination={{ pageSize: 6, itemLabel: "nha cung cap" }}
+                        rowClassName={(supplier) =>
+                            drawer?.entity === "suppliers" && drawer.id === String(supplier.id)
+                                ? "border-l-4 border-primary bg-primary/5"
+                                : undefined
+                        }
+                        onRowClick={(supplier) => openRecordDrawer("suppliers", supplier.id, "view")}
+                    />
+                ) : null}
+            </SurfaceCard>
+
+            <AdminDrawer
+                open={drawer !== null}
+                mode={drawer?.mode ?? "view"}
+                title={drawerTitle}
+                subtitle={
+                    drawer?.entity === "products"
+                        ? activeProduct?.sku
+                        : drawer?.entity === "suppliers"
+                          ? activeSupplier?.supplier_code
+                          : undefined
+                }
+                onClose={closeDrawer}
+                footer={
+                    <div className="flex flex-wrap justify-end gap-3">
+                        <Button variant="outline" onClick={closeDrawer}>
+                            Dong
+                        </Button>
+                        {drawer?.mode === "create" && drawer.entity === "products" ? (
+                            <Button disabled={isSaving || !canCreateProduct} onClick={() => void handleCreateProduct()}>
+                                Tao san pham
+                            </Button>
+                        ) : null}
+                        {drawer?.mode === "edit" && drawer.entity === "products" ? (
+                            <Button disabled={isSaving || !activeProduct || !canUpdateProduct} onClick={() => void handleUpdateProduct()}>
+                                Luu chinh sua
+                            </Button>
+                        ) : null}
+                        {drawer?.mode === "view" && drawer.entity === "products" && activeProduct ? (
+                            <>
+                                <Button variant="secondary" disabled={!canUpdateProduct} onClick={() => setDrawer({ ...drawer, mode: "edit" })}>
+                                    Sua
+                                </Button>
+                                {isAvailable(activeProduct.is_active, activeProduct.is_deleted) ? (
+                                    <Button variant="ghost" disabled={isSaving || !canDeleteProduct} onClick={() => void handleDeactivateProduct()}>
+                                        An san pham
+                                    </Button>
+                                ) : (
+                                    <Button variant="secondary" disabled={isSaving || !canUpdateProduct} onClick={() => void handleRestoreProduct()}>
+                                        Khoi phuc
+                                    </Button>
+                                )}
+                            </>
+                        ) : null}
+                        {drawer?.mode === "create" && drawer.entity === "categories" ? (
+                            <Button disabled={isSaving || !canCreateCategory} onClick={() => void handleCreateCategory()}>
+                                Tao danh muc
+                            </Button>
+                        ) : null}
+                        {drawer?.mode === "edit" && drawer.entity === "categories" ? (
+                            <Button disabled={isSaving || !activeCategory || !canUpdateCategory} onClick={() => void handleUpdateCategory()}>
+                                Luu chinh sua
+                            </Button>
+                        ) : null}
+                        {drawer?.mode === "view" && drawer.entity === "categories" && activeCategory ? (
+                            <>
+                                <Button variant="secondary" disabled={!canUpdateCategory} onClick={() => setDrawer({ ...drawer, mode: "edit" })}>
+                                    Sua
+                                </Button>
+                                {!isAvailable(activeCategory.is_active, activeCategory.is_deleted) ? (
+                                    <Button variant="secondary" disabled={isSaving || !canUpdateCategory} onClick={() => void handleRestoreCategory()}>
+                                        Khoi phuc
+                                    </Button>
+                                ) : (
+                                    <Button variant="ghost" disabled={isSaving || !canDeleteCategory} onClick={() => void handleDeactivateCategory()}>
+                                        An danh muc
+                                    </Button>
+                                )}
+                            </>
+                        ) : null}
+                        {drawer?.mode === "create" && drawer.entity === "suppliers" ? (
+                            <Button disabled={isSaving || !canCreateSupplier} onClick={() => void handleCreateSupplier()}>
+                                Tao nha cung cap
+                            </Button>
+                        ) : null}
+                        {drawer?.mode === "edit" && drawer.entity === "suppliers" ? (
+                            <Button disabled={isSaving || !activeSupplier || !canUpdateSupplier} onClick={() => void handleUpdateSupplier()}>
+                                Luu chinh sua
+                            </Button>
+                        ) : null}
+                        {drawer?.mode === "view" && drawer.entity === "suppliers" && activeSupplier ? (
+                            <>
+                                <Button variant="secondary" disabled={!canUpdateSupplier} onClick={() => setDrawer({ ...drawer, mode: "edit" })}>
+                                    Sua
+                                </Button>
+                                {!isAvailable(activeSupplier.is_active, activeSupplier.is_deleted) ? (
+                                    <Button variant="secondary" disabled={isSaving || !canUpdateSupplier} onClick={() => void handleRestoreSupplier()}>
+                                        Khoi phuc
+                                    </Button>
+                                ) : (
+                                    <Button variant="ghost" disabled={isSaving || !canDeleteSupplier} onClick={() => void handleDeactivateSupplier()}>
+                                        An nha cung cap
+                                    </Button>
+                                )}
+                            </>
+                        ) : null}
+                    </div>
+                }
+            >
+                {drawer?.entity === "products" && drawer.mode === "view" && activeProduct ? (
+                    <div className="space-y-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-headline text-xl font-bold">{activeProduct.name}</h3>
+                                <p className="mt-1 text-sm font-mono text-on-surface-variant">{activeProduct.sku}</p>
+                            </div>
+                            <Badge tone={activeTone(activeProduct.is_active, activeProduct.is_deleted)}>
+                                {activeLabel(activeProduct.is_active, activeProduct.is_deleted)}
+                            </Badge>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <FieldValue label="Category" value={activeProduct.category?.name ?? `#${activeProduct.category_id}`} />
+                            <FieldValue label="Supplier" value={activeProduct.supplier?.name ?? "Chua gan"} />
+                            <FieldValue label="Price" value={formatCurrency(Number(activeProduct.sale_price))} />
+                            <FieldValue label="Stock" value={`${activeProduct.stock_quantity} units`} />
+                        </div>
+                        <FieldValue label="Mo ta" value={activeProduct.description} />
+                    </div>
+                ) : null}
+
+                {drawer?.entity === "products" && (drawer.mode === "create" || drawer.mode === "edit") ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Ten san pham" value={productForm.name} onChange={(event) => setProductForm((current) => ({ ...current, name: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="SKU" value={productForm.sku} onChange={(event) => setProductForm((current) => ({ ...current, sku: event.target.value }))} />
+                        <select className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none" value={productForm.categoryId} onChange={(event) => setProductForm((current) => ({ ...current, categoryId: event.target.value }))}>
+                            <option value="">Chon danh muc</option>
+                            {categories.map((category) => (
+                                <option key={category.id} value={category.id}>{category.name}</option>
+                            ))}
+                        </select>
+                        <select className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none" value={productForm.supplierId} onChange={(event) => setProductForm((current) => ({ ...current, supplierId: event.target.value }))}>
+                            <option value="">Khong gan nha cung cap</option>
+                            {suppliers.map((supplier) => (
+                                <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                            ))}
+                        </select>
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Gia ban" type="number" min={0} value={productForm.salePrice} onChange={(event) => setProductForm((current) => ({ ...current, salePrice: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="So luong ton" type="number" min={0} value={productForm.stockQuantity} onChange={(event) => setProductForm((current) => ({ ...current, stockQuantity: event.target.value }))} />
+                        <textarea className="min-h-28 resize-none rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2" placeholder="Mo ta san pham" value={productForm.description} onChange={(event) => setProductForm((current) => ({ ...current, description: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15 md:col-span-2" placeholder="URL hinh anh san pham" value={productForm.imageUrl} onChange={(event) => setProductForm((current) => ({ ...current, imageUrl: event.target.value }))} />
+                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant md:col-span-2">
+                            <input type="checkbox" checked={productForm.isActive} onChange={(event) => setProductForm((current) => ({ ...current, isActive: event.target.checked }))} />
+                            San pham dang hoat dong tren storefront
+                        </label>
+                    </div>
+                ) : null}
+
+                {drawer?.entity === "categories" && drawer.mode === "view" && activeCategory ? (
+                    <div className="space-y-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <h3 className="font-headline text-xl font-bold">{activeCategory.name}</h3>
+                            <Badge tone={activeTone(activeCategory.is_active, activeCategory.is_deleted)}>
+                                {activeLabel(activeCategory.is_active, activeCategory.is_deleted)}
+                            </Badge>
+                        </div>
+                        <FieldValue label="Mo ta" value={activeCategory.description} />
+                    </div>
+                ) : null}
+
+                {drawer?.entity === "categories" && (drawer.mode === "create" || drawer.mode === "edit") ? (
+                    <div className="space-y-4">
+                        <input className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Ten danh muc" value={categoryForm.name} onChange={(event) => setCategoryForm((current) => ({ ...current, name: event.target.value }))} />
+                        <textarea className="min-h-28 w-full resize-none rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Mo ta danh muc" value={categoryForm.description} onChange={(event) => setCategoryForm((current) => ({ ...current, description: event.target.value }))} />
+                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant">
+                            <input type="checkbox" checked={categoryForm.isActive} onChange={(event) => setCategoryForm((current) => ({ ...current, isActive: event.target.checked }))} />
+                            Danh muc dang hoat dong
+                        </label>
+                    </div>
+                ) : null}
+
+                {drawer?.entity === "suppliers" && drawer.mode === "view" && activeSupplier ? (
+                    <div className="space-y-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-headline text-xl font-bold">{activeSupplier.name}</h3>
+                                <p className="mt-1 text-sm font-mono text-on-surface-variant">{activeSupplier.supplier_code ?? `SUP-${activeSupplier.id}`}</p>
+                            </div>
+                            <Badge tone={activeTone(activeSupplier.is_active, activeSupplier.is_deleted)}>
+                                {activeLabel(activeSupplier.is_active, activeSupplier.is_deleted)}
+                            </Badge>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <FieldValue label="Nguoi lien he" value={activeSupplier.contact_name} />
+                            <FieldValue label="Phone" value={activeSupplier.phone} />
+                            <FieldValue label="Email" value={activeSupplier.email} />
+                            <FieldValue label="Dia chi" value={activeSupplier.address} />
+                        </div>
+                    </div>
+                ) : null}
+
+                {drawer?.entity === "suppliers" && (drawer.mode === "create" || drawer.mode === "edit") ? (
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Ma nha cung cap" value={supplierForm.supplierCode} onChange={(event) => setSupplierForm((current) => ({ ...current, supplierCode: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Ten nha cung cap" value={supplierForm.name} onChange={(event) => setSupplierForm((current) => ({ ...current, name: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Nguoi lien he" value={supplierForm.contactName} onChange={(event) => setSupplierForm((current) => ({ ...current, contactName: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="So dien thoai" value={supplierForm.phone} onChange={(event) => setSupplierForm((current) => ({ ...current, phone: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Email" value={supplierForm.email} onChange={(event) => setSupplierForm((current) => ({ ...current, email: event.target.value }))} />
+                        <input className="rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15" placeholder="Dia chi" value={supplierForm.address} onChange={(event) => setSupplierForm((current) => ({ ...current, address: event.target.value }))} />
+                        <label className="flex items-center gap-3 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm text-on-surface-variant md:col-span-2">
+                            <input type="checkbox" checked={supplierForm.isActive} onChange={(event) => setSupplierForm((current) => ({ ...current, isActive: event.target.checked }))} />
+                            Nha cung cap dang hoat dong
+                        </label>
+                    </div>
+                ) : null}
+            </AdminDrawer>
         </div>
     );
 }

@@ -1,16 +1,38 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { catalogRepository, operationsRepository } from "@/shared/api/mock-repositories";
-import { deliveryStatusLabels, shippingTierLabels } from "@/shared/lib/labels";
+import type { Order } from "@/entities/order/model/types";
+import { formatCurrency, formatDate } from "@/shared/lib/format";
+import { deliveryStatusLabels, paymentStatusLabels, shippingTierLabels } from "@/shared/lib/labels";
+import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { useUiStore } from "@/shared/lib/store/use-ui-store";
-import { StatCard, SurfaceCard } from "@/shared/ui";
-import { OrderTable } from "@/widgets/order-table";
+import { AdminDrawer, Badge, Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
+import type { StatusTone, TableColumn } from "@/shared/types/ui";
+
+function deliveryTone(order: Order): StatusTone {
+    if (order.deliveryStatus === "delivered") return "success";
+    if (order.deliveryStatus === "in_transit" || order.deliveryStatus === "ready_to_ship") return "warning";
+    if (order.deliveryStatus === "disputed") return "danger";
+    return "primary";
+}
+
+function paymentTone(order: Order): StatusTone {
+    if (order.paymentStatus === "paid") return "success";
+    if (order.paymentStatus === "refunded") return "danger";
+    return "neutral";
+}
 
 export function SupplierOrdersPage() {
     const selectedSupplierOrderId = useUiStore((state) => state.selectedSupplierOrderId);
     const setSelectedSupplierOrderId = useUiStore((state) => state.setSelectedSupplierOrderId);
+    const orders = useOperationsDataStore((state) => state.supplierOrders);
+    const loadOperations = useOperationsDataStore((state) => state.loadOperations);
     const [filter, setFilter] = useState<"all" | "awaiting">("all");
-    const orders = operationsRepository.listSupplierOrders();
+    const [detailOpen, setDetailOpen] = useState(false);
+
+    useEffect(() => {
+        void loadOperations();
+    }, [loadOperations]);
+
     const filteredOrders = orders.filter((order) =>
         filter === "awaiting"
             ? order.deliveryStatus === "processing" || order.deliveryStatus === "ready_to_ship"
@@ -22,95 +44,174 @@ export function SupplierOrdersPage() {
     const stats = [
         {
             id: "supplier-pending",
-            label: "Đơn chờ xử lý",
+            label: "Don cho xu ly",
             value: `${orders.filter((order) => order.deliveryStatus === "processing").length}`,
             tone: "primary" as const,
             icon: "inventory_2",
-            helperText: "đang chờ đóng gói hoặc xác nhận",
+            helperText: "dang cho dong goi hoac xac nhan",
         },
         {
             id: "supplier-transit",
-            label: "Đơn đang vận chuyển",
+            label: "Don dang van chuyen",
             value: `${orders.filter((order) => order.deliveryStatus === "in_transit").length}`,
             tone: "warning" as const,
             icon: "local_shipping",
-            helperText: "đã bàn giao đơn vị vận chuyển",
+            helperText: "da ban giao don vi van chuyen",
         },
         {
             id: "supplier-revenue",
-            label: "Doanh thu mô phỏng",
-            value: "₫142M",
+            label: "Doanh thu",
+            value: formatCurrency(orders.reduce((total, order) => total + order.total, 0)),
             tone: "secondary" as const,
             icon: "payments",
-            helperText: "doanh thu hiển thị theo dashboard demo",
+            helperText: "tong gia tri don hang tu API",
+        },
+    ];
+
+    function openOrder(order: Order) {
+        setSelectedSupplierOrderId(order.id);
+        setDetailOpen(true);
+    }
+
+    const columns: TableColumn<Order>[] = [
+        {
+            key: "order",
+            title: "Order ID",
+            render: (order) => <span className="font-semibold">#{order.id}</span>,
+        },
+        {
+            key: "date",
+            title: "Date",
+            render: (order) => <span className="text-on-surface-variant">{formatDate(order.date)}</span>,
+        },
+        {
+            key: "customer",
+            title: "Customer",
+            render: (order) => (
+                <div>
+                    <p className="font-medium">{order.customerName}</p>
+                    <p className="text-xs text-on-surface-variant">{order.supplierName}</p>
+                </div>
+            ),
+        },
+        {
+            key: "total",
+            title: "Total",
+            render: (order) => <span className="font-semibold">{formatCurrency(order.total)}</span>,
+        },
+        {
+            key: "payment",
+            title: "Payment",
+            render: (order) => <Badge tone={paymentTone(order)}>{paymentStatusLabels[order.paymentStatus]}</Badge>,
+        },
+        {
+            key: "delivery",
+            title: "Status",
+            render: (order) => <Badge tone={deliveryTone(order)}>{deliveryStatusLabels[order.deliveryStatus]}</Badge>,
+        },
+        {
+            key: "actions",
+            title: "Actions",
+            align: "right",
+            render: (order) => (
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        openOrder(order);
+                    }}
+                >
+                    View detail
+                </Button>
+            ),
         },
     ];
 
     return (
         <div className="space-y-8">
-            <section className="flex items-end justify-between gap-6">
-            </section>
-
             <section className="grid gap-6 lg:grid-cols-3">
                 {stats.map((stat) => (
                     <StatCard key={stat.id} metric={stat} />
                 ))}
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
-                <SurfaceCard className="overflow-hidden p-0">
-                    <div className="flex items-center justify-between border-b border-outline-variant/15 bg-surface-bright px-6 py-5">
-                        <h4 className="font-headline font-semibold text-on-surface">
-                            Danh sách đơn mua vào
-                        </h4>
-                        <div className="flex gap-2">
-                            <button
-                                className={`rounded-full px-4 py-2 text-xs ${
-                                    filter === "all"
-                                        ? "bg-surface-container-low text-on-surface"
-                                        : "text-on-surface-variant hover:bg-surface-container-low"
-                                }`}
-                                onClick={() => setFilter("all")}
-                            >
-                                Tất cả
-                            </button>
-                            <button
-                                className={`rounded-full px-4 py-2 text-xs ${
-                                    filter === "awaiting"
-                                        ? "bg-surface-container-low text-on-surface"
-                                        : "text-on-surface-variant hover:bg-surface-container-low"
-                                }`}
-                                onClick={() => setFilter("awaiting")}
-                            >
-                                Chờ giao kho
-                            </button>
-                        </div>
+            <SurfaceCard className="overflow-hidden p-0">
+                <div className="flex items-center justify-between border-b border-outline-variant/15 bg-surface-bright px-6 py-5">
+                    <h4 className="font-headline font-semibold text-on-surface">
+                        Danh sach don mua vao
+                    </h4>
+                    <div className="flex gap-2">
+                        <button
+                            className={`rounded-full px-4 py-2 text-xs ${
+                                filter === "all"
+                                    ? "bg-surface-container-low text-on-surface"
+                                    : "text-on-surface-variant hover:bg-surface-container-low"
+                            }`}
+                            onClick={() => setFilter("all")}
+                        >
+                            Tat ca
+                        </button>
+                        <button
+                            className={`rounded-full px-4 py-2 text-xs ${
+                                filter === "awaiting"
+                                    ? "bg-surface-container-low text-on-surface"
+                                    : "text-on-surface-variant hover:bg-surface-container-low"
+                            }`}
+                            onClick={() => setFilter("awaiting")}
+                        >
+                            Cho giao kho
+                        </button>
                     </div>
-                    <div className="p-6">
-                        <OrderTable
-                            orders={filteredOrders}
-                            activeOrderId={activeOrder?.id}
-                            onSelectOrder={setSelectedSupplierOrderId}
-                            mode="supplier"
-                        />
-                    </div>
-                </SurfaceCard>
+                </div>
+                <div className="p-6">
+                    <DataTable
+                        rows={filteredOrders}
+                        columns={columns}
+                        getRowKey={(order) => order.id}
+                        minWidth="920px"
+                        pagination={{ pageSize: 6, itemLabel: "don hang" }}
+                        rowClassName={(order) =>
+                            order.id === activeOrder?.id ? "border-l-4 border-primary bg-primary/5" : undefined
+                        }
+                        onRowClick={openOrder}
+                    />
+                </div>
+            </SurfaceCard>
 
+            <AdminDrawer
+                open={detailOpen && Boolean(activeOrder)}
+                mode="view"
+                title={activeOrder ? `Order #${activeOrder.id}` : "Order detail"}
+                subtitle={activeOrder ? `${activeOrder.customerName} / ${deliveryStatusLabels[activeOrder.deliveryStatus]}` : undefined}
+                onClose={() => setDetailOpen(false)}
+                footer={
+                    <div className="flex justify-end">
+                        <Button variant="outline" onClick={() => setDetailOpen(false)}>
+                            Dong
+                        </Button>
+                    </div>
+                }
+            >
                 {activeOrder ? (
-                    <SurfaceCard className="space-y-5">
-                        <div>
-                            <p className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                Đơn đang chọn
-                            </p>
-                            <h2 className="mt-2 font-headline text-2xl font-bold">
-                                #{activeOrder.id}
-                            </h2>
-                        </div>
-                        <div className="space-y-3 text-sm text-on-surface-variant">
-                            <p>Người mua: {activeOrder.customerName}</p>
-                            <p>Giao vận: {deliveryStatusLabels[activeOrder.deliveryStatus]}</p>
-                            <p>Gói giao hàng: {shippingTierLabels[activeOrder.shippingTier]}</p>
-                            <p>Địa chỉ nhận: {activeOrder.address}</p>
+                    <div className="space-y-5">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Nguoi mua</p>
+                                <p className="mt-2 font-semibold">{activeOrder.customerName}</p>
+                            </div>
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Goi giao hang</p>
+                                <p className="mt-2 font-semibold">{shippingTierLabels[activeOrder.shippingTier]}</p>
+                            </div>
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Tong tien</p>
+                                <p className="mt-2 font-semibold">{formatCurrency(activeOrder.total)}</p>
+                            </div>
+                            <div className="rounded-2xl bg-surface-container-low p-4 text-sm">
+                                <p className="text-on-surface-variant">Dia chi nhan</p>
+                                <p className="mt-2 font-semibold">{activeOrder.address}</p>
+                            </div>
                         </div>
                         <div className="space-y-3">
                             {activeOrder.items.map((item) => (
@@ -119,19 +220,17 @@ export function SupplierOrdersPage() {
                                     className="rounded-2xl bg-surface-container-low p-4 text-sm"
                                 >
                                     <p className="font-semibold text-on-surface">
-                                        {catalogRepository.getProductById(item.productId)?.name ??
-                                            item.productId}
+                                        {item.productName ?? item.productId}
                                     </p>
                                     <p className="text-on-surface-variant">
-                                        Số lượng {item.quantity} · Đơn giá{" "}
-                                        {item.unitPrice.toLocaleString("vi-VN")} đ
+                                        So luong {item.quantity} / Don gia {formatCurrency(item.unitPrice)}
                                     </p>
                                 </div>
                             ))}
                         </div>
-                    </SurfaceCard>
+                    </div>
                 ) : null}
-            </section>
+            </AdminDrawer>
         </div>
     );
 }

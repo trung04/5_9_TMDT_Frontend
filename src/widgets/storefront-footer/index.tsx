@@ -1,8 +1,8 @@
 import { type FormEvent, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { subscribeNewsletter } from "@/shared/api/newsletter";
 import { routes } from "@/shared/config/routes";
-import { useCatalogStore } from "@/shared/lib/store/use-catalog-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Icon } from "@/shared/ui";
 
@@ -16,11 +16,10 @@ function getFooterVariant(pathname: string): FooterVariant {
 export function StorefrontFooter() {
     const location = useLocation();
     const variant = getFooterVariant(location.pathname);
-    const subscribeNewsletter = useCatalogStore((state) => state.subscribeNewsletter);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [email, setEmail] = useState("");
 
-    function handleSubscribe(event: FormEvent<HTMLFormElement>) {
+    async function handleSubscribe(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
 
         if (email.trim().length === 0) {
@@ -31,7 +30,7 @@ export function StorefrontFooter() {
             return;
         }
 
-        subscribeNewsletter(email.trim(), `footer-${variant}`);
+        await subscribeNewsletter(email.trim(), `footer-${variant}`);
         setEmail("");
         pushToast({
             tone: "success",

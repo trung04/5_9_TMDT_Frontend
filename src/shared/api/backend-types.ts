@@ -4,8 +4,8 @@ export interface BackendUser {
     email: string;
     phone: string;
     role: string;
-    status: string;
     is_active: boolean;
+    is_deleted: boolean;
     admin_role?: BackendAdminRoleSummary | null;
     permissions?: string[];
     created_at?: string;
@@ -47,8 +47,8 @@ export interface BackendAdminAccount {
     email: string;
     phone: string;
     role: string;
-    status: string;
     is_active: boolean;
+    is_deleted: boolean;
     admin_role: BackendAdminRoleSummary | null;
     created_by_admin: {
         id: number;
@@ -101,8 +101,8 @@ export interface BackendAdminCustomer {
     reward_tier: string;
     next_tier_points: number;
     role: string;
-    status: string;
     is_active: boolean;
+    is_deleted: boolean;
     orders_count: number;
     created_at?: string;
     updated_at?: string;
@@ -321,6 +321,19 @@ export interface BackendCategory {
     name: string;
     description: string;
     is_active?: boolean;
+    is_deleted?: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendRegion {
+    id: number;
+    slug: string;
+    name: string;
+    description: string | null;
+    image_url?: string | null;
+    is_active?: boolean;
+    products_count?: number;
     created_at?: string;
     updated_at?: string;
 }
@@ -334,6 +347,7 @@ export interface BackendSupplier {
     email?: string;
     address?: string;
     is_active?: boolean;
+    is_deleted?: boolean;
     created_at?: string;
     updated_at?: string;
 }
@@ -342,15 +356,25 @@ export interface BackendProduct {
     id: number;
     category_id: number;
     supplier_id: number | null;
+    region_id?: number | null;
     sku: string;
+    slug?: string | null;
     name: string;
     description: string;
+    short_description?: string | null;
     image_url?: string | null;
+    origin?: string | null;
+    weight?: string | null;
+    shelf_life?: string | null;
+    certifications?: string[] | null;
+    gallery?: Array<{ src: string; alt?: string }> | null;
     sale_price: number | string;
     stock_quantity: number;
     is_active: boolean;
+    is_deleted: boolean;
     category?: BackendCategory | null;
     supplier?: BackendSupplier | null;
+    region?: BackendRegion | null;
     created_at?: string;
     updated_at?: string;
 }
@@ -408,6 +432,24 @@ export interface BackendSupplierListResponse {
         per_page: number;
         total: number;
     };
+}
+
+export interface BackendRegionListResponse {
+    message: string;
+    data: BackendRegion[];
+}
+
+export interface BackendNewsletterSubscription {
+    id: number;
+    email: string;
+    source: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendNewsletterSubscriptionResponse {
+    message: string;
+    data: BackendNewsletterSubscription;
 }
 
 export interface BackendSupplierMutationResponse {
@@ -581,3 +623,151 @@ export type BackendAdminOrderSummary = BackendOrderSummary;
 export type BackendAdminOrderDetail = BackendOrderDetail;
 export type BackendAdminOrdersResponse = BackendOrdersResponse;
 export type BackendAdminOrderDetailResponse = BackendOrderDetailResponse;
+
+export interface BackendOperationInventoryItem {
+    id: number;
+    sku: string;
+    product_id: number;
+    product_name: string;
+    supplier_id: number | null;
+    supplier_name: string | null;
+    supplier_location: string | null;
+    inventory_name: string;
+    inventory_location: string | null;
+    quantity_on_hand: number;
+    reserved: number;
+    reorder_level: number;
+    safety_stock: number;
+    purchase_price: number;
+    aisle: string;
+    status: "healthy" | "low" | "critical";
+    last_counted_at: string | null;
+    updated_at: string | null;
+}
+
+export interface BackendOperationRequisition {
+    id: string;
+    inventory_sku: string;
+    product_id: number | null;
+    product_name: string | null;
+    supplier_id: number | null;
+    supplier_name: string | null;
+    requested_qty: number;
+    approved_qty: number | null;
+    eta_days: number;
+    status: "submitted" | "approved" | "received" | "cancelled";
+    note: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+}
+
+export interface BackendOperationOrderItem {
+    product_id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+}
+
+export interface BackendOperationStatusEvent {
+    id: string;
+    actor: string;
+    label: string;
+    created_at: string | null;
+}
+
+export interface BackendOperationTrackingEvent {
+    id: string;
+    order_id: string;
+    label: string;
+    timestamp: string | null;
+    completed: boolean;
+}
+
+export interface BackendOperationOrder {
+    id: string;
+    order_no: string | null;
+    customer_name: string;
+    customer_id: string | null;
+    supplier_name: string;
+    supplier_id: string | null;
+    date: string | null;
+    total: number;
+    payment_status: "pending" | "paid" | "cod" | "refunded";
+    delivery_status: "processing" | "ready_to_ship" | "in_transit" | "delivered" | "disputed";
+    shipping_tier: "standard" | "express" | "priority";
+    address: string;
+    note: string | null;
+    items: BackendOperationOrderItem[];
+    timeline: BackendOperationTrackingEvent[];
+    status_history: BackendOperationStatusEvent[];
+    assigned_warehouse_zone: string;
+}
+
+export interface BackendOperationFulfillmentTask {
+    id: string;
+    order_id: string;
+    customer_name: string;
+    shipping_tier: "standard" | "express" | "priority";
+    status: "picking" | "packing" | "awaiting_pickup" | "shipped";
+    priority: "standard" | "rush";
+    assigned_zone: string;
+    eta_label: string;
+    notes: string | null;
+    status_history: BackendOperationStatusEvent[];
+}
+
+export interface BackendSupportTicket {
+    id: number;
+    subject: string;
+    message: string;
+    channel: "supplier" | "warehouse";
+    status: "open" | "resolved";
+    created_at: string | null;
+    updated_at: string | null;
+    resolved_at: string | null;
+}
+
+export interface BackendOperationInventoryResponse {
+    message: string;
+    data: BackendOperationInventoryItem[];
+}
+
+export interface BackendOperationRequisitionsResponse {
+    message: string;
+    data: BackendOperationRequisition[];
+}
+
+export interface BackendOperationRequisitionResponse {
+    message: string;
+    data: BackendOperationRequisition;
+}
+
+export interface BackendOperationOrdersResponse {
+    message: string;
+    data: BackendOperationOrder[];
+}
+
+export interface BackendOperationOrderResponse {
+    message: string;
+    data: BackendOperationOrder;
+}
+
+export interface BackendOperationFulfillmentTasksResponse {
+    message: string;
+    data: BackendOperationFulfillmentTask[];
+}
+
+export interface BackendOperationFulfillmentTaskResponse {
+    message: string;
+    data: BackendOperationFulfillmentTask;
+}
+
+export interface BackendSupportTicketsResponse {
+    message: string;
+    data: BackendSupportTicket[];
+}
+
+export interface BackendSupportTicketResponse {
+    message: string;
+    data: BackendSupportTicket;
+}

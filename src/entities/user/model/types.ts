@@ -1,5 +1,5 @@
 export type UserRole = "customer" | "admin" | "supplier" | "warehouse";
-export type AuthSource = "backend" | "demo";
+export type AuthSource = "backend";
 
 export interface AuthUser {
     id: string;
@@ -25,7 +25,7 @@ export interface RolePermission {
     redirectTo: string;
 }
 
-export interface DemoCredential {
+export interface SeedCredential {
     id: string;
     role: UserRole;
     displayName: string;
