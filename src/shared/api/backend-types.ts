@@ -393,8 +393,18 @@ export interface BackendMeResponse {
 }
 
 export interface BackendProductListResponse {
-    message: string;
+    message?: string;
     data: BackendProduct[];
+    current_page?: number;
+    last_page?: number;
+    per_page?: number;
+    total?: number;
+    pagination?: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
 }
 
 export interface BackendProductDetailResponse {

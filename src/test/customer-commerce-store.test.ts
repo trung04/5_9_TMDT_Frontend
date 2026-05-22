@@ -121,6 +121,8 @@ describe("customer commerce stores", () => {
                             subtitle: "Tra · Hop tac xa Moc",
                             categoryId: "5",
                             categoryName: "Tra",
+                            supplierId: "8",
+                            supplierName: "Hop tac xa Moc",
                             regionId: "8",
                             regionName: "Hop tac xa Moc",
                             description: "San pham backend cho customer commerce.",

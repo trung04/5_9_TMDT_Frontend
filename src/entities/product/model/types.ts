@@ -21,6 +21,8 @@ export interface Product {
     subtitle: string;
     categoryId: string;
     categoryName: string;
+    supplierId: string;
+    supplierName: string;
     regionId: string;
     regionName: string;
     description: string;

@@ -10,6 +10,22 @@ import { Icon } from "@/shared/ui";
 
 type SortValue = "popular" | "newest" | "price-asc" | "price-desc";
 
+const PRODUCT_PAGE_SIZE = 15;
+
+function pageFromQuery(value: string | null) {
+    const page = Number(value ?? 1);
+
+    return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+}
+
+function pageWindow(currentPage: number, lastPage: number) {
+    const start = Math.max(1, currentPage - 2);
+    const end = Math.min(lastPage, start + 4);
+    const adjustedStart = Math.max(1, end - 4);
+
+    return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index);
+}
+
 export function ProductCatalogPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const addItem = useCartStore((state) => state.addItem);
@@ -18,6 +34,7 @@ export function ProductCatalogPage() {
     const categories = useStorefrontCatalogStore((state) => state.categories);
     const suppliers = useStorefrontCatalogStore((state) => state.suppliers);
     const products = useStorefrontCatalogStore((state) => state.products);
+    const pagination = useStorefrontCatalogStore((state) => state.productsPagination);
     const status = useStorefrontCatalogStore((state) => state.status);
     const error = useStorefrontCatalogStore((state) => state.error);
     const loadCatalog = useStorefrontCatalogStore((state) => state.loadCatalog);
@@ -33,12 +50,9 @@ export function ProductCatalogPage() {
         (searchParams.get("sort") as SortValue | null) ?? "popular",
     );
     const [ratingMin, setRatingMin] = useState(Number(searchParams.get("ratingMin") ?? 0));
+    const [currentPage, setCurrentPage] = useState(pageFromQuery(searchParams.get("page")));
 
     const searchParamSignature = searchParams.toString();
-
-    useEffect(() => {
-        void loadCatalog();
-    }, [loadCatalog]);
 
     useEffect(() => {
         setSearch(searchParams.get("search") ?? "");
@@ -47,6 +61,7 @@ export function ProductCatalogPage() {
         setPriceLimit(Number(searchParams.get("price") ?? 30000000));
         setSort((searchParams.get("sort") as SortValue | null) ?? "popular");
         setRatingMin(Number(searchParams.get("ratingMin") ?? 0));
+        setCurrentPage(pageFromQuery(searchParams.get("page")));
     }, [searchParamSignature, searchParams]);
 
     useEffect(() => {
@@ -58,6 +73,7 @@ export function ProductCatalogPage() {
         if (sort !== "popular") nextParams.set("sort", sort);
         if (priceLimit !== 30000000) nextParams.set("price", String(priceLimit));
         if (ratingMin > 0) nextParams.set("ratingMin", String(ratingMin));
+        if (currentPage > 1) nextParams.set("page", String(currentPage));
 
         if (nextParams.toString() !== searchParamSignature) {
             setSearchParams(nextParams, { replace: true });
@@ -70,6 +86,27 @@ export function ProductCatalogPage() {
         selectedCategories,
         selectedSuppliers,
         setSearchParams,
+        sort,
+        currentPage,
+    ]);
+
+    useEffect(() => {
+        void loadCatalog({
+            page: currentPage,
+            perPage: PRODUCT_PAGE_SIZE,
+            search,
+            categoryIds: selectedCategories,
+            supplierIds: selectedSuppliers,
+            maxPrice: priceLimit !== 30000000 ? priceLimit : undefined,
+            sort,
+        });
+    }, [
+        currentPage,
+        loadCatalog,
+        priceLimit,
+        search,
+        selectedCategories,
+        selectedSuppliers,
         sort,
     ]);
 
@@ -85,7 +122,7 @@ export function ProductCatalogPage() {
                 : selectedCategories.includes(product.categoryId),
         )
         .filter((product) =>
-            selectedSuppliers.length === 0 ? true : selectedSuppliers.includes(product.regionId),
+            selectedSuppliers.length === 0 ? true : selectedSuppliers.includes(product.supplierId),
         )
         .filter((product) => product.price <= priceLimit)
         .filter((product) => (ratingMin > 0 ? product.rating >= ratingMin : true))
@@ -97,6 +134,7 @@ export function ProductCatalogPage() {
         });
 
     function toggleSelection(value: string, current: string[], setValue: (next: string[]) => void) {
+        setCurrentPage(1);
         setValue(
             current.includes(value)
                 ? current.filter((item) => item !== value)
@@ -111,9 +149,21 @@ export function ProductCatalogPage() {
         setPriceLimit(30000000);
         setSort("popular");
         setRatingMin(0);
+        setCurrentPage(1);
     }
 
     const isLoading = status === "loading" || status === "idle";
+    const paginationPages = pagination ? pageWindow(pagination.currentPage, pagination.lastPage) : [];
+    const totalProducts = pagination?.total ?? visibleProducts.length;
+
+    function goToPage(page: number) {
+        if (!pagination) return;
+
+        const nextPage = Math.min(Math.max(page, 1), pagination.lastPage);
+
+        setCurrentPage(nextPage);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }
 
     return (
         <div className="mx-auto max-w-7xl px-6 pb-20 pt-24">
@@ -139,7 +189,10 @@ export function ProductCatalogPage() {
                                 className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 pr-12 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
                                 placeholder="Tìm tên sản phẩm..."
                                 value={search}
-                                onChange={(event) => setSearch(event.target.value)}
+                                onChange={(event) => {
+                                    setSearch(event.target.value);
+                                    setCurrentPage(1);
+                                }}
                             />
                             <Icon name="search" className="absolute right-3 top-3 text-outline" />
                         </div>
@@ -213,11 +266,14 @@ export function ProductCatalogPage() {
                             <input
                                 className="h-1 w-full cursor-pointer appearance-none rounded-lg bg-surface-container-highest accent-primary"
                                 type="range"
-                                min={0}
-                                max={30000000}
-                                step={500000}
+                                min={0} 
+                                max={1000000}
+                                step={10000}
                                 value={priceLimit}
-                                onChange={(event) => setPriceLimit(Number(event.target.value))}
+                                onChange={(event) => {
+                                    setPriceLimit(Number(event.target.value));
+                                    setCurrentPage(1);
+                                }}
                             />
                             <div className="mt-3 flex justify-between text-xs uppercase tracking-wider text-outline">
                                 <span>0đ</span>
@@ -233,7 +289,10 @@ export function ProductCatalogPage() {
                         <div className="flex flex-col space-y-2">
                             <button
                                 className="flex items-center text-left"
-                                onClick={() => setRatingMin((value) => (value === 4 ? 0 : 4))}
+                                onClick={() => {
+                                    setRatingMin((value) => (value === 4 ? 0 : 4));
+                                    setCurrentPage(1);
+                                }}
                             >
                                 <div className="flex text-tertiary">
                                     {Array.from({ length: 4 }).map((_, index) => (
@@ -268,7 +327,7 @@ export function ProductCatalogPage() {
                                 Sản phẩm đặc sắc
                             </h1>
                             <p className="mt-1 text-sm text-on-surface-variant">
-                                {visibleProducts.length} sản phẩm phù hợp bộ lọc
+                                {totalProducts} sản phẩm phù hợp bộ lọc
                             </p>
                         </div>
 
@@ -277,7 +336,10 @@ export function ProductCatalogPage() {
                                 <select
                                     className="w-full appearance-none rounded-full border-none bg-surface-container-low px-5 py-2.5 text-sm font-medium focus:ring-2 focus:ring-primary/20"
                                     value={sort}
-                                    onChange={(event) => setSort(event.target.value as SortValue)}
+                                    onChange={(event) => {
+                                        setSort(event.target.value as SortValue);
+                                        setCurrentPage(1);
+                                    }}
                                 >
                                     <option value="popular">Phổ biến nhất</option>
                                     <option value="newest">Mới nhất</option>
@@ -446,6 +508,46 @@ export function ProductCatalogPage() {
                             ))}
                         </div>
                     )}
+
+                    {pagination && pagination.lastPage > 1 ? (
+                        <nav className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-outline-variant/30 pt-6 sm:flex-row">
+                            <p className="text-sm font-medium text-on-surface-variant">
+                                Trang {pagination.currentPage} / {pagination.lastPage}
+                            </p>
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                <button
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/40 text-on-surface-variant transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={pagination.currentPage <= 1}
+                                    onClick={() => goToPage(pagination.currentPage - 1)}
+                                    aria-label="Trang truoc"
+                                >
+                                    <Icon name="chevron_left" />
+                                </button>
+                                {paginationPages.map((page) => (
+                                    <button
+                                        key={page}
+                                        className={`h-10 min-w-10 rounded-full px-3 text-sm font-semibold transition-colors ${
+                                            page === pagination.currentPage
+                                                ? "bg-primary text-on-primary"
+                                                : "border border-outline-variant/40 text-on-surface-variant hover:border-primary hover:text-primary"
+                                        }`}
+                                        onClick={() => goToPage(page)}
+                                        aria-current={page === pagination.currentPage ? "page" : undefined}
+                                    >
+                                        {page}
+                                    </button>
+                                ))}
+                                <button
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant/40 text-on-surface-variant transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                    disabled={pagination.currentPage >= pagination.lastPage}
+                                    onClick={() => goToPage(pagination.currentPage + 1)}
+                                    aria-label="Trang sau"
+                                >
+                                    <Icon name="chevron_right" />
+                                </button>
+                            </div>
+                        </nav>
+                    ) : null}
                 </section>
             </div>
         </div>

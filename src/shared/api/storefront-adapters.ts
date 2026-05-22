@@ -315,6 +315,8 @@ export function adaptBackendProduct(product: BackendProduct, index = 0): Product
         subtitle: `${categoryName} · ${supplierName}`,
         categoryId: String(product.category_id),
         categoryName,
+        supplierId: String(product.supplier_id ?? ""),
+        supplierName,
         regionId: String(product.region_id ?? product.region?.id ?? product.supplier_id ?? product.id),
         regionName: product.region?.name ?? product.origin ?? supplierName,
         description: product.description,
