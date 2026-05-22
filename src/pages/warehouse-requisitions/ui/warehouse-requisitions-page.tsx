@@ -18,9 +18,14 @@ export function WarehouseRequisitionsPage() {
     return (
         <div className="space-y-8">
             <section>
-                <p className="mt-1 text-on-surface-variant">
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Phiếu tái nhập kho
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
                     Duyệt nội bộ, hủy hoặc xác nhận đã nhập kho cho các phiếu đang luân chuyển
-                </p>
+                    </p>
+                </div>
             </section>
 
             <div className="space-y-4">

@@ -776,6 +776,17 @@ export function AdminLogisticsPage() {
 
     return (
         <div className="space-y-8">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Điều phối đơn hàng
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Lọc, xử lý trạng thái và cập nhật thanh toán cho các đơn hàng trong hệ thống.
+                    </p>
+                </div>
+            </section>
+
             <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
                 <input
                     className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"

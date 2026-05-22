@@ -22,6 +22,14 @@ export function SupplierHelpPage() {
     return (
         <div className="space-y-8">
             <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Hỗ trợ nhà cung cấp
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Gửi yêu cầu hỗ trợ và theo dõi phản hồi cho luồng vận hành nhà cung cấp.
+                    </p>
+                </div>
             </section>
 
             <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">

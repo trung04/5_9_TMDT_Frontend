@@ -19,7 +19,12 @@ export function SupplierInventoryPage() {
         <div className="space-y-8">
             <section className="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Tồn kho nhà cung cấp
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Theo dõi tồn kho, trạng thái cảnh báo và lượng hàng đang giữ cho từng SKU.
+                    </p>
                 </div>
                 <Button
                     variant="secondary"

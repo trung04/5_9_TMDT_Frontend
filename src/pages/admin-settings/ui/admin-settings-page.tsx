@@ -57,12 +57,16 @@ export function AdminSettingsPage() {
 
     return (
         <div className="space-y-8">
-            <div>
-                <h1 className="font-headline text-3xl font-bold">Cấu hình quản trị</h1>
-                <p className="mt-2 text-on-surface-variant">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Cấu hình quản trị
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
                     Quản lý các thông số vận hành cơ bản cho tài khoản admin hiện tại.
-                </p>
-            </div>
+                    </p>
+                </div>
+            </section>
 
             {isLoading ? (
                 <SurfaceCard className="text-on-surface-variant">Đang tải cấu hình...</SurfaceCard>

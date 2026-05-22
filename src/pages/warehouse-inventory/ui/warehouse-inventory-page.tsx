@@ -135,7 +135,12 @@ export function WarehouseInventoryPage() {
         <div className="space-y-8">
             <section className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Tồn kho kho vận
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Kiểm tra sức khỏe tồn kho, mức dự trữ và các SKU cần xử lý trong kho.
+                    </p>
                 </div>
                 <input
                     className="w-full max-w-md rounded-full bg-surface-container-low px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"

@@ -17,6 +17,16 @@ export function SupplierRequisitionsPage() {
 
     return (
         <div className="space-y-8">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Phiếu yêu cầu nhà cung cấp
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Theo dõi yêu cầu bổ sung hàng, phê duyệt và xác nhận luân chuyển tồn kho.
+                    </p>
+                </div>
+            </section>
 
             <div className="space-y-4">
                 {requisitions.map((requisition) => (

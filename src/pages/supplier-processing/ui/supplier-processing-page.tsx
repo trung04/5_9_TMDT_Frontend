@@ -116,6 +116,17 @@ export function SupplierProcessingPage() {
 
     return (
         <div className="space-y-8">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Xử lý đơn nhà cung cấp
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Kiểm tra đơn cần chuẩn bị, chuyển sang sẵn sàng giao và xác nhận hoàn tất.
+                    </p>
+                </div>
+            </section>
+
             <SurfaceCard className="overflow-hidden p-0">
                 <div className="border-b border-outline-variant/15 px-6 py-5">
                     <h3 className="font-headline text-xl font-semibold">Supplier xu ly don</h3>

@@ -413,6 +413,17 @@ export function AdminDashboardPage() {
 
     return (
         <div className="space-y-8">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Tổng quan quản trị
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Theo dõi doanh thu, đơn hàng cần xử lý và các cảnh báo vận hành chính.
+                    </p>
+                </div>
+            </section>
+
             <section className="rounded-[1.75rem] bg-surface-container-low p-4 shadow-sm ring-1 ring-black/5">
                 <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
                     {/* <div className="min-w-0 xl:flex-1">

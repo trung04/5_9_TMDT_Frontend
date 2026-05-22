@@ -1124,9 +1124,11 @@ export function AdminCommunityPage() {
         <div className="space-y-8">
             <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
                 <div>
-                    <h1 className="font-headline text-3xl font-bold text-on-surface">Cong dong</h1>
-                    <p className="mt-2 text-sm text-on-surface-variant">
-                        Quan ly bai viet, doi tac va khach hang trong cung mot khu vuc.
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Cộng đồng
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Quản lý bài viết, lời mời nhà cung cấp và hoạt động cộng đồng.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-3">

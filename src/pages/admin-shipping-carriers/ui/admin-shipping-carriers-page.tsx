@@ -413,6 +413,17 @@ export function AdminShippingCarriersPage() {
 
     return (
         <div className="space-y-8">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Đơn vị vận chuyển
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Cấu hình GHN và các đơn vị vận chuyển thủ công để tạo vận đơn sau khi xác nhận đơn.
+                    </p>
+                </div>
+            </section>
+
             <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <input
                     className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 xl:max-w-xl"
@@ -429,7 +440,7 @@ export function AdminShippingCarriersPage() {
 
             <SurfaceCard className="space-y-4">
                 <div>
-                    <h1 className="font-headline text-2xl font-bold text-on-surface">Don vi van chuyen</h1>
+                    <h2 className="font-headline text-2xl font-bold text-on-surface">Danh sách đơn vị vận chuyển</h2>
                     <p className="mt-1 text-sm text-on-surface-variant">
                         Cau hinh GHN va cac don vi van chuyen thu cong de nhan vien tao van don sau khi xac nhan don.
                     </p>

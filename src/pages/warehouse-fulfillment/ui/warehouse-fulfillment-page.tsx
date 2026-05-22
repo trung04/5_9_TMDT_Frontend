@@ -63,7 +63,14 @@ export function WarehouseFulfillmentPage() {
     return (
         <div className="space-y-8">
             <section className="space-y-1">
-               
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Fulfillment kho
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Theo dõi picking, packing, bàn giao và nhịp xử lý đơn trong kho.
+                    </p>
+                </div>
             </section>
 
             <section className="grid gap-6 xl:grid-cols-3">

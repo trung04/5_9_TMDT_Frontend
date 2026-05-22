@@ -130,6 +130,17 @@ export function SupplierOrdersPage() {
 
     return (
         <div className="space-y-8">
+            <section>
+                <div>
+                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
+                        Đơn hàng nhà cung cấp
+                    </h1>
+                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
+                        Theo dõi đơn mua vào, trạng thái thanh toán và tiến độ giao hàng từ nhà cung cấp.
+                    </p>
+                </div>
+            </section>
+
             <section className="grid gap-6 lg:grid-cols-3">
                 {stats.map((stat) => (
                     <StatCard key={stat.id} metric={stat} />
