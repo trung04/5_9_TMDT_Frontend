@@ -4,6 +4,7 @@ import type {
     BackendAdminOrderDetail,
     BackendAdminOrderSummary,
     BackendBulkOrderStatusResult,
+    BackendShippingCarrier,
 } from "@/shared/api/backend-types";
 import { hasAdminPermission } from "@/shared/lib/auth";
 import {
@@ -14,8 +15,10 @@ import {
 } from "@/shared/lib/customer-order-labels";
 import { formatCurrency, formatDate } from "@/shared/lib/format";
 import { useAdminOrdersStore } from "@/shared/lib/store/use-admin-orders-store";
+import { useAdminShippingCarriersStore } from "@/shared/lib/store/use-admin-shipping-carriers-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
+import { useGhnLocationStore } from "@/shared/lib/store/use-ghn-location-store";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
 import { AdminDrawer, Badge, Button, DataTable, Icon, SurfaceCard, cn } from "@/shared/ui";
 
@@ -29,17 +32,39 @@ const ORDER_STATUSES = [
     "CANCELLED",
 ] as const;
 
-type BulkAction = "CONFIRM" | "PACK" | "SHIP" | "DELIVER" | "MARK_DELIVERY_FAILED" | "CANCEL" | "RESHIP";
+type BulkAction = "CONFIRM" | "SHIP" | "DELIVER" | "MARK_DELIVERY_FAILED" | "CANCEL" | "RESHIP";
 
 const BULK_ACTION_LABELS: Record<BulkAction, string> = {
     CONFIRM: "Xac nhan don",
-    PACK: "Dong goi",
     SHIP: "Ban giao van chuyen",
     DELIVER: "Danh dau giao thanh cong",
     MARK_DELIVERY_FAILED: "Danh dau giao that bai",
     CANCEL: "Huy don",
     RESHIP: "Giao lai",
 };
+
+const emptyShipmentForm = {
+    shippingCarrierId: "",
+    trackingCode: "",
+    trackingUrl: "",
+    serviceTypeId: "2",
+    paymentTypeId: "1",
+    requiredNote: "KHONGCHOXEMHANG",
+    weight: "1000",
+    length: "20",
+    width: "20",
+    height: "10",
+    shippingLine1: "",
+    shippingProvinceId: "",
+    shippingProvinceName: "",
+    shippingDistrictId: "",
+    shippingDistrictName: "",
+    shippingWardCode: "",
+    shippingWardName: "",
+    note: "",
+};
+
+type ShipmentForm = typeof emptyShipmentForm;
 
 function labelForStatus(status: string) {
     return customerOrderStatusLabels[status] ?? fallbackBackendLabel(status);
@@ -69,12 +94,38 @@ function paymentInstructionValue(payload: Record<string, unknown> | null | undef
     return typeof value === "string" ? value : "";
 }
 
+function numberFromForm(value: string) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function shipmentFormFromOrder(order: BackendAdminOrderDetail, carrier?: BackendShippingCarrier | null): ShipmentForm {
+    return {
+        ...emptyShipmentForm,
+        shippingCarrierId: carrier ? String(carrier.id) : "",
+        serviceTypeId: String(carrier?.default_service_type_id ?? 2),
+        paymentTypeId: String(carrier?.default_payment_type_id ?? 1),
+        requiredNote: carrier?.default_required_note ?? "KHONGCHOXEMHANG",
+        weight: String(carrier?.default_weight ?? 1000),
+        length: String(carrier?.default_length ?? 20),
+        width: String(carrier?.default_width ?? 20),
+        height: String(carrier?.default_height ?? 10),
+        shippingLine1: order.shipping_line1 ?? "",
+        shippingProvinceId: order.shipping_province_id ? String(order.shipping_province_id) : "",
+        shippingProvinceName: order.shipping_province_name ?? "",
+        shippingDistrictId: order.shipping_district_id ? String(order.shipping_district_id) : "",
+        shippingDistrictName: order.shipping_district_name ?? "",
+        shippingWardCode: order.shipping_ward_code ?? "",
+        shippingWardName: order.shipping_ward_name ?? "",
+    };
+}
+
 function bulkActionsForFilter(statusFilter: string): BulkAction[] {
     switch (statusFilter) {
         case "PENDING":
             return ["CONFIRM", "CANCEL"];
         case "CONFIRMED":
-            return ["PACK", "CANCEL"];
+            return ["CANCEL"];
         case "PACKED":
             return ["SHIP", "CANCEL"];
         case "SHIPPED":
@@ -85,7 +136,7 @@ function bulkActionsForFilter(statusFilter: string): BulkAction[] {
         case "CANCELLED":
             return [];
         default:
-            return ["CONFIRM", "PACK", "SHIP", "DELIVER", "MARK_DELIVERY_FAILED", "CANCEL", "RESHIP"];
+            return ["CONFIRM", "SHIP", "DELIVER", "MARK_DELIVERY_FAILED", "CANCEL", "RESHIP"];
     }
 }
 
@@ -211,6 +262,7 @@ export function AdminLogisticsPage() {
     const [nextPaymentStatus, setNextPaymentStatus] = useState("PENDING");
     const [note, setNote] = useState("");
     const [paymentNote, setPaymentNote] = useState("");
+    const [shipmentForm, setShipmentForm] = useState<ShipmentForm>(emptyShipmentForm);
     const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
     const [bulkAction, setBulkAction] = useState<BulkAction | "">("");
     const [bulkResult, setBulkResult] = useState<BackendBulkOrderStatusResult | null>(null);
@@ -223,7 +275,18 @@ export function AdminLogisticsPage() {
     const loadOrder = useAdminOrdersStore((state) => state.loadOrder);
     const updateStatus = useAdminOrdersStore((state) => state.updateStatus);
     const updatePaymentStatus = useAdminOrdersStore((state) => state.updatePaymentStatus);
+    const createShipment = useAdminOrdersStore((state) => state.createShipment);
+    const syncShipment = useAdminOrdersStore((state) => state.syncShipment);
+    const cancelShipment = useAdminOrdersStore((state) => state.cancelShipment);
     const bulkUpdateStatus = useAdminOrdersStore((state) => state.bulkUpdateStatus);
+    const carriers = useAdminShippingCarriersStore((state) => state.carriers);
+    const loadCarriers = useAdminShippingCarriersStore((state) => state.loadCarriers);
+    const provinces = useGhnLocationStore((state) => state.provinces);
+    const districtsByProvince = useGhnLocationStore((state) => state.districtsByProvince);
+    const wardsByDistrict = useGhnLocationStore((state) => state.wardsByDistrict);
+    const loadProvinces = useGhnLocationStore((state) => state.loadProvinces);
+    const loadDistricts = useGhnLocationStore((state) => state.loadDistricts);
+    const loadWards = useGhnLocationStore((state) => state.loadWards);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const user = useAuthStore((state) => state.session?.user ?? null);
     const canUpdateOrderStatus = hasAdminPermission(user, "admin.orders.status.update");
@@ -233,6 +296,11 @@ export function AdminLogisticsPage() {
     useEffect(() => {
         void loadOrders();
     }, [loadOrders]);
+
+    useEffect(() => {
+        void loadCarriers({ activeOnly: true });
+        void loadProvinces();
+    }, [loadCarriers, loadProvinces]);
 
     const filteredOrders = useMemo(() => {
         const keyword = query.trim().toLowerCase();
@@ -263,6 +331,9 @@ export function AdminLogisticsPage() {
         ? orders.find((order) => String(order.id) === activeOrderId)
         : undefined;
     const activeOrder = activeOrderId ? orderDetails[activeOrderId] : undefined;
+    const selectedCarrier = carriers.find((carrier) => String(carrier.id) === shipmentForm.shippingCarrierId);
+    const districts = shipmentForm.shippingProvinceId ? districtsByProvince[shipmentForm.shippingProvinceId] ?? [] : [];
+    const wards = shipmentForm.shippingDistrictId ? wardsByDistrict[shipmentForm.shippingDistrictId] ?? [] : [];
     const availableBulkActions = useMemo(() => bulkActionsForFilter(statusFilter), [statusFilter]);
     const isAllFilteredSelected =
         filteredOrders.length > 0 && filteredOrders.every((order) => selectedOrderIds.includes(String(order.id)));
@@ -291,6 +362,25 @@ export function AdminLogisticsPage() {
     }, [activeOrder, activeOrderSummary]);
 
     useEffect(() => {
+        if (!activeOrder || activeOrder.shipment) {
+            return;
+        }
+
+        const carrier = carriers[0] ?? null;
+        setShipmentForm(shipmentFormFromOrder(activeOrder, carrier));
+    }, [activeOrder, carriers]);
+
+    useEffect(() => {
+        if (!shipmentForm.shippingProvinceId) return;
+        void loadDistricts(Number(shipmentForm.shippingProvinceId));
+    }, [loadDistricts, shipmentForm.shippingProvinceId]);
+
+    useEffect(() => {
+        if (!shipmentForm.shippingDistrictId) return;
+        void loadWards(Number(shipmentForm.shippingDistrictId));
+    }, [loadWards, shipmentForm.shippingDistrictId]);
+
+    useEffect(() => {
         setSelectedOrderIds((current) =>
             current.filter((id) => orders.some((order) => String(order.id) === id)),
         );
@@ -311,6 +401,121 @@ export function AdminLogisticsPage() {
         setDetailOpen(true);
     }
 
+    function updateShipmentField<K extends keyof ShipmentForm>(key: K, value: ShipmentForm[K]) {
+        setShipmentForm((current) => ({
+            ...current,
+            [key]: value,
+        }));
+    }
+
+    function handleCarrierChange(carrierId: string) {
+        const carrier = carriers.find((item) => String(item.id) === carrierId);
+
+        setShipmentForm((current) => ({
+            ...current,
+            shippingCarrierId: carrierId,
+            serviceTypeId: String(carrier?.default_service_type_id ?? (current.serviceTypeId || 2)),
+            paymentTypeId: String(carrier?.default_payment_type_id ?? (current.paymentTypeId || 1)),
+            requiredNote: carrier?.default_required_note ?? current.requiredNote,
+            weight: String(carrier?.default_weight ?? (current.weight || 1000)),
+            length: String(carrier?.default_length ?? (current.length || 20)),
+            width: String(carrier?.default_width ?? (current.width || 20)),
+            height: String(carrier?.default_height ?? (current.height || 10)),
+        }));
+    }
+
+    async function handleCreateShipment() {
+        if (!canUpdateOrderStatus) {
+            pushToast({ tone: "warning", message: "Ban chua co quyen tao van don." });
+            return;
+        }
+
+        if (!activeOrder || !activeOrderSummary) {
+            return;
+        }
+
+        if (activeOrder.status !== "CONFIRMED") {
+            pushToast({ tone: "warning", message: "Chi don da xac nhan moi duoc tao van don." });
+            return;
+        }
+
+        if (!shipmentForm.shippingCarrierId) {
+            pushToast({ tone: "warning", message: "Vui long chon don vi van chuyen." });
+            return;
+        }
+
+        if (
+            selectedCarrier?.provider === "GHN" &&
+            (!shipmentForm.shippingLine1 ||
+                !shipmentForm.shippingProvinceName ||
+                !shipmentForm.shippingDistrictName ||
+                !shipmentForm.shippingWardName)
+        ) {
+            pushToast({ tone: "warning", message: "Can bo sung day du dia chi GHN truoc khi tao van don." });
+            return;
+        }
+
+        if (selectedCarrier?.provider !== "GHN" && !shipmentForm.trackingCode.trim()) {
+            pushToast({ tone: "warning", message: "Can nhap ma van don cho carrier thu cong." });
+            return;
+        }
+
+        const result = await createShipment(String(activeOrderSummary.id), {
+            shipping_carrier_id: Number(shipmentForm.shippingCarrierId),
+            tracking_code: shipmentForm.trackingCode.trim() || undefined,
+            tracking_url: shipmentForm.trackingUrl.trim() || undefined,
+            service_type_id: numberFromForm(shipmentForm.serviceTypeId),
+            payment_type_id: numberFromForm(shipmentForm.paymentTypeId),
+            required_note: shipmentForm.requiredNote,
+            weight: numberFromForm(shipmentForm.weight),
+            length: numberFromForm(shipmentForm.length),
+            width: numberFromForm(shipmentForm.width),
+            height: numberFromForm(shipmentForm.height),
+            shipping_line1: shipmentForm.shippingLine1.trim() || undefined,
+            shipping_province_id: shipmentForm.shippingProvinceId ? Number(shipmentForm.shippingProvinceId) : null,
+            shipping_province_name: shipmentForm.shippingProvinceName || null,
+            shipping_district_id: shipmentForm.shippingDistrictId ? Number(shipmentForm.shippingDistrictId) : null,
+            shipping_district_name: shipmentForm.shippingDistrictName || null,
+            shipping_ward_code: shipmentForm.shippingWardCode || null,
+            shipping_ward_name: shipmentForm.shippingWardName || null,
+            note: shipmentForm.note.trim() || undefined,
+        });
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the tao van don." });
+            return;
+        }
+
+        pushToast({ tone: "success", message: `Da tao van don cho ${result.data.order_no}.` });
+        setShipmentForm(shipmentFormFromOrder(result.data, selectedCarrier));
+    }
+
+    async function handleSyncShipment() {
+        if (!activeOrderSummary) return;
+
+        const result = await syncShipment(String(activeOrderSummary.id));
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the dong bo GHN." });
+            return;
+        }
+
+        pushToast({ tone: "success", message: `Da dong bo van don ${result.data.order_no}.` });
+    }
+
+    async function handleCancelShipment() {
+        if (!activeOrderSummary) return;
+
+        const result = await cancelShipment(String(activeOrderSummary.id));
+
+        if (!result.success || !result.data) {
+            pushToast({ tone: "warning", message: result.error ?? "Khong the huy van don." });
+            return;
+        }
+
+        pushToast({ tone: "success", message: `Da huy van don ${result.data.order_no}.` });
+    }
+
     async function handleUpdateStatus() {
         if (!canUpdateOrderStatus) {
             pushToast({ tone: "warning", message: "Ban chua co quyen cap nhat trang thai don hang." });
@@ -323,6 +528,11 @@ export function AdminLogisticsPage() {
 
         if (!activeOrder.allowed_next_statuses.includes(nextStatus)) {
             pushToast({ tone: "warning", message: "Trang thai don hang khong hop le cho buoc tiep theo." });
+            return;
+        }
+
+        if (nextStatus === "SHIPPED" && !activeOrder.shipment) {
+            pushToast({ tone: "warning", message: "Can tao van don truoc khi ban giao van chuyen." });
             return;
         }
 
@@ -677,6 +887,269 @@ export function AdminLogisticsPage() {
                 ) : (
                     <div className="space-y-6">
                         <OrderSummaryGrid order={activeOrder} />
+
+                        <div className="space-y-4 rounded-2xl bg-surface-container-low p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <p className="text-xs font-label uppercase tracking-[0.14em] text-on-surface-variant">
+                                    Van don
+                                </p>
+                                {activeOrder.shipment?.provider === "GHN" ? (
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        disabled={isSaving || !canUpdateOrderStatus || Boolean(activeOrder.shipment.cancelled_at)}
+                                        onClick={() => void handleSyncShipment()}
+                                    >
+                                        Dong bo GHN
+                                    </Button>
+                                ) : null}
+                            </div>
+
+                            {activeOrder.shipment ? (
+                                <div className="space-y-4">
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <FieldValue label="Don vi" value={activeOrder.shipment.carrier?.name ?? activeOrder.shipping_carrier} />
+                                        <FieldValue label="Ma van don" value={activeOrder.shipment.tracking_code} />
+                                        <FieldValue label="Trang thai carrier" value={activeOrder.shipment.status} />
+                                        <FieldValue
+                                            label="Phi thuc te"
+                                            value={
+                                                activeOrder.shipment.shipping_fee !== null
+                                                    ? formatCurrency(Number(activeOrder.shipment.shipping_fee))
+                                                    : "Chua co"
+                                            }
+                                        />
+                                        <FieldValue label="COD" value={formatCurrency(Number(activeOrder.shipment.cod_amount ?? 0))} />
+                                        <FieldValue label="Dong bo luc" value={activeOrder.shipment.synced_at ? formatDate(activeOrder.shipment.synced_at) : "Chua dong bo"} />
+                                    </div>
+                                    {activeOrder.shipment.tracking_url ? (
+                                        <a
+                                            className="inline-flex text-sm font-medium text-primary hover:underline"
+                                            href={activeOrder.shipment.tracking_url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                        >
+                                            Mo trang tracking
+                                        </a>
+                                    ) : null}
+                                    {["CONFIRMED", "PACKED"].includes(activeOrder.status) ? (
+                                        <Button
+                                            variant="ghost"
+                                            disabled={isSaving || !canUpdateOrderStatus || Boolean(activeOrder.shipment.cancelled_at)}
+                                            onClick={() => void handleCancelShipment()}
+                                        >
+                                            Huy van don
+                                        </Button>
+                                    ) : null}
+                                </div>
+                            ) : activeOrder.status !== "CONFIRMED" ? (
+                                <div className="rounded-2xl border border-outline-variant/20 bg-surface px-4 py-3 text-sm text-on-surface-variant">
+                                    Tao van don sau khi don da duoc xac nhan.
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Don vi van chuyen</span>
+                                            <select
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.shippingCarrierId}
+                                                onChange={(event) => handleCarrierChange(event.target.value)}
+                                            >
+                                                <option value="">Chon carrier</option>
+                                                {carriers.map((carrier) => (
+                                                    <option key={carrier.id} value={carrier.id}>
+                                                        {carrier.name} ({carrier.provider})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Ghi chu tao van don</span>
+                                            <input
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.note}
+                                                onChange={(event) => updateShipmentField("note", event.target.value)}
+                                            />
+                                        </label>
+                                    </div>
+
+                                    {selectedCarrier?.provider !== "GHN" ? (
+                                        <div className="grid gap-4 md:grid-cols-2">
+                                            <label className="block space-y-2 text-sm">
+                                                <span className="font-medium">Ma van don thu cong</span>
+                                                <input
+                                                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                    value={shipmentForm.trackingCode}
+                                                    onChange={(event) => updateShipmentField("trackingCode", event.target.value)}
+                                                />
+                                            </label>
+                                            <label className="block space-y-2 text-sm">
+                                                <span className="font-medium">Tracking URL</span>
+                                                <input
+                                                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                    value={shipmentForm.trackingUrl}
+                                                    onChange={(event) => updateShipmentField("trackingUrl", event.target.value)}
+                                                />
+                                            </label>
+                                        </div>
+                                    ) : null}
+
+                                    <div className="grid gap-4 md:grid-cols-4">
+                                        {[
+                                            ["weight", "Can nang (g)"],
+                                            ["length", "Dai (cm)"],
+                                            ["width", "Rong (cm)"],
+                                            ["height", "Cao (cm)"],
+                                        ].map(([key, label]) => (
+                                            <label key={key} className="block space-y-2 text-sm">
+                                                <span className="font-medium">{label}</span>
+                                                <input
+                                                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                    type="number"
+                                                    min={1}
+                                                    value={shipmentForm[key as keyof ShipmentForm]}
+                                                    onChange={(event) =>
+                                                        updateShipmentField(key as keyof ShipmentForm, event.target.value)
+                                                    }
+                                                />
+                                            </label>
+                                        ))}
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-3">
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Service type</span>
+                                            <input
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                type="number"
+                                                min={1}
+                                                value={shipmentForm.serviceTypeId}
+                                                onChange={(event) => updateShipmentField("serviceTypeId", event.target.value)}
+                                            />
+                                        </label>
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Payment type</span>
+                                            <input
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                type="number"
+                                                min={1}
+                                                value={shipmentForm.paymentTypeId}
+                                                onChange={(event) => updateShipmentField("paymentTypeId", event.target.value)}
+                                            />
+                                        </label>
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Required note</span>
+                                            <select
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.requiredNote}
+                                                onChange={(event) => updateShipmentField("requiredNote", event.target.value)}
+                                            >
+                                                <option value="KHONGCHOXEMHANG">KHONGCHOXEMHANG</option>
+                                                <option value="CHOTHUHANG">CHOTHUHANG</option>
+                                                <option value="CHOXEMHANGKHONGTHU">CHOXEMHANGKHONGTHU</option>
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <div className="grid gap-4 md:grid-cols-2">
+                                        <label className="block space-y-2 text-sm md:col-span-2">
+                                            <span className="font-medium">Dia chi chi tiet</span>
+                                            <input
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.shippingLine1}
+                                                onChange={(event) => updateShipmentField("shippingLine1", event.target.value)}
+                                            />
+                                        </label>
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Tinh/thanh</span>
+                                            <select
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.shippingProvinceId}
+                                                onChange={(event) => {
+                                                    const province = provinces.find(
+                                                        (item) => String(item.ProvinceID) === event.target.value,
+                                                    );
+                                                    setShipmentForm((current) => ({
+                                                        ...current,
+                                                        shippingProvinceId: event.target.value,
+                                                        shippingProvinceName: province?.ProvinceName ?? "",
+                                                        shippingDistrictId: "",
+                                                        shippingDistrictName: "",
+                                                        shippingWardCode: "",
+                                                        shippingWardName: "",
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="">Chon tinh/thanh</option>
+                                                {provinces.map((province) => (
+                                                    <option key={province.ProvinceID} value={province.ProvinceID}>
+                                                        {province.ProvinceName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Quan/huyen</span>
+                                            <select
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.shippingDistrictId}
+                                                disabled={!shipmentForm.shippingProvinceId}
+                                                onChange={(event) => {
+                                                    const district = districts.find(
+                                                        (item) => String(item.DistrictID) === event.target.value,
+                                                    );
+                                                    setShipmentForm((current) => ({
+                                                        ...current,
+                                                        shippingDistrictId: event.target.value,
+                                                        shippingDistrictName: district?.DistrictName ?? "",
+                                                        shippingWardCode: "",
+                                                        shippingWardName: "",
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="">Chon quan/huyen</option>
+                                                {districts.map((district) => (
+                                                    <option key={district.DistrictID} value={district.DistrictID}>
+                                                        {district.DistrictName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                        <label className="block space-y-2 text-sm">
+                                            <span className="font-medium">Phuong/xa</span>
+                                            <select
+                                                className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                                                value={shipmentForm.shippingWardCode}
+                                                disabled={!shipmentForm.shippingDistrictId}
+                                                onChange={(event) => {
+                                                    const ward = wards.find((item) => item.WardCode === event.target.value);
+                                                    setShipmentForm((current) => ({
+                                                        ...current,
+                                                        shippingWardCode: event.target.value,
+                                                        shippingWardName: ward?.WardName ?? "",
+                                                    }));
+                                                }}
+                                            >
+                                                <option value="">Chon phuong/xa</option>
+                                                {wards.map((ward) => (
+                                                    <option key={ward.WardCode} value={ward.WardCode}>
+                                                        {ward.WardName}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </label>
+                                    </div>
+
+                                    <Button
+                                        disabled={isSaving || !canUpdateOrderStatus || !shipmentForm.shippingCarrierId}
+                                        onClick={() => void handleCreateShipment()}
+                                    >
+                                        {isSaving ? "Dang tao..." : "Tao van don"}
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
 
                         <div className="space-y-3 rounded-2xl bg-surface-container-low p-4">
                             <p className="text-xs font-label uppercase tracking-[0.14em] text-on-surface-variant">

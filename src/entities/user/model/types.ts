@@ -41,6 +41,12 @@ export interface UserAddress {
     phone: string;
     line1: string;
     city: string;
+    ghnProvinceId?: number | null;
+    ghnProvinceName?: string | null;
+    ghnDistrictId?: number | null;
+    ghnDistrictName?: string | null;
+    ghnWardCode?: string | null;
+    ghnWardName?: string | null;
     note?: string;
     isDefault: boolean;
 }

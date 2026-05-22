@@ -8,6 +8,7 @@ export type AdminModuleId =
     | "products"
     | "categories"
     | "suppliers"
+    | "shippingCarriers"
     | "community"
     | "logistics"
     | "settings"
@@ -89,6 +90,19 @@ export const adminModules: AdminModule[] = [
             "admin.suppliers.create",
             "admin.suppliers.update",
             "admin.suppliers.delete",
+        ],
+        section: "commerce",
+    },
+    {
+        id: "shippingCarriers",
+        label: "Don vi van chuyen",
+        to: routes.adminShippingCarriers,
+        icon: "local_shipping",
+        permissions: [
+            "admin.shipping_carriers.view",
+            "admin.shipping_carriers.create",
+            "admin.shipping_carriers.update",
+            "admin.shipping_carriers.delete",
         ],
         section: "commerce",
     },

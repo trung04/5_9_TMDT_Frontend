@@ -214,6 +214,12 @@ export function adaptBackendUserAddress(address: BackendAccountProfile["addresse
         phone: address.phone,
         line1: address.line1,
         city: address.city,
+        ghnProvinceId: address.ghn_province_id ?? null,
+        ghnProvinceName: address.ghn_province_name ?? null,
+        ghnDistrictId: address.ghn_district_id ?? null,
+        ghnDistrictName: address.ghn_district_name ?? null,
+        ghnWardCode: address.ghn_ward_code ?? null,
+        ghnWardName: address.ghn_ward_name ?? null,
         note: address.note ?? "",
         isDefault: address.is_default,
     };

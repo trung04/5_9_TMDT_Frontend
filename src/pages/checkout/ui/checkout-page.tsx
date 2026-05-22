@@ -9,13 +9,21 @@ import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
 import { useCustomerOrdersStore } from "@/shared/lib/store/use-customer-orders-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
+import { useGhnLocationStore } from "@/shared/lib/store/use-ghn-location-store";
 import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
 import { Icon } from "@/shared/ui";
 
 type CheckoutForm = {
     recipientName: string;
     recipientPhone: string;
+    shippingLine1: string;
     shippingAddress: string;
+    shippingProvinceId: string;
+    shippingProvinceName: string;
+    shippingDistrictId: string;
+    shippingDistrictName: string;
+    shippingWardCode: string;
+    shippingWardName: string;
     note: string;
 };
 
@@ -56,13 +64,24 @@ function getDefaultAddress(profile: ReturnType<typeof useAccountStore.getState>[
 
 function buildForm(profile: ReturnType<typeof useAccountStore.getState>["profile"]): CheckoutForm {
     const defaultAddress = getDefaultAddress(profile);
+    const provinceName = defaultAddress?.ghnProvinceName ?? "";
+    const districtName = defaultAddress?.ghnDistrictName ?? "";
+    const wardName = defaultAddress?.ghnWardName ?? "";
+    const line1 = defaultAddress?.line1 ?? profile.address;
 
     return {
         recipientName: defaultAddress?.recipient ?? profile.name,
         recipientPhone: defaultAddress?.phone ?? profile.phone,
-        shippingAddress: [defaultAddress?.line1 ?? profile.address, defaultAddress?.city ?? profile.city]
+        shippingLine1: line1,
+        shippingAddress: [line1, wardName, districtName, provinceName || defaultAddress?.city || profile.city]
             .filter(Boolean)
             .join(", "),
+        shippingProvinceId: defaultAddress?.ghnProvinceId ? String(defaultAddress.ghnProvinceId) : "",
+        shippingProvinceName: provinceName,
+        shippingDistrictId: defaultAddress?.ghnDistrictId ? String(defaultAddress.ghnDistrictId) : "",
+        shippingDistrictName: districtName,
+        shippingWardCode: defaultAddress?.ghnWardCode ?? "",
+        shippingWardName: wardName,
         note: defaultAddress?.note ?? "",
     };
 }
@@ -211,6 +230,12 @@ export function CheckoutPage() {
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const products = useStorefrontCatalogStore((state) => state.products);
     const productDetails = useStorefrontCatalogStore((state) => state.productDetails);
+    const provinces = useGhnLocationStore((state) => state.provinces);
+    const districtsByProvince = useGhnLocationStore((state) => state.districtsByProvince);
+    const wardsByDistrict = useGhnLocationStore((state) => state.wardsByDistrict);
+    const loadProvinces = useGhnLocationStore((state) => state.loadProvinces);
+    const loadDistricts = useGhnLocationStore((state) => state.loadDistricts);
+    const loadWards = useGhnLocationStore((state) => state.loadWards);
     const [form, setForm] = useState<CheckoutForm>(() => buildForm(profile));
     const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("COD");
     const [submitError, setSubmitError] = useState("");
@@ -224,8 +249,22 @@ export function CheckoutPage() {
     }, [loadCart]);
 
     useEffect(() => {
+        void loadProvinces();
+    }, [loadProvinces]);
+
+    useEffect(() => {
         setForm(buildForm(profile));
     }, [profile]);
+
+    useEffect(() => {
+        if (!form.shippingProvinceId) return;
+        void loadDistricts(Number(form.shippingProvinceId));
+    }, [form.shippingProvinceId, loadDistricts]);
+
+    useEffect(() => {
+        if (!form.shippingDistrictId) return;
+        void loadWards(Number(form.shippingDistrictId));
+    }, [form.shippingDistrictId, loadWards]);
 
     const guestCartItems: CheckoutCartItemView[] = guestItems.map((item) => {
         const product =
@@ -248,8 +287,18 @@ export function CheckoutPage() {
     const subtotal =
         cart?.subtotal ??
         guestCartItems.reduce((totalValue, item) => totalValue + item.unitPrice * item.quantity, 0);
-    const hasShippingAddress = form.shippingAddress.trim().length > 0;
-    const shippingFee = hasShippingAddress ? calculateShippingFee(subtotal, form.shippingAddress) : null;
+    const districts = form.shippingProvinceId ? districtsByProvince[form.shippingProvinceId] ?? [] : [];
+    const wards = form.shippingDistrictId ? wardsByDistrict[form.shippingDistrictId] ?? [] : [];
+    const fullShippingAddress = [
+        form.shippingLine1,
+        form.shippingWardName,
+        form.shippingDistrictName,
+        form.shippingProvinceName,
+    ]
+        .filter(Boolean)
+        .join(", ");
+    const hasShippingAddress = fullShippingAddress.trim().length > 0;
+    const shippingFee = hasShippingAddress ? calculateShippingFee(subtotal, fullShippingAddress) : null;
     const discount = 0;
     const total = subtotal + (shippingFee ?? 0) - discount;
 
@@ -308,7 +357,14 @@ export function CheckoutPage() {
             return;
         }
 
-        if (!form.recipientName.trim() || !form.recipientPhone.trim() || !form.shippingAddress.trim()) {
+        if (
+            !form.recipientName.trim() ||
+            !form.recipientPhone.trim() ||
+            !form.shippingLine1.trim() ||
+            !form.shippingProvinceId ||
+            !form.shippingDistrictId ||
+            !form.shippingWardCode
+        ) {
             setSubmitError("Vui lòng hoàn tất đầy đủ thông tin nhận hàng trước khi đặt đơn.");
             return;
         }
@@ -327,7 +383,14 @@ export function CheckoutPage() {
         const result = await checkout({
             recipient_name: form.recipientName.trim(),
             recipient_phone: form.recipientPhone.trim(),
-            shipping_address: form.shippingAddress.trim(),
+            shipping_address: fullShippingAddress.trim(),
+            shipping_line1: form.shippingLine1.trim(),
+            shipping_province_id: Number(form.shippingProvinceId),
+            shipping_province_name: form.shippingProvinceName,
+            shipping_district_id: Number(form.shippingDistrictId),
+            shipping_district_name: form.shippingDistrictName,
+            shipping_ward_code: form.shippingWardCode,
+            shipping_ward_name: form.shippingWardName,
             note: form.note.trim(),
             payment_method: paymentMethod,
             payment_gateway: paymentMethod === "BANK_TRANSFER" ? "Manual bank transfer" : undefined,
@@ -341,7 +404,8 @@ export function CheckoutPage() {
         updateProfile({
             name: form.recipientName.trim(),
             phone: form.recipientPhone.trim(),
-            address: form.shippingAddress.trim(),
+            address: fullShippingAddress.trim(),
+            city: form.shippingProvinceName,
         });
         await loadCart();
 
@@ -507,15 +571,106 @@ export function CheckoutPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-6 space-y-2">
-                                <label className="text-xs uppercase tracking-widest text-on-surface-variant">
-                                    Địa chỉ giao hàng
-                                </label>
-                                <textarea
-                                    className="min-h-28 w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
-                                    value={form.shippingAddress}
-                                    onChange={(event) => updateField("shippingAddress", event.target.value)}
-                                />
+                            <div className="mt-6 space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase tracking-widest text-on-surface-variant">
+                                        Dia chi chi tiet
+                                    </label>
+                                    <input
+                                        className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
+                                        value={form.shippingLine1}
+                                        onChange={(event) => updateField("shippingLine1", event.target.value)}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                    <label className="space-y-2">
+                                        <span className="block text-xs uppercase tracking-widest text-on-surface-variant">
+                                            Tinh/thanh
+                                        </span>
+                                        <select
+                                            className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
+                                            value={form.shippingProvinceId}
+                                            onChange={(event) => {
+                                                const province = provinces.find(
+                                                    (item) => String(item.ProvinceID) === event.target.value,
+                                                );
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    shippingProvinceId: event.target.value,
+                                                    shippingProvinceName: province?.ProvinceName ?? "",
+                                                    shippingDistrictId: "",
+                                                    shippingDistrictName: "",
+                                                    shippingWardCode: "",
+                                                    shippingWardName: "",
+                                                }));
+                                            }}
+                                        >
+                                            <option value="">Chon tinh/thanh</option>
+                                            {provinces.map((province) => (
+                                                <option key={province.ProvinceID} value={province.ProvinceID}>
+                                                    {province.ProvinceName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="block text-xs uppercase tracking-widest text-on-surface-variant">
+                                            Quan/huyen
+                                        </span>
+                                        <select
+                                            className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
+                                            value={form.shippingDistrictId}
+                                            disabled={!form.shippingProvinceId}
+                                            onChange={(event) => {
+                                                const district = districts.find(
+                                                    (item) => String(item.DistrictID) === event.target.value,
+                                                );
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    shippingDistrictId: event.target.value,
+                                                    shippingDistrictName: district?.DistrictName ?? "",
+                                                    shippingWardCode: "",
+                                                    shippingWardName: "",
+                                                }));
+                                            }}
+                                        >
+                                            <option value="">Chon quan/huyen</option>
+                                            {districts.map((district) => (
+                                                <option key={district.DistrictID} value={district.DistrictID}>
+                                                    {district.DistrictName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                    <label className="space-y-2">
+                                        <span className="block text-xs uppercase tracking-widest text-on-surface-variant">
+                                            Phuong/xa
+                                        </span>
+                                        <select
+                                            className="w-full rounded-xl border-b-2 border-transparent bg-surface-container-highest px-4 py-3 outline-none transition-all focus:border-primary focus:ring-0"
+                                            value={form.shippingWardCode}
+                                            disabled={!form.shippingDistrictId}
+                                            onChange={(event) => {
+                                                const ward = wards.find((item) => item.WardCode === event.target.value);
+                                                setForm((current) => ({
+                                                    ...current,
+                                                    shippingWardCode: event.target.value,
+                                                    shippingWardName: ward?.WardName ?? "",
+                                                }));
+                                            }}
+                                        >
+                                            <option value="">Chon phuong/xa</option>
+                                            {wards.map((ward) => (
+                                                <option key={ward.WardCode} value={ward.WardCode}>
+                                                    {ward.WardName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                                <div className="rounded-2xl bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
+                                    {fullShippingAddress || "Dia chi day du se hien thi sau khi chon khu vuc GHN."}
+                                </div>
                             </div>
 
                             <div className="mt-6 space-y-2">

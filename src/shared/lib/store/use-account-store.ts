@@ -29,6 +29,12 @@ interface AddressInput {
     phone: string;
     line1: string;
     city: string;
+    ghnProvinceId?: number | null;
+    ghnProvinceName?: string | null;
+    ghnDistrictId?: number | null;
+    ghnDistrictName?: string | null;
+    ghnWardCode?: string | null;
+    ghnWardName?: string | null;
     note?: string;
 }
 
@@ -147,6 +153,23 @@ function profilePayload(profile: UserProfile) {
         sms_alerts: profile.smsAlerts,
         order_email: profile.orderEmail,
         security_alerts: profile.securityAlerts,
+    };
+}
+
+function addressPayload(input: AddressInput) {
+    return {
+        label: input.label.trim(),
+        recipient: input.recipient.trim(),
+        phone: input.phone.trim(),
+        line1: input.line1.trim(),
+        city: input.city.trim(),
+        ghn_province_id: input.ghnProvinceId ?? null,
+        ghn_province_name: input.ghnProvinceName?.trim() || null,
+        ghn_district_id: input.ghnDistrictId ?? null,
+        ghn_district_name: input.ghnDistrictName?.trim() || null,
+        ghn_ward_code: input.ghnWardCode?.trim() || null,
+        ghn_ward_name: input.ghnWardName?.trim() || null,
+        note: input.note?.trim() || null,
     };
 }
 
@@ -274,14 +297,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
             const response = await apiRequest<BackendAccountProfileResponse>("/account/addresses", {
                 method: "POST",
                 token,
-                body: {
-                    label: input.label.trim(),
-                    recipient: input.recipient.trim(),
-                    phone: input.phone.trim(),
-                    line1: input.line1.trim(),
-                    city: input.city.trim(),
-                    note: input.note?.trim() || null,
-                },
+                body: addressPayload(input),
             });
             const { profile } = syncProfileResponse(set, response);
 
@@ -315,14 +331,7 @@ export const useAccountStore = create<AccountState>()((set, get) => ({
                 {
                     method: "PUT",
                     token,
-                    body: {
-                        label: input.label.trim(),
-                        recipient: input.recipient.trim(),
-                        phone: input.phone.trim(),
-                        line1: input.line1.trim(),
-                        city: input.city.trim(),
-                        note: input.note?.trim() || null,
-                    },
+                    body: addressPayload(input),
                 },
             );
             const { profile } = syncProfileResponse(set, response);

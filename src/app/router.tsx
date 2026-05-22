@@ -20,6 +20,7 @@ import { AdminDashboardPage } from "@/pages/admin-dashboard/ui/admin-dashboard-p
 import { AdminLogisticsPage } from "@/pages/admin-logistics/ui/admin-logistics-page";
 import { AdminRepositoryPage } from "@/pages/admin-repository/ui/admin-repository-page";
 import { AdminSettingsPage } from "@/pages/admin-settings/ui/admin-settings-page";
+import { AdminShippingCarriersPage } from "@/pages/admin-shipping-carriers/ui/admin-shipping-carriers-page";
 import { AdminUsersPage } from "@/pages/admin-users/ui/admin-users-page";
 import { ProductCatalogPage } from "@/pages/catalog/ui/product-catalog-page";
 import { CheckoutPage } from "@/pages/checkout/ui/checkout-page";
@@ -180,6 +181,14 @@ export function AppRoutes() {
                     element={
                         <AdminModuleGuard moduleId="suppliers">
                             <AdminRepositoryPage lockedTab="suppliers" />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminShippingCarriers}
+                    element={
+                        <AdminModuleGuard moduleId="shippingCarriers">
+                            <AdminShippingCarriersPage />
                         </AdminModuleGuard>
                     }
                 />

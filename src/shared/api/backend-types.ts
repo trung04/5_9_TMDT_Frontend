@@ -131,6 +131,12 @@ export interface BackendUserAddress {
     phone: string;
     line1: string;
     city: string;
+    ghn_province_id?: number | null;
+    ghn_province_name?: string | null;
+    ghn_district_id?: number | null;
+    ghn_district_name?: string | null;
+    ghn_ward_code?: string | null;
+    ghn_ward_name?: string | null;
     note: string | null;
     is_default: boolean;
 }
@@ -379,6 +385,82 @@ export interface BackendProduct {
     updated_at?: string;
 }
 
+export interface BackendShippingCarrier {
+    id: number;
+    code: string;
+    name: string;
+    provider: "GHN" | "MANUAL" | string;
+    tracking_url_template: string | null;
+    default_weight: number;
+    default_length: number;
+    default_width: number;
+    default_height: number;
+    default_service_type_id: number | null;
+    default_payment_type_id: number | null;
+    default_required_note: string | null;
+    pickup_name: string | null;
+    pickup_phone: string | null;
+    pickup_address: string | null;
+    pickup_ward_code: string | null;
+    pickup_ward_name: string | null;
+    pickup_district_id: number | null;
+    pickup_district_name: string | null;
+    pickup_province_id: number | null;
+    pickup_province_name: string | null;
+    settings?: Record<string, unknown> | null;
+    is_active: boolean;
+    is_deleted: boolean;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendOrderShipment {
+    id: number;
+    order_id: number;
+    shipping_carrier_id: number;
+    provider: string;
+    status: string;
+    tracking_code: string | null;
+    tracking_url: string | null;
+    service_type_id: number | null;
+    payment_type_id: number | null;
+    required_note: string | null;
+    weight: number | null;
+    length: number | null;
+    width: number | null;
+    height: number | null;
+    shipping_fee: number | string | null;
+    cod_amount: number | string | null;
+    expected_delivery_time: string | null;
+    synced_at: string | null;
+    cancelled_at: string | null;
+    carrier: Pick<BackendShippingCarrier, "id" | "code" | "name" | "provider"> | null;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendGhnProvince {
+    ProvinceID: number;
+    ProvinceName: string;
+    Code?: string;
+    NameExtension?: string[];
+}
+
+export interface BackendGhnDistrict {
+    DistrictID: number;
+    ProvinceID: number;
+    DistrictName: string;
+    Code?: string;
+    Type?: number;
+    SupportType?: number;
+}
+
+export interface BackendGhnWard {
+    WardCode: string;
+    DistrictID: number;
+    WardName: string;
+}
+
 export interface BackendAuthResponse {
     message: string;
     access_token: string;
@@ -442,6 +524,37 @@ export interface BackendSupplierListResponse {
         per_page: number;
         total: number;
     };
+}
+
+export interface BackendShippingCarrierListResponse {
+    message: string;
+    data: BackendShippingCarrier[];
+    pagination?: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
+}
+
+export interface BackendShippingCarrierMutationResponse {
+    message: string;
+    data: BackendShippingCarrier;
+}
+
+export interface BackendGhnProvincesResponse {
+    message: string;
+    data: BackendGhnProvince[];
+}
+
+export interface BackendGhnDistrictsResponse {
+    message: string;
+    data: BackendGhnDistrict[];
+}
+
+export interface BackendGhnWardsResponse {
+    message: string;
+    data: BackendGhnWard[];
 }
 
 export interface BackendRegionListResponse {
@@ -551,12 +664,20 @@ export interface BackendOrderSummary {
     stock_deducted_at?: string | null;
     shipping_carrier?: string | null;
     shipping_code?: string | null;
+    shipping_line1?: string | null;
+    shipping_province_id?: number | null;
+    shipping_province_name?: string | null;
+    shipping_district_id?: number | null;
+    shipping_district_name?: string | null;
+    shipping_ward_code?: string | null;
+    shipping_ward_name?: string | null;
     shipped_at?: string | null;
     delivered_at?: string | null;
     cancelled_at?: string | null;
     item_count: number;
     customer?: BackendUser | null;
     payment: BackendPayment | null;
+    shipment?: BackendOrderShipment | null;
     created_at: string;
     updated_at: string;
 }
@@ -585,6 +706,13 @@ export interface BackendOrderDetail extends BackendOrderSummary {
     recipient_name: string;
     recipient_phone: string;
     shipping_address: string;
+    shipping_line1?: string | null;
+    shipping_province_id?: number | null;
+    shipping_province_name?: string | null;
+    shipping_district_id?: number | null;
+    shipping_district_name?: string | null;
+    shipping_ward_code?: string | null;
+    shipping_ward_name?: string | null;
     note: string | null;
     allowed_next_statuses: string[];
     allowed_payment_statuses?: string[];

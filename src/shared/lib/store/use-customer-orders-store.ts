@@ -22,6 +22,13 @@ interface CheckoutInput {
     recipient_name: string;
     recipient_phone: string;
     shipping_address: string;
+    shipping_line1?: string;
+    shipping_province_id?: number | null;
+    shipping_province_name?: string | null;
+    shipping_district_id?: number | null;
+    shipping_district_name?: string | null;
+    shipping_ward_code?: string | null;
+    shipping_ward_name?: string | null;
     note?: string;
     payment_method: "COD" | "BANK_TRANSFER";
     payment_gateway?: string;

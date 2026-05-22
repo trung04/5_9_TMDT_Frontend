@@ -55,6 +55,7 @@ export const routes = {
     adminProducts: "/admin/products",
     adminCategories: "/admin/categories",
     adminSuppliers: "/admin/suppliers",
+    adminShippingCarriers: "/admin/shipping-carriers",
     adminLogistics: "/admin/logistics",
     adminSettings: "/admin/settings",
     adminAccess: "/admin/access",
