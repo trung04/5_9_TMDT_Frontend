@@ -58,7 +58,7 @@ export function StorefrontFooter() {
                             className="text-zinc-500 transition-colors hover:text-[#0d631b]"
                             to={routes.story}
                         >
-                            Câu chuyện
+                            Bài viết
                         </Link>
                         <Link
                             className="text-zinc-500 transition-colors hover:text-[#0d631b]"
@@ -119,7 +119,7 @@ export function StorefrontFooter() {
                                 className="inline-block text-zinc-600 transition-all hover:-translate-y-px hover:text-green-700"
                                 to={routes.story}
                             >
-                                Câu chuyện thương hiệu
+                                Bài viết cộng đồng
                             </Link>
                         </li>
                         <li>

@@ -34,13 +34,13 @@ export function StorefrontHeader() {
         variant === "catalog"
             ? [
                   { label: "Cửa hàng", to: routes.products },
-                  { label: "Câu chuyện", to: routes.story },
+                  { label: "Bài viết", to: routes.story },
                   { label: "Vùng miền", to: routes.regions },
                   { label: "Đăng nhập", to: routes.login },
               ]
             : [
                   { label: "Cửa hàng", to: routes.products },
-                  { label: "Câu chuyện", to: routes.story },
+                  { label: "Bài viết", to: routes.story },
                   { label: "Vùng miền", to: routes.regions },
               ];
 

@@ -9,6 +9,7 @@ import type {
     BackendProductMutationResponse,
     BackendSupplier,
     BackendSupplierListResponse,
+    BackendSupplierMutationResponse,
 } from "@/shared/api/backend-types";
 import { apiRequest, isUnauthorizedApiError } from "@/shared/api/backend-client";
 import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
@@ -39,6 +40,20 @@ interface CategoryPayload {
     is_active?: boolean;
 }
 
+interface SupplierPayload {
+    supplier_code: string;
+    name: string;
+    contact_name?: string | null;
+    phone: string;
+    email?: string | null;
+    address?: string | null;
+    is_active?: boolean;
+}
+
+interface LoadDataOptions {
+    includeProducts?: boolean;
+}
+
 interface AdminCatalogState {
     products: BackendProduct[];
     categories: BackendCategory[];
@@ -46,13 +61,16 @@ interface AdminCatalogState {
     isLoading: boolean;
     isSaving: boolean;
     error: string | null;
-    loadData: () => Promise<AsyncResult>;
+    loadData: (options?: LoadDataOptions) => Promise<AsyncResult>;
     createProduct: (payload: ProductPayload) => Promise<AsyncResult<BackendProduct>>;
     updateProduct: (productId: number, payload: ProductPayload) => Promise<AsyncResult<BackendProduct>>;
     deleteProduct: (productId: number) => Promise<AsyncResult>;
     createCategory: (payload: CategoryPayload) => Promise<AsyncResult<BackendCategory>>;
     updateCategory: (categoryId: number, payload: CategoryPayload) => Promise<AsyncResult<BackendCategory>>;
     deleteCategory: (categoryId: number) => Promise<AsyncResult>;
+    createSupplier: (payload: SupplierPayload) => Promise<AsyncResult<BackendSupplier>>;
+    updateSupplier: (supplierId: number, payload: SupplierPayload) => Promise<AsyncResult<BackendSupplier>>;
+    deleteSupplier: (supplierId: number) => Promise<AsyncResult>;
     reset: () => void;
 }
 
@@ -80,7 +98,7 @@ async function refreshStorefrontCatalog() {
 
 export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
     ...initialState,
-    loadData: async () => {
+    loadData: async (options = { includeProducts: true }) => {
         const accessToken = token();
 
         if (!accessToken) {
@@ -94,7 +112,12 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
 
         try {
             const [productsResponse, categoriesResponse, suppliersResponse] = await Promise.all([
-                apiRequest<BackendProductListResponse>("/admin/products", { token: accessToken }),
+                options.includeProducts
+                    ? apiRequest<BackendProductListResponse>("/admin/products", { token: accessToken })
+                    : Promise.resolve({
+                          message: "Products skipped.",
+                          data: [],
+                      } satisfies BackendProductListResponse),
                 apiRequest<BackendCategoryListResponse>("/categories?per_page=100", { token: accessToken }),
                 apiRequest<BackendSupplierListResponse>("/suppliers?per_page=100", { token: accessToken }),
             ]);
@@ -299,6 +322,103 @@ export const useAdminCatalogStore = create<AdminCatalogState>()((set) => ({
             }
 
             const message = error instanceof Error ? error.message : "Không thể xóa danh mục.";
+            set({ isSaving: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+    createSupplier: async (payload) => {
+        const accessToken = token();
+        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de tao nha cung cap." };
+
+        set({ isSaving: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendSupplierMutationResponse>("/admin/suppliers", {
+                method: "POST",
+                token: accessToken,
+                body: payload,
+            });
+
+            set((state) => ({
+                suppliers: [...state.suppliers, response.data],
+                isSaving: false,
+                error: null,
+            }));
+            await refreshStorefrontCatalog();
+            return { success: true, data: response.data };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the tao nha cung cap.";
+            set({ isSaving: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+    updateSupplier: async (supplierId, payload) => {
+        const accessToken = token();
+        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de cap nhat nha cung cap." };
+
+        set({ isSaving: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendSupplierMutationResponse>(
+                `/admin/suppliers/${supplierId}`,
+                {
+                    method: "PUT",
+                    token: accessToken,
+                    body: payload,
+                },
+            );
+
+            set((state) => ({
+                suppliers: state.suppliers.map((supplier) =>
+                    supplier.id === supplierId ? response.data : supplier,
+                ),
+                isSaving: false,
+                error: null,
+            }));
+            await refreshStorefrontCatalog();
+            return { success: true, data: response.data };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the cap nhat nha cung cap.";
+            set({ isSaving: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+    deleteSupplier: async (supplierId) => {
+        const accessToken = token();
+        if (!accessToken) return { success: false, error: "Ban can dang nhap admin de xoa nha cung cap." };
+
+        set({ isSaving: true, error: null });
+
+        try {
+            await apiRequest(`/admin/suppliers/${supplierId}`, {
+                method: "DELETE",
+                token: accessToken,
+            });
+
+            set((state) => ({
+                suppliers: state.suppliers.filter((supplier) => supplier.id !== supplierId),
+                isSaving: false,
+                error: null,
+            }));
+            await refreshStorefrontCatalog();
+            return { success: true };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the xoa nha cung cap.";
             set({ isSaving: false, error: message });
             return { success: false, error: message };
         }

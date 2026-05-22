@@ -1,17 +1,53 @@
 import { MemoryRouter } from "react-router-dom";
 import { act, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AppRoutes } from "@/app/router";
 import { adaptBackendUserToSession } from "@/shared/api/storefront-adapters";
+import { routes } from "@/shared/config/routes";
 import { resetDemoState } from "@/shared/lib/store/reset-demo";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
-import { createBackendUser } from "@/test/backend-test-utils";
+import { createBackendUser, getRequestPath, jsonResponse } from "@/test/backend-test-utils";
 import { AdminSidebar } from "@/widgets/admin-sidebar";
+
+function renderApp(route: string) {
+    return render(
+        <MemoryRouter initialEntries={[route]}>
+            <AppRoutes />
+        </MemoryRouter>,
+    );
+}
+
+function setAdminSession(permissions: string[], isSuper = false) {
+    useAuthStore.setState({
+        session: {
+            user: {
+                id: isSuper ? "1" : "2",
+                name: isSuper ? "Root" : "Operator",
+                email: isSuper ? "root@example.com" : "operator@example.com",
+                role: "admin",
+                adminRole: {
+                    id: isSuper ? "1" : "2",
+                    name: isSuper ? "Super Admin" : "Child Admin",
+                    slug: isSuper ? "super_admin" : "child_admin",
+                    isSuper,
+                },
+                permissions,
+            },
+            loggedInAt: "2026-05-21T00:00:00.000Z",
+        },
+        accessToken: "admin-token",
+        authSource: "backend",
+        isHydrating: false,
+    });
+}
 
 describe("admin RBAC frontend", () => {
     beforeEach(() => {
         localStorage.clear();
         resetDemoState();
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
     });
 
     it("adapts backend admin role and permissions into the auth session", () => {
@@ -61,7 +97,13 @@ describe("admin RBAC frontend", () => {
             </MemoryRouter>,
         );
 
+        expect(screen.getByText("Users")).toBeInTheDocument();
+        expect(screen.getByText("Products")).toBeInTheDocument();
+        expect(screen.getByText("Categories")).toBeInTheDocument();
+        expect(screen.getByText("Suppliers")).toBeInTheDocument();
         expect(screen.getByText("Phan quyen")).toBeInTheDocument();
+        expect(screen.getByText("Supplier don hang")).toBeInTheDocument();
+        expect(screen.getByText("Kho fulfillment")).toBeInTheDocument();
 
         act(() => {
             useAuthStore.setState({
@@ -92,6 +134,196 @@ describe("admin RBAC frontend", () => {
 
         expect(screen.getByText("Tong quan")).toBeInTheDocument();
         expect(screen.queryByText("Phan quyen")).not.toBeInTheDocument();
-        expect(screen.queryByText("Kho san pham")).not.toBeInTheDocument();
+        expect(screen.queryByText("Products")).not.toBeInTheDocument();
+        expect(screen.queryByText("Supplier don hang")).not.toBeInTheDocument();
+
+        act(() => {
+            useAuthStore.setState({
+                session: {
+                    user: {
+                        id: "3",
+                        name: "Supplier Viewer",
+                        email: "supplier-viewer@example.com",
+                        role: "admin",
+                        adminRole: {
+                            id: "3",
+                            name: "Supplier Viewer",
+                            slug: "supplier_viewer",
+                            isSuper: false,
+                        },
+                        permissions: ["admin.supplier.orders.view"],
+                    },
+                    loggedInAt: "2026-05-21T00:00:00.000Z",
+                },
+            });
+        });
+
+        rerender(
+            <MemoryRouter>
+                <AdminSidebar />
+            </MemoryRouter>,
+        );
+
+        expect(screen.getByText("Supplier don hang")).toBeInTheDocument();
+        expect(screen.queryByText("Tong quan")).not.toBeInTheDocument();
+    });
+
+    it("opens the first permitted admin module from /admin when dashboard is not allowed", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/categories")) {
+                return jsonResponse({
+                    message: "Categories retrieved successfully.",
+                    data: [],
+                    pagination: { total: 0, per_page: 100, current_page: 1, last_page: 1 },
+                });
+            }
+
+            if (path.endsWith("/api/suppliers")) {
+                return jsonResponse({
+                    message: "Suppliers retrieved successfully.",
+                    data: [],
+                    pagination: { total: 0, per_page: 100, current_page: 1, last_page: 1 },
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setAdminSession(["admin.categories.create"]);
+
+        renderApp(routes.adminDashboard);
+
+        expect(await screen.findByText("Danh muc storefront")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
+    });
+
+    it("blocks direct admin module access without a matching permission", async () => {
+        setAdminSession(["admin.dashboard.view"]);
+
+        renderApp(routes.adminUsers);
+
+        expect(await screen.findByText(/sai khu vực/i)).toBeInTheDocument();
+    });
+
+    it("opens the users module and disables CRUD buttons without write permissions", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/admin/users")) {
+                return jsonResponse({
+                    message: "Admin users retrieved successfully.",
+                    data: [
+                        {
+                            id: 9,
+                            full_name: "Customer Managed",
+                            email: "managed@example.com",
+                            phone: "0909000009",
+                            address: "12 Nguyen Trai",
+                            city: "Ha Noi",
+                            favorite_region: "Dong Bac",
+                            avatar_url: null,
+                            newsletter: true,
+                            sms_alerts: false,
+                            order_email: true,
+                            security_alerts: true,
+                            reward_points: 120,
+                            reward_tier: "Silver",
+                            next_tier_points: 1000,
+                            role: "CUSTOMER",
+                            status: "ACTIVE",
+                            is_active: true,
+                            orders_count: 3,
+                            created_at: "2026-05-22T00:00:00.000000Z",
+                            updated_at: "2026-05-22T00:00:00.000000Z",
+                        },
+                    ],
+                    pagination: { total: 1, per_page: 200, current_page: 1, last_page: 1 },
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setAdminSession(["admin.users.view"]);
+
+        renderApp(routes.adminUsers);
+
+        expect(await screen.findByRole("heading", { name: "Users" })).toBeInTheDocument();
+        expect(screen.getByText("managed@example.com")).toBeInTheDocument();
+        expect(screen.getAllByRole("button", { name: /Tao user/i }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+        expect(screen.getByRole("button", { name: /Luu chinh sua/i })).toBeDisabled();
+        expect(screen.getByRole("button", { name: /Khoa user/i })).toBeDisabled();
+    });
+
+    it("keeps the repository legacy route pointed at products", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/admin/products")) {
+                return jsonResponse({
+                    message: "Products retrieved successfully.",
+                    data: [],
+                });
+            }
+
+            if (path.endsWith("/api/categories")) {
+                return jsonResponse({
+                    message: "Categories retrieved successfully.",
+                    data: [],
+                    pagination: { total: 0, per_page: 100, current_page: 1, last_page: 1 },
+                });
+            }
+
+            if (path.endsWith("/api/suppliers")) {
+                return jsonResponse({
+                    message: "Suppliers retrieved successfully.",
+                    data: [],
+                    pagination: { total: 0, per_page: 100, current_page: 1, last_page: 1 },
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setAdminSession(["admin.products.view"]);
+
+        renderApp(routes.adminRepository);
+
+        expect(await screen.findByRole("heading", { name: "Products" })).toBeInTheDocument();
+    });
+
+    it("allows admin child accounts to open assigned supplier and warehouse modules", async () => {
+        setAdminSession(["admin.supplier.orders.view"]);
+
+        const rendered = renderApp(routes.adminSupplierOrders);
+
+        expect(await screen.findByText("Supplier don hang")).toBeInTheDocument();
+        expect(screen.queryByText("Kho fulfillment")).not.toBeInTheDocument();
+
+        rendered.unmount();
+        setAdminSession(["admin.warehouse.fulfillment.view"]);
+        renderApp(routes.adminWarehouseFulfillment);
+
+        expect(await screen.findByText("Kho fulfillment")).toBeInTheDocument();
+        expect(screen.queryByText("Supplier don hang")).not.toBeInTheDocument();
+    });
+
+    it("redirects admin users from portal roots into the admin shell", async () => {
+        setAdminSession(["admin.supplier.orders.view"]);
+
+        const rendered = renderApp("/supplier");
+
+        expect(await screen.findByText("Supplier don hang")).toBeInTheDocument();
+
+        rendered.unmount();
+        setAdminSession(["admin.warehouse.inventory.view"]);
+        renderApp("/warehouse");
+
+        expect(await screen.findByText("Kho ton kho")).toBeInTheDocument();
     });
 });

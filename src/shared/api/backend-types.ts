@@ -84,6 +84,46 @@ export interface BackendAdminAccountResponse {
     data: BackendAdminAccount;
 }
 
+export interface BackendAdminCustomer {
+    id: number;
+    full_name: string;
+    email: string;
+    phone: string;
+    address: string | null;
+    city: string | null;
+    favorite_region: string | null;
+    avatar_url: string | null;
+    newsletter: boolean;
+    sms_alerts: boolean;
+    order_email: boolean;
+    security_alerts: boolean;
+    reward_points: number;
+    reward_tier: string;
+    next_tier_points: number;
+    role: string;
+    status: string;
+    is_active: boolean;
+    orders_count: number;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface BackendAdminCustomersResponse {
+    message: string;
+    data: BackendAdminCustomer[];
+    pagination: {
+        current_page: number;
+        last_page: number;
+        per_page: number;
+        total: number;
+    };
+}
+
+export interface BackendAdminCustomerResponse {
+    message: string;
+    data: BackendAdminCustomer;
+}
+
 export interface BackendUserAddress {
     id: number;
     label: string;
@@ -196,6 +236,76 @@ export interface BackendComplaintResponse {
     data: BackendComplaint;
 }
 
+export interface BackendPostAuthor {
+    id: number;
+    full_name: string;
+    email: string;
+}
+
+export interface BackendPostComment {
+    id: number;
+    post_id: number;
+    user_id: number;
+    content: string;
+    status: string;
+    hidden_at?: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    author: BackendPostAuthor | null;
+    hidden_by?: BackendPostAuthor | null;
+}
+
+export interface BackendPost {
+    id: number;
+    title: string;
+    excerpt: string | null;
+    body: string;
+    cover_image_url: string | null;
+    status: string;
+    published_at: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+    author: BackendPostAuthor | null;
+    likes_count: number;
+    comments_count: number;
+    comments: BackendPostComment[];
+}
+
+export interface BackendPostsResponse {
+    message: string;
+    data: BackendPost[];
+}
+
+export interface BackendPostResponse {
+    message: string;
+    data: BackendPost;
+}
+
+export interface BackendPostCommentResponse {
+    message: string;
+    data: BackendPostComment;
+    meta?: {
+        post_id: number;
+        comments_count: number;
+    };
+}
+
+export interface BackendPostLikesResponse {
+    message: string;
+    data: {
+        post_id: number;
+        liked: boolean;
+        likes_count: number;
+    };
+}
+
+export interface BackendMyPostLikesResponse {
+    message: string;
+    data: {
+        post_ids: number[];
+    };
+}
+
 export interface BackendWishlistData {
     product_ids: number[];
     products: BackendProduct[];
@@ -298,6 +408,11 @@ export interface BackendSupplierListResponse {
         per_page: number;
         total: number;
     };
+}
+
+export interface BackendSupplierMutationResponse {
+    message: string;
+    data: BackendSupplier;
 }
 
 export interface BackendAdminSettings {

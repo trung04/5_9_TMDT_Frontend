@@ -8,7 +8,9 @@ import {
     fallbackBackendLabel,
 } from "@/shared/lib/customer-order-labels";
 import { formatCurrency, formatDate } from "@/shared/lib/format";
+import { hasAdminPermission } from "@/shared/lib/auth";
 import { useAdminOrdersStore } from "@/shared/lib/store/use-admin-orders-store";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
@@ -89,6 +91,10 @@ export function AdminLogisticsPage() {
     const updatePaymentStatus = useAdminOrdersStore((state) => state.updatePaymentStatus);
     const bulkUpdateStatus = useAdminOrdersStore((state) => state.bulkUpdateStatus);
     const pushToast = useFeedbackStore((state) => state.pushToast);
+    const user = useAuthStore((state) => state.session?.user ?? null);
+    const canUpdateOrderStatus = hasAdminPermission(user, "admin.orders.status.update");
+    const canUpdatePaymentStatus = hasAdminPermission(user, "admin.orders.payment.update");
+    const canBulkUpdateOrders = hasAdminPermission(user, "admin.orders.bulk.update");
 
     useEffect(() => {
         void loadOrders();
@@ -175,6 +181,14 @@ export function AdminLogisticsPage() {
     }, [availableBulkActions]);
 
     async function handleUpdateStatus() {
+        if (!canUpdateOrderStatus) {
+            pushToast({
+                tone: "warning",
+                message: "Ban chua co quyen cap nhat trang thai don hang.",
+            });
+            return;
+        }
+
         if (!activeOrderSummary || !activeOrder) {
             return;
         }
@@ -205,6 +219,14 @@ export function AdminLogisticsPage() {
     }
 
     async function handleUpdatePaymentStatus() {
+        if (!canUpdatePaymentStatus) {
+            pushToast({
+                tone: "warning",
+                message: "Ban chua co quyen cap nhat thanh toan.",
+            });
+            return;
+        }
+
         if (!activeOrderSummary || !activeOrder) {
             return;
         }
@@ -235,6 +257,14 @@ export function AdminLogisticsPage() {
     }
 
     async function handleDeliveryFailedAction(action: "reshop" | "restock" | "dispose") {
+        if (!canUpdateOrderStatus) {
+            pushToast({
+                tone: "warning",
+                message: "Ban chua co quyen cap nhat trang thai don hang.",
+            });
+            return;
+        }
+
         if (!activeOrderSummary || !activeOrder) {
             return;
         }
@@ -291,6 +321,14 @@ export function AdminLogisticsPage() {
     }
 
     async function handleApplyBulkAction() {
+        if (!canBulkUpdateOrders) {
+            pushToast({
+                tone: "warning",
+                message: "Ban chua co quyen xu ly hang loat don hang.",
+            });
+            return;
+        }
+
         if (!selectedOrderIds.length || !bulkAction) {
             return;
         }
@@ -359,19 +397,25 @@ export function AdminLogisticsPage() {
             <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
                 <SurfaceCard className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
-                        <label className="flex items-center gap-3 text-sm font-medium text-on-surface">
-                            <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-outline-variant/30"
-                                checked={isAllFilteredSelected}
-                                onChange={(event) => handleToggleSelectAll(event.target.checked)}
-                            />
-                            Chọn tất cả
-                        </label>
+                        {canBulkUpdateOrders ? (
+                            <label className="flex items-center gap-3 text-sm font-medium text-on-surface">
+                                <input
+                                    type="checkbox"
+                                    className="h-4 w-4 rounded border-outline-variant/30"
+                                    checked={isAllFilteredSelected}
+                                    onChange={(event) => handleToggleSelectAll(event.target.checked)}
+                                />
+                                Chon tat ca
+                            </label>
+                        ) : (
+                            <span className="text-sm font-medium text-on-surface">
+                                Danh sach don hang
+                            </span>
+                        )}
                         <span className="text-xs text-on-surface-variant">{filteredOrders.length} đơn đang hiển thị</span>
                     </div>
 
-                    {selectedOrderIds.length > 0 ? (
+                    {canBulkUpdateOrders && selectedOrderIds.length > 0 ? (
                         <div className="space-y-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
                             <div className="text-sm font-semibold text-on-surface">
                                 Đã chọn {selectedOrderIds.length} đơn
@@ -394,7 +438,12 @@ export function AdminLogisticsPage() {
                                 </select>
                                 <Button
                                     onClick={() => void handleApplyBulkAction()}
-                                    disabled={isSaving || !bulkAction || availableBulkActions.length === 0}
+                                    disabled={
+                                        isSaving ||
+                                        !bulkAction ||
+                                        availableBulkActions.length === 0 ||
+                                        !canBulkUpdateOrders
+                                    }
                                 >
                                     {isSaving ? "Đang xử lý..." : "Áp dụng"}
                                 </Button>
@@ -428,12 +477,16 @@ export function AdminLogisticsPage() {
                             >
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div className="flex items-center gap-3">
-                                        <input
-                                            type="checkbox"
-                                            className="h-4 w-4 rounded border-outline-variant/30"
-                                            checked={isSelected}
-                                            onChange={(event) => toggleOrderSelection(orderId, event.target.checked)}
-                                        />
+                                        {canBulkUpdateOrders ? (
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-outline-variant/30"
+                                                checked={isSelected}
+                                                onChange={(event) =>
+                                                    toggleOrderSelection(orderId, event.target.checked)
+                                                }
+                                            />
+                                        ) : null}
                                         <button className="text-left" onClick={() => setActiveOrderId(orderId)}>
                                             <p className="font-semibold text-on-surface">{order.order_no}</p>
                                         </button>
@@ -587,20 +640,24 @@ export function AdminLogisticsPage() {
                                             Đơn giao thất bại. Cần kiểm tra chất lượng hàng hoàn trước khi nhập lại kho.
                                         </div>
                                         <div className="flex flex-col gap-3 lg:flex-row lg:flex-nowrap">
-                                            <Button className="lg:flex-1" onClick={() => void handleDeliveryFailedAction("reshop")} disabled={isSaving}>
+                                            <Button
+                                                className="lg:flex-1"
+                                                onClick={() => void handleDeliveryFailedAction("reshop")}
+                                                disabled={isSaving || !canUpdateOrderStatus}
+                                            >
                                                 {isSaving ? "Đang cập nhật..." : "Giao lại"}
                                             </Button>
                                             <Button
                                                 variant="secondary"
                                                 className="lg:flex-1"
                                                 onClick={() => void handleDeliveryFailedAction("restock")}
-                                                disabled={isSaving}
+                                                disabled={isSaving || !canUpdateOrderStatus}
                                             >
                                                 Hủy và nhập lại kho
                                             </Button>
                                             <button
                                                 className="rounded-full border border-error/25 px-5 py-3 text-sm font-semibold text-error disabled:opacity-50 lg:flex-1"
-                                                disabled={isSaving}
+                                                disabled={isSaving || !canUpdateOrderStatus}
                                                 onClick={() => void handleDeliveryFailedAction("dispose")}
                                             >
                                                 Hủy nhưng không nhập lại kho
@@ -612,6 +669,7 @@ export function AdminLogisticsPage() {
                                         <select
                                             className="min-w-0 flex-1 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none"
                                             value={nextStatus}
+                                            disabled={!canUpdateOrderStatus}
                                             onChange={(event) => setNextStatus(event.target.value)}
                                         >
                                             {activeOrder.allowed_next_statuses.length === 0 ? (
@@ -626,7 +684,11 @@ export function AdminLogisticsPage() {
                                         </select>
                                         <Button
                                             onClick={() => void handleUpdateStatus()}
-                                            disabled={isSaving || activeOrder.allowed_next_statuses.length === 0}
+                                            disabled={
+                                                isSaving ||
+                                                activeOrder.allowed_next_statuses.length === 0 ||
+                                                !canUpdateOrderStatus
+                                            }
                                         >
                                             {isSaving ? "Đang cập nhật..." : "Lưu trạng thái đơn"}
                                         </Button>
@@ -634,6 +696,7 @@ export function AdminLogisticsPage() {
                                 )}
                                 <textarea
                                     className="min-h-24 w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                    disabled={!canUpdateOrderStatus}
                                     placeholder={
                                         activeOrder.status === "DELIVERY_FAILED"
                                             ? "Nhập ghi chú xử lý giao thất bại hoặc lý do không nhập lại kho"
@@ -652,6 +715,7 @@ export function AdminLogisticsPage() {
                                     <select
                                         className="min-w-0 flex-1 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none"
                                         value={nextPaymentStatus}
+                                        disabled={!canUpdatePaymentStatus}
                                         onChange={(event) => setNextPaymentStatus(event.target.value)}
                                     >
                                         {activeOrder.allowed_payment_statuses?.length ? (
@@ -668,13 +732,18 @@ export function AdminLogisticsPage() {
                                     </select>
                                     <Button
                                         onClick={() => void handleUpdatePaymentStatus()}
-                                        disabled={isSaving || !activeOrder.allowed_payment_statuses?.length}
+                                        disabled={
+                                            isSaving ||
+                                            !activeOrder.allowed_payment_statuses?.length ||
+                                            !canUpdatePaymentStatus
+                                        }
                                     >
                                         {isSaving ? "Đang cập nhật..." : "Lưu trạng thái thanh toán"}
                                     </Button>
                                 </div>
                                 <textarea
                                     className="min-h-24 w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                                    disabled={!canUpdatePaymentStatus}
                                     placeholder="Ghi chú cho lịch sử thanh toán"
                                     value={paymentNote}
                                     onChange={(event) => setPaymentNote(event.target.value)}

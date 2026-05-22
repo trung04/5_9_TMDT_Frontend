@@ -50,4 +50,13 @@
     .section-shell {
         @apply rounded-[2rem] bg-surface-container-low p-4 sm:p-6;
     }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
 }

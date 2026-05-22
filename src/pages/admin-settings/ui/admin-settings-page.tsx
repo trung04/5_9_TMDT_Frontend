@@ -23,11 +23,14 @@ export function AdminSettingsPage() {
     const saveSettings = useAdminSettingsStore((state) => state.saveSettings);
     const user = useAuthStore((state) => state.session?.user ?? null);
     const [form, setForm] = useState<AdminSettingsForm>(settings);
+    const canViewSettings = hasAdminPermission(user, "admin.settings.view");
     const canUpdateSettings = hasAdminPermission(user, "admin.settings.update");
 
     useEffect(() => {
-        void loadSettings();
-    }, [loadSettings]);
+        if (canViewSettings) {
+            void loadSettings();
+        }
+    }, [canViewSettings, loadSettings]);
 
     useEffect(() => {
         setForm(settings);
@@ -63,6 +66,11 @@ export function AdminSettingsPage() {
 
             {isLoading ? (
                 <SurfaceCard className="text-on-surface-variant">Đang tải cấu hình...</SurfaceCard>
+            ) : null}
+            {!canViewSettings ? (
+                <SurfaceCard className="text-on-surface-variant">
+                    Ban chua co quyen xem cau hinh hien tai.
+                </SurfaceCard>
             ) : null}
             {error ? <SurfaceCard className="text-on-surface-variant">{error}</SurfaceCard> : null}
 

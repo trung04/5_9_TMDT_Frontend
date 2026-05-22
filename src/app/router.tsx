@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { AdminModuleGuard } from "@/app/admin-module-guard";
 import { AccountLayout } from "@/app/layouts/account-layout";
 import { AdminLayout } from "@/app/layouts/admin-layout";
 import { PortalLayout } from "@/app/layouts/portal-layout";
@@ -19,6 +20,7 @@ import { AdminDashboardPage } from "@/pages/admin-dashboard/ui/admin-dashboard-p
 import { AdminLogisticsPage } from "@/pages/admin-logistics/ui/admin-logistics-page";
 import { AdminRepositoryPage } from "@/pages/admin-repository/ui/admin-repository-page";
 import { AdminSettingsPage } from "@/pages/admin-settings/ui/admin-settings-page";
+import { AdminUsersPage } from "@/pages/admin-users/ui/admin-users-page";
 import { ProductCatalogPage } from "@/pages/catalog/ui/product-catalog-page";
 import { CheckoutPage } from "@/pages/checkout/ui/checkout-page";
 import { HomePage } from "@/pages/home/ui/home-page";
@@ -39,7 +41,46 @@ import { WarehouseHelpPage } from "@/pages/warehouse-help/ui/warehouse-help-page
 import { WarehouseInventoryPage } from "@/pages/warehouse-inventory/ui/warehouse-inventory-page";
 import { WarehouseRequisitionsPage } from "@/pages/warehouse-requisitions/ui/warehouse-requisitions-page";
 import { WarehouseSupplierOrdersPage } from "@/pages/warehouse-supplier-orders/ui/warehouse-supplier-orders-page";
+import { getFirstAccessibleAdminModule } from "@/shared/config/admin-modules";
 import { routes as appRoutes } from "@/shared/config/routes";
+import { useAuthStore } from "@/shared/lib/store/use-auth-store";
+
+function AdminIndexRoute() {
+    const user = useAuthStore((state) => state.session?.user ?? null);
+    const firstModule = getFirstAccessibleAdminModule(user);
+
+    if (!firstModule) {
+        return <Navigate replace to={appRoutes.unauthorized} />;
+    }
+
+    if (firstModule.id !== "dashboard") {
+        return <Navigate replace to={firstModule.to} />;
+    }
+
+    return <AdminDashboardPage />;
+}
+
+function SupplierRootRedirect() {
+    const role = useAuthStore((state) => state.session?.user.role);
+
+    return (
+        <Navigate
+            replace
+            to={role === "admin" ? appRoutes.adminSupplierOrders : appRoutes.supplierOrders}
+        />
+    );
+}
+
+function WarehouseRootRedirect() {
+    const role = useAuthStore((state) => state.session?.user.role);
+
+    return (
+        <Navigate
+            replace
+            to={role === "admin" ? appRoutes.adminWarehouseInventory : appRoutes.warehouseInventory}
+        />
+    );
+}
 
 export function AppRoutes() {
     return (
@@ -93,12 +134,167 @@ export function AppRoutes() {
                     </RouteGuard>
                 }
             >
-                <Route path={appRoutes.adminDashboard} element={<AdminDashboardPage />} />
-                <Route path={appRoutes.adminCommunity} element={<AdminCommunityPage />} />
-                <Route path={appRoutes.adminRepository} element={<AdminRepositoryPage />} />
-                <Route path={appRoutes.adminLogistics} element={<AdminLogisticsPage />} />
-                <Route path={appRoutes.adminSettings} element={<AdminSettingsPage />} />
-                <Route path={appRoutes.adminAccess} element={<AdminAccessPage />} />
+                <Route path={appRoutes.adminDashboard} element={<AdminIndexRoute />} />
+                <Route
+                    path={appRoutes.adminDashboardLegacy}
+                    element={<Navigate replace to={appRoutes.adminDashboard} />}
+                />
+                <Route
+                    path={appRoutes.adminCommunity}
+                    element={
+                        <AdminModuleGuard moduleId="community">
+                            <AdminCommunityPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminRepository}
+                    element={<Navigate replace to={appRoutes.adminProducts} />}
+                />
+                <Route
+                    path={appRoutes.adminUsers}
+                    element={
+                        <AdminModuleGuard moduleId="users">
+                            <AdminUsersPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminProducts}
+                    element={
+                        <AdminModuleGuard moduleId="products">
+                            <AdminRepositoryPage lockedTab="products" />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminCategories}
+                    element={
+                        <AdminModuleGuard moduleId="categories">
+                            <AdminRepositoryPage lockedTab="categories" />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminSuppliers}
+                    element={
+                        <AdminModuleGuard moduleId="suppliers">
+                            <AdminRepositoryPage lockedTab="suppliers" />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminLogistics}
+                    element={
+                        <AdminModuleGuard moduleId="logistics">
+                            <AdminLogisticsPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminSettings}
+                    element={
+                        <AdminModuleGuard moduleId="settings">
+                            <AdminSettingsPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminAccess}
+                    element={
+                        <AdminModuleGuard moduleId="access">
+                            <AdminAccessPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path="/admin/supplier"
+                    element={<Navigate replace to={appRoutes.adminSupplierOrders} />}
+                />
+                <Route
+                    path={appRoutes.adminSupplierInventory}
+                    element={
+                        <AdminModuleGuard moduleId="supplierInventory">
+                            <SupplierInventoryPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminSupplierRequisitions}
+                    element={
+                        <AdminModuleGuard moduleId="supplierRequisitions">
+                            <SupplierRequisitionsPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminSupplierProcessing}
+                    element={
+                        <AdminModuleGuard moduleId="supplierProcessing">
+                            <SupplierProcessingPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminSupplierOrders}
+                    element={
+                        <AdminModuleGuard moduleId="supplierOrders">
+                            <SupplierOrdersPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminSupplierHelp}
+                    element={
+                        <AdminModuleGuard moduleId="supplierHelp">
+                            <SupplierHelpPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path="/admin/warehouse"
+                    element={<Navigate replace to={appRoutes.adminWarehouseInventory} />}
+                />
+                <Route
+                    path={appRoutes.adminWarehouseInventory}
+                    element={
+                        <AdminModuleGuard moduleId="warehouseInventory">
+                            <WarehouseInventoryPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminWarehouseRequisitions}
+                    element={
+                        <AdminModuleGuard moduleId="warehouseRequisitions">
+                            <WarehouseRequisitionsPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminWarehouseFulfillment}
+                    element={
+                        <AdminModuleGuard moduleId="warehouseFulfillment">
+                            <WarehouseFulfillmentPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminWarehouseSupplierOrders}
+                    element={
+                        <AdminModuleGuard moduleId="warehouseSupplierOrders">
+                            <WarehouseSupplierOrdersPage />
+                        </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminWarehouseHelp}
+                    element={
+                        <AdminModuleGuard moduleId="warehouseHelp">
+                            <WarehouseHelpPage />
+                        </AdminModuleGuard>
+                    }
+                />
             </Route>
 
             <Route
@@ -133,11 +329,10 @@ export function AppRoutes() {
             </Route>
 
             <Route path="/account" element={<Navigate replace to={appRoutes.accountProfile} />} />
-            <Route path="/admin" element={<Navigate replace to={appRoutes.adminDashboard} />} />
-            <Route path="/supplier" element={<Navigate replace to={appRoutes.supplierOrders} />} />
+            <Route path="/supplier" element={<SupplierRootRedirect />} />
             <Route
                 path="/warehouse"
-                element={<Navigate replace to={appRoutes.warehouseInventory} />}
+                element={<WarehouseRootRedirect />}
             />
             <Route path="*" element={<Navigate replace to={appRoutes.home} />} />
         </Routes>
