@@ -35,8 +35,8 @@ export function DataTable<T>({
     rowClassName,
     onRowClick,
     isLoading = false,
-    loadingMessage = "Dang tai du lieu...",
-    emptyMessage = "Khong co du lieu phu hop.",
+    loadingMessage = "Đang tải dữ liệu...",
+    emptyMessage = "Không có dữ liệu phù hợp.",
     footer,
     minWidth,
     pagination,
@@ -69,14 +69,14 @@ export function DataTable<T>({
         paginationEnabled && rows.length > 0 ? (
             <div className="flex flex-col gap-3 text-xs text-on-surface-variant sm:flex-row sm:items-center sm:justify-between">
                 <span>
-                    Hien thi {firstItemNumber}-{lastItemNumber} / {rows.length} {pagination?.itemLabel ?? "records"}
+                    Hiển thị {firstItemNumber}-{lastItemNumber} / {rows.length} {pagination?.itemLabel ?? "bản ghi"}
                 </span>
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label="Trang dau"
-                        title="Trang dau"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant/10 bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Trang đầu"
+                        title="Trang đầu"
                         disabled={currentPage <= 1}
                         onClick={() => goToPage(1)}
                     >
@@ -84,9 +84,9 @@ export function DataTable<T>({
                     </button>
                     <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label="Trang truoc"
-                        title="Trang truoc"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant/10 bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Trang trước"
+                        title="Trang trước"
                         disabled={currentPage <= 1}
                         onClick={() => goToPage(currentPage - 1)}
                     >
@@ -97,7 +97,7 @@ export function DataTable<T>({
                     </span>
                     <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant/10 bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Trang sau"
                         title="Trang sau"
                         disabled={currentPage >= pageCount}
@@ -107,9 +107,9 @@ export function DataTable<T>({
                     </button>
                     <button
                         type="button"
-                        className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label="Trang cuoi"
-                        title="Trang cuoi"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-outline-variant/10 bg-surface-container-high text-on-surface-variant transition hover:bg-surface-container-highest disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label="Trang cuối"
+                        title="Trang cuối"
                         disabled={currentPage >= pageCount}
                         onClick={() => goToPage(pageCount)}
                     >
@@ -120,7 +120,7 @@ export function DataTable<T>({
         ) : null;
 
     return (
-        <div className={cn("overflow-hidden rounded-[1.5rem] bg-surface", className)}>
+        <div className={cn("overflow-hidden rounded-[1.25rem] border border-outline-variant/10 bg-surface", className)}>
             <div className="overflow-x-auto">
                 <table className={cn("w-full min-w-full table-fixed text-left", tableClassName)} style={{ minWidth }}>
                     <colgroup>
@@ -128,13 +128,13 @@ export function DataTable<T>({
                             <col key={column.key} style={{ width: column.width ?? fallbackColumnWidth }} />
                         ))}
                     </colgroup>
-                    <thead className="bg-surface-container-low">
+                    <thead className="bg-surface-container-low/90">
                         <tr>
                             {columns.map((column) => (
                                 <th
                                     key={column.key}
                                     className={cn(
-                                        "px-6 py-4 text-[11px] font-label uppercase tracking-widest text-on-surface-variant/70",
+                                        "px-5 py-3 text-[11px] font-label uppercase tracking-widest text-on-surface-variant/70",
                                         column.align === "center" && "text-center",
                                         column.align === "right" && "text-right",
                                         column.nowrap && "whitespace-nowrap",
@@ -152,7 +152,7 @@ export function DataTable<T>({
                         {isLoading ? (
                             <tr>
                                 <td
-                                    className="px-6 py-8 text-center text-sm text-on-surface-variant"
+                                    className="px-5 py-8 text-center text-sm text-on-surface-variant"
                                     colSpan={columns.length}
                                 >
                                     {loadingMessage}
@@ -162,7 +162,7 @@ export function DataTable<T>({
                         {!isLoading && rows.length === 0 ? (
                             <tr>
                                 <td
-                                    className="px-6 py-8 text-center text-sm text-on-surface-variant"
+                                    className="px-5 py-8 text-center text-sm text-on-surface-variant"
                                     colSpan={columns.length}
                                 >
                                     {emptyMessage}
@@ -175,8 +175,8 @@ export function DataTable<T>({
                                     key={getRowKey(row)}
                                     onClick={() => onRowClick?.(row)}
                                     className={cn(
-                                        index % 2 === 0 ? "bg-surface" : "bg-surface-container-low/60",
-                                        "transition hover:bg-surface-container-lowest",
+                                        index % 2 === 0 ? "bg-surface" : "bg-surface-container-low/35",
+                                        "border-t border-outline-variant/10 transition hover:bg-surface-container-lowest",
                                         onRowClick && "cursor-pointer",
                                         rowClassName?.(row),
                                     )}
@@ -185,7 +185,7 @@ export function DataTable<T>({
                                         <td
                                             key={column.key}
                                             className={cn(
-                                                "px-6 py-5 align-top text-sm leading-6 text-on-surface",
+                                                "px-5 py-4 align-top text-sm leading-6 text-on-surface",
                                                 column.align === "center" && "text-center",
                                                 column.align === "right" && "text-right",
                                                 column.nowrap && "whitespace-nowrap",
@@ -203,7 +203,7 @@ export function DataTable<T>({
                 </table>
             </div>
             {footer || paginationFooter ? (
-                <div className="space-y-3 border-t border-outline-variant/10 bg-surface-container-low px-6 py-4">
+                <div className="space-y-3 border-t border-outline-variant/10 bg-surface-container-low px-5 py-4">
                     {footer}
                     {paginationFooter}
                 </div>

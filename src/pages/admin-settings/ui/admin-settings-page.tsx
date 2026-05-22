@@ -10,7 +10,7 @@ import {
 } from "@/shared/lib/store/use-admin-settings-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { Button, SurfaceCard } from "@/shared/ui";
+import { AdminPageHeader, Button, SurfaceCard } from "@/shared/ui";
 
 export function AdminSettingsPage() {
     const navigate = useNavigate();
@@ -57,16 +57,10 @@ export function AdminSettingsPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Cấu hình quản trị
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                    Quản lý các thông số vận hành cơ bản cho tài khoản admin hiện tại.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Cấu hình quản trị"
+                description="Quản lý các thông số vận hành cơ bản cho tài khoản admin hiện tại."
+            />
 
             {isLoading ? (
                 <SurfaceCard className="text-on-surface-variant">Đang tải cấu hình...</SurfaceCard>

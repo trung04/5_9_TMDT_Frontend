@@ -4,7 +4,7 @@ import { downloadTextFile } from "@/shared/lib/download";
 import { inventoryHealthLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
-import { Button, SurfaceCard } from "@/shared/ui";
+import { AdminPageHeader, Button, SurfaceCard } from "@/shared/ui";
 
 export function SupplierInventoryPage() {
     const inventory = useOperationsDataStore((state) => state.inventory);
@@ -17,15 +17,10 @@ export function SupplierInventoryPage() {
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-wrap items-end justify-between gap-4">
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Tồn kho nhà cung cấp
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Theo dõi tồn kho, trạng thái cảnh báo và lượng hàng đang giữ cho từng SKU.
-                    </p>
-                </div>
+            <AdminPageHeader
+                title="Tồn kho nhà cung cấp"
+                description="Theo dõi tồn kho, trạng thái cảnh báo và lượng hàng đang giữ cho từng SKU."
+                actions={
                 <Button
                     variant="secondary"
                     onClick={() => {
@@ -51,7 +46,8 @@ export function SupplierInventoryPage() {
                 >
                     Xuất CSV
                 </Button>
-            </section>
+                }
+            />
 
             <div className="grid gap-6 xl:grid-cols-2">
                 {inventory.map((item) => (

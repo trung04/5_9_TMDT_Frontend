@@ -17,9 +17,9 @@ interface AdminDrawerProps {
 }
 
 const modeLabels: Record<AdminDrawerMode, string> = {
-    view: "Chi tiet",
-    create: "Tao moi",
-    edit: "Chinh sua",
+    view: "Chi tiết",
+    create: "Tạo mới",
+    edit: "Chỉnh sửa",
 };
 
 export function AdminDrawer({
@@ -44,7 +44,7 @@ export function AdminDrawer({
             <button
                 type="button"
                 className="hidden flex-1 cursor-default lg:block"
-                aria-label="Dong khung thong tin"
+                aria-label="Đóng khung thông tin"
                 onClick={onClose}
             />
             <aside
@@ -70,8 +70,8 @@ export function AdminDrawer({
                         </div>
                         <button
                             type="button"
-                            className="rounded-full bg-surface-container-low p-2 text-on-surface-variant transition hover:text-primary"
-                            aria-label="Dong"
+                            className="rounded-xl bg-surface-container-low p-2 text-on-surface-variant transition hover:text-primary"
+                            aria-label="Đóng"
                             onClick={onClose}
                         >
                             <Icon name="close" />

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { requisitionStatusLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
-import { Button, SurfaceCard } from "@/shared/ui";
+import { AdminPageHeader, Button, SurfaceCard } from "@/shared/ui";
 
 export function SupplierRequisitionsPage() {
     const requisitions = useOperationsDataStore((state) => state.requisitions);
@@ -17,16 +17,10 @@ export function SupplierRequisitionsPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Phiếu yêu cầu nhà cung cấp
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Theo dõi yêu cầu bổ sung hàng, phê duyệt và xác nhận luân chuyển tồn kho.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Phiếu yêu cầu nhà cung cấp"
+                description="Theo dõi yêu cầu bổ sung hàng, phê duyệt và xác nhận luân chuyển tồn kho."
+            />
 
             <div className="space-y-4">
                 {requisitions.map((requisition) => (

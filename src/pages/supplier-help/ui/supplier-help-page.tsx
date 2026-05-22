@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
-import { Button, SurfaceCard } from "@/shared/ui";
+import { AdminPageHeader, Button, SurfaceCard } from "@/shared/ui";
 
 export function SupplierHelpPage() {
     const createSupportTicket = useOperationsDataStore((state) => state.createSupportTicket);
@@ -21,16 +21,10 @@ export function SupplierHelpPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Hỗ trợ nhà cung cấp
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Gửi yêu cầu hỗ trợ và theo dõi phản hồi cho luồng vận hành nhà cung cấp.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Hỗ trợ nhà cung cấp"
+                description="Gửi yêu cầu hỗ trợ và theo dõi phản hồi cho luồng vận hành nhà cung cấp."
+            />
 
             <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                 <SurfaceCard className="space-y-4">

@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from "@/shared/lib/format";
 import { deliveryStatusLabels, paymentStatusLabels, shippingTierLabels } from "@/shared/lib/labels";
 import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { useUiStore } from "@/shared/lib/store/use-ui-store";
-import { AdminDrawer, Badge, Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
+import { AdminDrawer, AdminPageHeader, Badge, Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
 
 function deliveryTone(order: Order): StatusTone {
@@ -130,16 +130,10 @@ export function SupplierOrdersPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Đơn hàng nhà cung cấp
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Theo dõi đơn mua vào, trạng thái thanh toán và tiến độ giao hàng từ nhà cung cấp.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Đơn hàng nhà cung cấp"
+                description="Theo dõi đơn mua vào, trạng thái thanh toán và tiến độ giao hàng từ nhà cung cấp."
+            />
 
             <section className="grid gap-6 lg:grid-cols-3">
                 {stats.map((stat) => (

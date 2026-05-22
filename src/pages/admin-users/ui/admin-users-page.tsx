@@ -9,7 +9,17 @@ import {
 } from "@/shared/lib/store/use-admin-user-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { AdminDrawer, Badge, Button, DataTable, Icon, StatCard, SurfaceCard, cn } from "@/shared/ui";
+import {
+    ActionIconButton,
+    AdminDrawer,
+    AdminPageHeader,
+    AdminToolbar,
+    Badge,
+    Button,
+    DataTable,
+    StatCard,
+    SurfaceCard,
+} from "@/shared/ui";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
 
 type DrawerMode = "view" | "create" | "edit";
@@ -66,43 +76,6 @@ function FieldValue({ label, value }: { label: string; value: string | number | 
             </p>
             <p className="mt-2 font-medium text-on-surface">{value || "Chua cap nhat"}</p>
         </div>
-    );
-}
-
-function ActionButton({
-    label,
-    icon,
-    disabled,
-    onClick,
-    tone = "neutral",
-}: {
-    label: string;
-    icon: string;
-    disabled?: boolean;
-    onClick: () => void;
-    tone?: "neutral" | "danger" | "primary";
-}) {
-    return (
-        <button
-            type="button"
-            className={cn(
-                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
-                tone === "danger"
-                    ? "text-error hover:bg-error-container/40"
-                    : tone === "primary"
-                      ? "text-primary hover:bg-primary/10"
-                      : "text-on-surface-variant hover:bg-surface-container-low",
-            )}
-            aria-label={label}
-            title={label}
-            disabled={disabled}
-            onClick={(event) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <Icon name={icon} className="text-xl" />
-        </button>
     );
 }
 
@@ -191,31 +164,31 @@ export function AdminUsersPage() {
     const stats = [
         {
             id: "admin-users-total",
-            label: "Customer Directory",
+            label: "Danh bạ khách hàng",
             value: canViewUsers ? `${customers.length}` : "-",
             tone: "primary" as const,
             icon: "group",
-            delta: "Tong tai khoan customer",
+            delta: "Tổng tài khoản khách hàng",
         },
         {
             id: "admin-users-active",
-            label: "Dang hoat dong",
+            label: "Đang hoạt động",
             value: canViewUsers
                 ? `${customers.filter((customer) => statusLabel(customer) === "ACTIVE").length}`
                 : "-",
             tone: "success" as const,
             icon: "verified_user",
-            delta: "Co the dang nhap va mua hang",
+            delta: "Có thể đăng nhập và mua hàng",
         },
         {
             id: "admin-users-orders",
-            label: "Tong don gan user",
+            label: "Tổng đơn gắn user",
             value: canViewUsers
                 ? `${customers.reduce((sum, customer) => sum + customer.orders_count, 0)}`
                 : "-",
             tone: "secondary" as const,
             icon: "shopping_bag",
-            delta: "Khong mat khi khoa mem user",
+            delta: "Không mất khi khóa mềm user",
         },
     ];
 
@@ -268,7 +241,7 @@ export function AdminUsersPage() {
         ) {
             pushToast({
                 tone: "warning",
-                message: "Can nhap ten, email, so dien thoai va mat khau toi thieu 8 ky tu.",
+                message: "Cần nhập tên, email, số điện thoại và mật khẩu tối thiểu 8 ký tự.",
             });
             return;
         }
@@ -276,13 +249,13 @@ export function AdminUsersPage() {
         const result = await createCustomer(buildPayload(true));
 
         if (!result.success || !result.data) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the tao user." });
+            pushToast({ tone: "warning", message: result.error ?? "Không thể tạo user." });
             return;
         }
 
         setActiveCustomerId(String(result.data.id));
         setDrawerMode("view");
-        pushToast({ tone: "success", message: `Da tao user ${result.data.full_name}.` });
+        pushToast({ tone: "success", message: `Đã tạo user ${result.data.full_name}.` });
     }
 
     async function handleUpdateCustomer() {
@@ -291,12 +264,12 @@ export function AdminUsersPage() {
         const result = await updateCustomer(activeCustomer.id, buildPayload(false));
 
         if (!result.success || !result.data) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat user." });
+            pushToast({ tone: "warning", message: result.error ?? "Không thể cập nhật user." });
             return;
         }
 
         setDrawerMode("view");
-        pushToast({ tone: "success", message: `Da cap nhat user ${result.data.full_name}.` });
+        pushToast({ tone: "success", message: `Đã cập nhật user ${result.data.full_name}.` });
     }
 
     async function handleBlockCustomer(customer = activeCustomer) {
@@ -305,19 +278,19 @@ export function AdminUsersPage() {
         const result = await blockCustomer(customer.id);
 
         if (!result.success || !result.data) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the khoa user." });
+            pushToast({ tone: "warning", message: result.error ?? "Không thể khóa user." });
             return;
         }
 
         setActiveCustomerId(String(result.data.id));
         setDrawerMode("view");
-        pushToast({ tone: "success", message: `Da khoa user ${result.data.full_name}.` });
+        pushToast({ tone: "success", message: `Đã khóa user ${result.data.full_name}.` });
     }
 
     const columns: TableColumn<BackendAdminCustomer>[] = [
         {
             key: "identity",
-            title: "User Identity",
+            title: "Người dùng",
             width: "24%",
             render: (customer) => (
                 <div className="flex items-center gap-4">
@@ -333,20 +306,20 @@ export function AdminUsersPage() {
         },
         {
             key: "region",
-            title: "Region",
+            title: "Khu vực",
             width: "22%",
             render: (customer) => (
                 <div>
-                    <p>{customer.city ?? "Chua cap nhat"}</p>
+                    <p>{customer.city ?? "Chưa cập nhật"}</p>
                     <p className="text-xs text-on-surface-variant">
-                        {customer.favorite_region ?? "Chua co vung yeu thich"}
+                        {customer.favorite_region ?? "Chưa có vùng yêu thích"}
                     </p>
                 </div>
             ),
         },
         {
             key: "orders",
-            title: "Orders",
+            title: "Đơn",
             align: "right",
             width: "9%",
             nowrap: true,
@@ -354,18 +327,18 @@ export function AdminUsersPage() {
         },
         {
             key: "reward",
-            title: "Reward",
+            title: "Thưởng",
             width: "15%",
             render: (customer) => (
                 <div>
                     <p className="font-medium">{customer.reward_tier}</p>
-                    <p className="text-xs text-on-surface-variant">{customer.reward_points} diem</p>
+                    <p className="text-xs text-on-surface-variant">{customer.reward_points} điểm</p>
                 </div>
             ),
         },
         {
             key: "status",
-            title: "Status",
+            title: "Trạng thái",
             width: "14%",
             nowrap: true,
             render: (customer) => (
@@ -374,26 +347,26 @@ export function AdminUsersPage() {
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "16%",
             nowrap: true,
             render: (customer) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton
+                    <ActionIconButton
                         label={`Xem ${customer.full_name}`}
                         icon="visibility"
                         onClick={() => openCustomerDrawer(customer, "view")}
                     />
-                    <ActionButton
-                        label={`Sua ${customer.full_name}`}
+                    <ActionIconButton
+                        label={`Sửa ${customer.full_name}`}
                         icon="edit"
                         tone="primary"
                         disabled={!canUpdateUser}
                         onClick={() => openCustomerDrawer(customer, "edit")}
                     />
-                    <ActionButton
-                        label={`Khoa ${customer.full_name}`}
+                    <ActionIconButton
+                        label={`Khóa ${customer.full_name}`}
                         icon="block"
                         tone="danger"
                         disabled={!canDeleteUser || !customer.is_active}
@@ -406,26 +379,18 @@ export function AdminUsersPage() {
 
     const drawerTitle =
         drawerMode === "create"
-            ? "Tao customer"
+            ? "Tạo customer"
             : drawerMode === "edit"
-              ? "Chinh sua customer"
-              : "Ho so customer";
+              ? "Chỉnh sửa customer"
+              : "Hồ sơ customer";
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-on-surface-variant">
-                        Directory / Management
-                    </p>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Users
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Quan ly customer account, trang thai dang nhap va thong tin ho so trong admin shell.
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
+            <AdminPageHeader
+                title="Người dùng"
+                description="Quản lý tài khoản customer, trạng thái đăng nhập và thông tin hồ sơ trong admin shell."
+                actions={
+                    <>
                     <Button
                         variant="secondary"
                         disabled={!canViewUsers}
@@ -435,16 +400,17 @@ export function AdminUsersPage() {
                                 JSON.stringify(customers, null, 2),
                                 "application/json",
                             );
-                            pushToast({ tone: "success", message: "Da xuat danh sach users." });
+                            pushToast({ tone: "success", message: "Đã xuất danh sách users." });
                         }}
                     >
-                        Export
+                        Xuất dữ liệu
                     </Button>
                     <Button disabled={!canCreateUser} onClick={openCreateDrawer}>
-                        Tao user
+                        Tạo user
                     </Button>
-                </div>
-            </section>
+                    </>
+                }
+            />
 
             <section className="grid gap-6 xl:grid-cols-3">
                 {stats.map((stat) => (
@@ -453,28 +419,28 @@ export function AdminUsersPage() {
             </section>
 
             <SurfaceCard className="space-y-5">
-                <div className="flex flex-col gap-3 lg:flex-row">
+                <AdminToolbar>
                     <input
-                        className="min-w-0 flex-1 rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                        placeholder="Search users, region, email or phone..."
+                        className="min-w-0 flex-1 rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                        placeholder="Tìm theo tên, khu vực, email hoặc số điện thoại..."
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                     />
                     <select
-                        className="rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                        className="rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
                         value={statusFilter}
                         onChange={(event) => setStatusFilter(event.target.value)}
                     >
-                        <option value="all">Tat ca trang thai</option>
+                        <option value="all">Tất cả trạng thái</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                     </select>
-                </div>
+                </AdminToolbar>
 
                 {error ? <p className="text-sm text-error">{error}</p> : null}
                 {!canViewUsers ? (
                     <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                        Ban chua co quyen xem danh sach users.
+                        Bạn chưa có quyền xem danh sách users.
                     </p>
                 ) : null}
 
@@ -484,7 +450,7 @@ export function AdminUsersPage() {
                         columns={columns}
                         getRowKey={(customer) => String(customer.id)}
                         isLoading={isLoading}
-                        emptyMessage="Khong co user phu hop bo loc hien tai."
+                        emptyMessage="Không có user phù hợp bộ lọc hiện tại."
                         minWidth="920px"
                         pagination={{ pageSize: 5, itemLabel: "users" }}
                         rowClassName={(customer) =>

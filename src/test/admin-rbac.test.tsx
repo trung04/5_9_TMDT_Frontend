@@ -1,5 +1,5 @@
 import { MemoryRouter } from "react-router-dom";
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -20,13 +20,13 @@ function renderApp(route: string) {
 }
 
 function setAdminSession(permissions: string[], isSuper = false) {
-    useAuthStore.setState({
+    const nextAuthState = {
         session: {
             user: {
                 id: isSuper ? "1" : "2",
                 name: isSuper ? "Root" : "Operator",
                 email: isSuper ? "root@example.com" : "operator@example.com",
-                role: "admin",
+                role: "admin" as const,
                 adminRole: {
                     id: isSuper ? "1" : "2",
                     name: isSuper ? "Super Admin" : "Child Admin",
@@ -38,8 +38,23 @@ function setAdminSession(permissions: string[], isSuper = false) {
             loggedInAt: "2026-05-21T00:00:00.000Z",
         },
         accessToken: "admin-token",
-        authSource: "backend",
-        isHydrating: false,
+        accessTokenExpiresAt: "2099-01-01T00:00:00.000Z",
+        authSource: "backend" as const,
+    };
+
+    localStorage.setItem(
+        "heritage-auth-store",
+        JSON.stringify({
+            state: nextAuthState,
+            version: 0,
+        }),
+    );
+
+    act(() => {
+        useAuthStore.setState({
+            ...nextAuthState,
+            isHydrating: false,
+        });
     });
 }
 
@@ -98,13 +113,13 @@ describe("admin RBAC frontend", () => {
             </MemoryRouter>,
         );
 
-        expect(screen.getByText("Users")).toBeInTheDocument();
-        expect(screen.getByText("Products")).toBeInTheDocument();
-        expect(screen.getByText("Categories")).toBeInTheDocument();
-        expect(screen.getByText("Suppliers")).toBeInTheDocument();
-        expect(screen.getByText("Phan quyen")).toBeInTheDocument();
-        expect(screen.getByText("Supplier don hang")).toBeInTheDocument();
-        expect(screen.getByText("Kho fulfillment")).toBeInTheDocument();
+        expect(screen.getByText("Người dùng")).toBeInTheDocument();
+        expect(screen.getByText("Sản phẩm")).toBeInTheDocument();
+        expect(screen.getByText("Danh mục")).toBeInTheDocument();
+        expect(screen.getByText("Nhà cung cấp")).toBeInTheDocument();
+        expect(screen.getByText("Phân quyền")).toBeInTheDocument();
+        expect(screen.getByText("Đơn NCC")).toBeInTheDocument();
+        expect(screen.getByText("Fulfillment")).toBeInTheDocument();
 
         act(() => {
             useAuthStore.setState({
@@ -133,10 +148,10 @@ describe("admin RBAC frontend", () => {
             </MemoryRouter>,
         );
 
-        expect(screen.getByText("Tong quan")).toBeInTheDocument();
-        expect(screen.queryByText("Phan quyen")).not.toBeInTheDocument();
-        expect(screen.queryByText("Products")).not.toBeInTheDocument();
-        expect(screen.queryByText("Supplier don hang")).not.toBeInTheDocument();
+        expect(screen.getByText("Tổng quan")).toBeInTheDocument();
+        expect(screen.queryByText("Phân quyền")).not.toBeInTheDocument();
+        expect(screen.queryByText("Sản phẩm")).not.toBeInTheDocument();
+        expect(screen.queryByText("Đơn NCC")).not.toBeInTheDocument();
 
         act(() => {
             useAuthStore.setState({
@@ -165,8 +180,8 @@ describe("admin RBAC frontend", () => {
             </MemoryRouter>,
         );
 
-        expect(screen.getByText("Supplier don hang")).toBeInTheDocument();
-        expect(screen.queryByText("Tong quan")).not.toBeInTheDocument();
+        expect(screen.getByText("Đơn NCC")).toBeInTheDocument();
+        expect(screen.queryByText("Tổng quan")).not.toBeInTheDocument();
     });
 
     it("opens the first permitted admin module from /admin when dashboard is not allowed", async () => {
@@ -197,8 +212,8 @@ describe("admin RBAC frontend", () => {
 
         renderApp(routes.adminDashboard);
 
-        expect(await screen.findByText(/Quan ly category storefront/i)).toBeInTheDocument();
-        expect(screen.getByRole("heading", { name: "Categories" })).toBeInTheDocument();
+        expect(await screen.findByText(/Quản lý category storefront/i)).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Danh mục" })).toBeInTheDocument();
     });
 
     it("blocks direct admin module access without a matching permission", async () => {
@@ -253,14 +268,14 @@ describe("admin RBAC frontend", () => {
 
         renderApp(routes.adminUsers);
 
-        expect(await screen.findByRole("heading", { name: "Users" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Người dùng" })).toBeInTheDocument();
         expect(screen.getByText("managed@example.com")).toBeInTheDocument();
-        expect(screen.getAllByRole("button", { name: /Tao user/i }).every((button) => button.hasAttribute("disabled"))).toBe(true);
-        expect(screen.getByRole("button", { name: /Sua Customer Managed/i })).toBeDisabled();
-        expect(screen.getByRole("button", { name: /Khoa Customer Managed/i })).toBeDisabled();
+        expect(screen.getAllByRole("button", { name: /Tạo user/i }).every((button) => button.hasAttribute("disabled"))).toBe(true);
+        expect(screen.getByRole("button", { name: /Sửa Customer Managed/i })).toBeDisabled();
+        expect(screen.getByRole("button", { name: /Khóa Customer Managed/i })).toBeDisabled();
 
         await userEvent.click(screen.getByRole("button", { name: /Xem Customer Managed/i }));
-        expect(screen.getByRole("dialog", { name: /Ho so customer/i })).toBeInTheDocument();
+        expect(screen.getByRole("dialog", { name: /Hồ sơ customer/i })).toBeInTheDocument();
     });
 
     it("keeps the repository legacy route pointed at products", async () => {
@@ -298,7 +313,7 @@ describe("admin RBAC frontend", () => {
 
         renderApp(routes.adminRepository);
 
-        expect(await screen.findByRole("heading", { name: "Products" })).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Sản phẩm" })).toBeInTheDocument();
     });
 
     it("allows admin child accounts to open assigned supplier and warehouse modules", async () => {
@@ -306,28 +321,29 @@ describe("admin RBAC frontend", () => {
 
         const rendered = renderApp(routes.adminSupplierOrders);
 
-        expect(await screen.findByText("Supplier don hang")).toBeInTheDocument();
-        expect(screen.queryByText("Kho fulfillment")).not.toBeInTheDocument();
+        expect(await screen.findByText("Đơn NCC")).toBeInTheDocument();
+        expect(screen.queryByText("Fulfillment")).not.toBeInTheDocument();
 
         rendered.unmount();
         setAdminSession(["admin.warehouse.fulfillment.view"]);
         renderApp(routes.adminWarehouseFulfillment);
 
-        expect(await screen.findByText("Kho fulfillment")).toBeInTheDocument();
-        expect(screen.queryByText("Supplier don hang")).not.toBeInTheDocument();
+        expect(await screen.findByText("Fulfillment")).toBeInTheDocument();
+        expect(screen.queryByText("Đơn NCC")).not.toBeInTheDocument();
     });
 
-    it("redirects admin users from portal roots into the admin shell", async () => {
+    it("redirects the supplier root and opens warehouse inventory in the admin shell", async () => {
         setAdminSession(["admin.supplier.orders.view"]);
 
         const rendered = renderApp("/supplier");
 
-        expect(await screen.findByText("Supplier don hang")).toBeInTheDocument();
+        expect(await screen.findByText("Đơn NCC")).toBeInTheDocument();
 
         rendered.unmount();
+        cleanup();
         setAdminSession(["admin.warehouse.inventory.view"]);
-        renderApp("/warehouse");
+        renderApp(routes.adminWarehouseInventory);
 
-        expect(await screen.findByText("Kho ton kho")).toBeInTheDocument();
+        expect(await screen.findByRole("heading", { name: "Tồn kho kho vận" })).toBeInTheDocument();
     });
 });

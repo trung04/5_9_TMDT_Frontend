@@ -15,11 +15,11 @@ const adminSections: Array<{
     id: AdminModule["section"];
     label: string;
 }> = [
-    { id: "overview", label: "Khu dieu khien" },
-    { id: "commerce", label: "Thuong mai" },
-    { id: "supplier", label: "Cong nha cung cap" },
-    { id: "warehouse", label: "Cong kho van" },
-    { id: "system", label: "He thong" },
+    { id: "overview", label: "Khu điều khiển" },
+    { id: "commerce", label: "Thương mại" },
+    { id: "supplier", label: "Cổng nhà cung cấp" },
+    { id: "warehouse", label: "Cổng kho vận" },
+    { id: "system", label: "Hệ thống" },
 ];
 
 function toShellNavItem(item: AdminModule): ShellNavItem {
@@ -49,18 +49,21 @@ export function AdminSidebar() {
         );
 
     return (
-        <aside className="flex h-full flex-col overflow-hidden bg-[#f3f3f3] px-4 py-6">
-            <div className="mb-8 shrink-0 px-4">
-                <h2 className="font-headline text-xl font-bold tracking-tight text-primary">
+        <aside className="flex h-full flex-col overflow-hidden border-r border-outline-variant/10 bg-surface-container-lowest px-3 py-5">
+            <div className="mb-7 shrink-0 px-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-on-surface-variant">
+                    Quản trị
+                </p>
+                <h2 className="mt-1 font-headline text-xl font-bold tracking-tight text-primary">
                     Heritage Admin
                 </h2>
             </div>
 
-            <div className="scrollbar-none min-h-0 flex-1 space-y-6 overflow-y-auto pr-1">
+            <div className="scrollbar-none min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
                 {adminSections.map((section) =>
                     visibleItems[section.id].length > 0 ? (
                         <div key={section.id} className="space-y-2">
-                            <p className="px-4 text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant/60">
+                            <p className="px-3 text-[11px] font-semibold uppercase tracking-widest text-on-surface-variant/60">
                                 {section.label}
                             </p>
                             <SidebarNav items={visibleItems[section.id]} />
@@ -69,22 +72,22 @@ export function AdminSidebar() {
                 )}
             </div>
 
-            <div className="mt-6 shrink-0 space-y-1 border-t border-outline-variant/10 pt-6">
+            <div className="mt-6 shrink-0 space-y-1 border-t border-outline-variant/10 pt-5">
                 {hasAnyAdminPermission(user, ["admin.settings.view", "admin.settings.update"]) ? (
                     <Link
-                        className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-on-surface-variant transition hover:bg-white/40 hover:text-primary"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface-variant transition hover:bg-white/60 hover:text-primary"
                         to={routes.adminSettings}
                     >
                         <span className="material-symbols-outlined text-xl">settings</span>
-                        <span>Cai dat he thong</span>
+                        <span>Cài đặt hệ thống</span>
                     </Link>
                 ) : null}
                 <Link
-                    className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-error/80 transition hover:bg-white/40"
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-error/80 transition hover:bg-white/60"
                     to={routes.logout}
                 >
                     <span className="material-symbols-outlined text-xl">logout</span>
-                    <span>Dang xuat</span>
+                    <span>Đăng xuất</span>
                 </Link>
             </div>
         </aside>

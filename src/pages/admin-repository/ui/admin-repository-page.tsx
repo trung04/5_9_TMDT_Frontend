@@ -6,7 +6,19 @@ import { formatCurrency } from "@/shared/lib/format";
 import { useAdminCatalogStore } from "@/shared/lib/store/use-admin-catalog-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { AdminDrawer, Badge, Button, DataTable, Icon, StatCard, SurfaceCard, cn } from "@/shared/ui";
+import {
+    ActionIconButton,
+    AdminDrawer,
+    AdminPageHeader,
+    AdminToolbar,
+    Badge,
+    Button,
+    DataTable,
+    Icon,
+    StatCard,
+    SurfaceCard,
+    cn,
+} from "@/shared/ui";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
 
 type RepositoryTab = "products" | "categories" | "suppliers";
@@ -74,45 +86,6 @@ function FieldValue({ label, value }: { label: string; value: string | number | 
     );
 }
 
-function ActionButton({
-    label,
-    icon,
-    disabled,
-    onClick,
-    tone = "neutral",
-}: {
-    label: string;
-    icon: string;
-    disabled?: boolean;
-    onClick: () => void;
-    tone?: "neutral" | "danger" | "primary" | "success";
-}) {
-    return (
-        <button
-            type="button"
-            className={cn(
-                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
-                tone === "danger"
-                    ? "text-error hover:bg-error-container/40"
-                    : tone === "primary"
-                      ? "text-primary hover:bg-primary/10"
-                      : tone === "success"
-                        ? "text-primary hover:bg-primary/10"
-                        : "text-on-surface-variant hover:bg-surface-container-low",
-            )}
-            aria-label={label}
-            title={label}
-            disabled={disabled}
-            onClick={(event) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <Icon name={icon} className="text-xl" />
-        </button>
-    );
-}
-
 export function AdminRepositoryPage({
     initialTab = "products",
     lockedTab,
@@ -159,17 +132,17 @@ export function AdminRepositoryPage({
         const tabs = [
             {
                 id: "products" as const,
-                label: "San pham",
+                label: "Sản phẩm",
                 visible: canViewProducts || canCreateProduct || canUpdateProduct || canDeleteProduct,
             },
             {
                 id: "categories" as const,
-                label: "Danh muc",
+                label: "Danh mục",
                 visible: canManageCategories,
             },
             {
                 id: "suppliers" as const,
-                label: "Nha cung cap",
+                label: "Nhà cung cấp",
                 visible: canManageSuppliers,
             },
         ].filter((item) => item.visible);
@@ -299,29 +272,29 @@ export function AdminRepositoryPage({
     const stats = [
         {
             id: "repository-products",
-            label: "Tong san pham",
+            label: "Tổng sản phẩm",
             value: canViewProducts ? `${products.length}` : "-",
             tone: "primary" as const,
             icon: "inventory_2",
             delta: canViewProducts
-                ? `${filteredProducts.length} san pham dang hien thi`
-                : "Chua co quyen xem danh sach san pham",
+                ? `${filteredProducts.length} sản phẩm đang hiển thị`
+                : "Chưa có quyền xem danh sách sản phẩm",
         },
         {
             id: "repository-categories",
-            label: "Danh muc",
+            label: "Danh mục",
             value: `${categories.length}`,
             tone: "secondary" as const,
             icon: "category",
-            delta: `${categories.filter((category) => !isAvailable(category.is_active, category.is_deleted)).length} dang tam dung`,
+            delta: `${categories.filter((category) => !isAvailable(category.is_active, category.is_deleted)).length} đang tạm dừng`,
         },
         {
             id: "repository-suppliers",
-            label: "Nha cung cap",
+            label: "Nhà cung cấp",
             value: `${suppliers.length}`,
             tone: "tertiary" as const,
             icon: "local_shipping",
-            delta: `${suppliers.filter((supplier) => !isAvailable(supplier.is_active, supplier.is_deleted)).length} dang tam dung`,
+            delta: `${suppliers.filter((supplier) => !isAvailable(supplier.is_active, supplier.is_deleted)).length} đang tạm dừng`,
         },
     ];
 
@@ -595,7 +568,7 @@ export function AdminRepositoryPage({
     const productColumns: TableColumn<BackendProduct>[] = [
         {
             key: "product",
-            title: "Product Details",
+            title: "Sản phẩm",
             width: "28%",
             render: (product) => (
                 <div className="flex items-center gap-4">
@@ -617,13 +590,13 @@ export function AdminRepositoryPage({
         },
         {
             key: "category",
-            title: "Category",
+            title: "Danh mục",
             width: "14%",
             render: (product) => product.category?.name ?? `#${product.category_id}`,
         },
         {
             key: "price",
-            title: "Price",
+            title: "Giá",
             align: "right",
             width: "12%",
             nowrap: true,
@@ -631,20 +604,20 @@ export function AdminRepositoryPage({
         },
         {
             key: "stock",
-            title: "Stock",
+            title: "Tồn kho",
             width: "9%",
             nowrap: true,
             render: (product) => `${product.stock_quantity} units`,
         },
         {
             key: "supplier",
-            title: "Supplier",
+            title: "Nhà cung cấp",
             width: "16%",
             render: (product) => product.supplier?.name ?? "Chua gan",
         },
         {
             key: "status",
-            title: "Status",
+            title: "Trạng thái",
             width: "11%",
             nowrap: true,
             render: (product) => (
@@ -655,18 +628,18 @@ export function AdminRepositoryPage({
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "10%",
             nowrap: true,
             render: (product) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton label={`Xem ${product.name}`} icon="visibility" onClick={() => openRecordDrawer("products", product.id, "view")} />
-                    <ActionButton label={`Sua ${product.name}`} icon="edit" tone="primary" disabled={!canUpdateProduct} onClick={() => openRecordDrawer("products", product.id, "edit")} />
+                    <ActionIconButton label={`Xem ${product.name}`} icon="visibility" onClick={() => openRecordDrawer("products", product.id, "view")} />
+                    <ActionIconButton label={`Sửa ${product.name}`} icon="edit" tone="primary" disabled={!canUpdateProduct} onClick={() => openRecordDrawer("products", product.id, "edit")} />
                     {isAvailable(product.is_active, product.is_deleted) ? (
-                        <ActionButton label={`An ${product.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteProduct} onClick={() => void handleDeactivateProduct(product)} />
+                        <ActionIconButton label={`Ẩn ${product.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteProduct} onClick={() => void handleDeactivateProduct(product)} />
                     ) : (
-                        <ActionButton label={`Khoi phuc ${product.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateProduct} onClick={() => void handleRestoreProduct(product)} />
+                        <ActionIconButton label={`Khôi phục ${product.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateProduct} onClick={() => void handleRestoreProduct(product)} />
                     )}
                 </div>
             ),
@@ -676,18 +649,18 @@ export function AdminRepositoryPage({
     const categoryColumns: TableColumn<BackendCategory>[] = [
         {
             key: "name",
-            title: "Category",
+            title: "Danh mục",
             width: "68%",
             render: (category) => (
                 <div>
                     <p className="font-semibold">{category.name}</p>
-                    <p className="line-clamp-1 text-xs text-on-surface-variant">{category.description || "Khong co mo ta"}</p>
+                    <p className="line-clamp-1 text-xs text-on-surface-variant">{category.description || "Không có mô tả"}</p>
                 </div>
             ),
         },
         {
             key: "status",
-            title: "Status",
+            title: "Trạng thái",
             width: "16%",
             nowrap: true,
             render: (category) => (
@@ -698,18 +671,18 @@ export function AdminRepositoryPage({
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "16%",
             nowrap: true,
             render: (category) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton label={`Xem ${category.name}`} icon="visibility" onClick={() => openRecordDrawer("categories", category.id, "view")} />
-                    <ActionButton label={`Sua ${category.name}`} icon="edit" tone="primary" disabled={!canUpdateCategory} onClick={() => openRecordDrawer("categories", category.id, "edit")} />
+                    <ActionIconButton label={`Xem ${category.name}`} icon="visibility" onClick={() => openRecordDrawer("categories", category.id, "view")} />
+                    <ActionIconButton label={`Sửa ${category.name}`} icon="edit" tone="primary" disabled={!canUpdateCategory} onClick={() => openRecordDrawer("categories", category.id, "edit")} />
                     {!isAvailable(category.is_active, category.is_deleted) ? (
-                        <ActionButton label={`Khoi phuc ${category.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateCategory} onClick={() => void handleRestoreCategory(category)} />
+                        <ActionIconButton label={`Khôi phục ${category.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateCategory} onClick={() => void handleRestoreCategory(category)} />
                     ) : (
-                        <ActionButton label={`An ${category.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteCategory} onClick={() => void handleDeactivateCategory(category)} />
+                        <ActionIconButton label={`Ẩn ${category.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteCategory} onClick={() => void handleDeactivateCategory(category)} />
                     )}
                 </div>
             ),
@@ -719,7 +692,7 @@ export function AdminRepositoryPage({
     const supplierColumns: TableColumn<BackendSupplier>[] = [
         {
             key: "supplier",
-            title: "Supplier",
+            title: "Nhà cung cấp",
             width: "25%",
             render: (supplier) => (
                 <div>
@@ -730,12 +703,12 @@ export function AdminRepositoryPage({
         },
         {
             key: "contact",
-            title: "Contact",
+            title: "Liên hệ",
             width: "22%",
             render: (supplier) => (
                 <div>
-                    <p>{supplier.contact_name || "Chua co lien he"}</p>
-                    <p className="text-xs text-on-surface-variant">{supplier.phone || "Chua co SDT"}</p>
+                    <p>{supplier.contact_name || "Chưa có liên hệ"}</p>
+                    <p className="text-xs text-on-surface-variant">{supplier.phone || "Chưa có SĐT"}</p>
                 </div>
             ),
         },
@@ -743,11 +716,11 @@ export function AdminRepositoryPage({
             key: "email",
             title: "Email",
             width: "23%",
-            render: (supplier) => supplier.email || "Chua co email",
+            render: (supplier) => supplier.email || "Chưa có email",
         },
         {
             key: "status",
-            title: "Status",
+            title: "Trạng thái",
             width: "14%",
             nowrap: true,
             render: (supplier) => (
@@ -758,18 +731,18 @@ export function AdminRepositoryPage({
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "16%",
             nowrap: true,
             render: (supplier) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton label={`Xem ${supplier.name}`} icon="visibility" onClick={() => openRecordDrawer("suppliers", supplier.id, "view")} />
-                    <ActionButton label={`Sua ${supplier.name}`} icon="edit" tone="primary" disabled={!canUpdateSupplier} onClick={() => openRecordDrawer("suppliers", supplier.id, "edit")} />
+                    <ActionIconButton label={`Xem ${supplier.name}`} icon="visibility" onClick={() => openRecordDrawer("suppliers", supplier.id, "view")} />
+                    <ActionIconButton label={`Sửa ${supplier.name}`} icon="edit" tone="primary" disabled={!canUpdateSupplier} onClick={() => openRecordDrawer("suppliers", supplier.id, "edit")} />
                     {!isAvailable(supplier.is_active, supplier.is_deleted) ? (
-                        <ActionButton label={`Khoi phuc ${supplier.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateSupplier} onClick={() => void handleRestoreSupplier(supplier)} />
+                        <ActionIconButton label={`Khôi phục ${supplier.name}`} icon="settings_backup_restore" tone="success" disabled={!canUpdateSupplier} onClick={() => void handleRestoreSupplier(supplier)} />
                     ) : (
-                        <ActionButton label={`An ${supplier.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteSupplier} onClick={() => void handleDeactivateSupplier(supplier)} />
+                        <ActionIconButton label={`Ẩn ${supplier.name}`} icon="visibility_off" tone="danger" disabled={!canDeleteSupplier} onClick={() => void handleDeactivateSupplier(supplier)} />
                     )}
                 </div>
             ),
@@ -778,16 +751,16 @@ export function AdminRepositoryPage({
 
     const pageMeta = {
         products: {
-            title: "Products",
-            description: "Quan ly product repository, gia ban, ton kho va nha cung cap theo mau admin.",
+            title: "Sản phẩm",
+            description: "Quản lý product repository, giá bán, tồn kho và nhà cung cấp theo mẫu admin.",
         },
         categories: {
-            title: "Categories",
-            description: "Quan ly category storefront va noi dung hien thi trong catalog.",
+            title: "Danh mục",
+            description: "Quản lý category storefront và nội dung hiển thị trong catalog.",
         },
         suppliers: {
-            title: "Suppliers",
-            description: "Quan ly ho so nha cung cap, lien he va trang thai hop tac.",
+            title: "Nhà cung cấp",
+            description: "Quản lý hồ sơ nhà cung cấp, liên hệ và trạng thái hợp tác.",
         },
     }[activeTab ?? "products"];
 
@@ -814,19 +787,11 @@ export function AdminRepositoryPage({
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-on-surface-variant">
-                        Catalog / Management
-                    </p>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        {pageMeta.title}
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        {pageMeta.description}
-                    </p>
-                </div>
-                {activeTab ? (
+            <AdminPageHeader
+                title={pageMeta.title}
+                description={pageMeta.description}
+                actions={
+                    activeTab ? (
                     <Button
                         disabled={
                             (activeTab === "products" && !canCreateProduct) ||
@@ -835,10 +800,11 @@ export function AdminRepositoryPage({
                         }
                         onClick={() => openCreateDrawer(activeTab)}
                     >
-                        Tao moi
+                        Tạo mới
                     </Button>
-                ) : null}
-            </section>
+                    ) : null
+                }
+            />
 
             <section className="grid gap-6 xl:grid-cols-3">
                 {stats.map((stat) => (
@@ -866,24 +832,26 @@ export function AdminRepositoryPage({
             ) : null}
 
             <SurfaceCard className="space-y-5">
-                <input
-                    className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                    placeholder="Loc theo ten, ma, danh muc hoac nha cung cap..."
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                />
+                <AdminToolbar>
+                    <input
+                        className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                        placeholder="Lọc theo tên, mã, danh mục hoặc nhà cung cấp..."
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                    />
+                </AdminToolbar>
 
                 {error ? <p className="text-sm text-error">{error}</p> : null}
                 {visibleTabs.length === 0 ? (
                     <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                        Ban chua co quyen thao tac trong kho san pham.
+                        Bạn chưa có quyền thao tác trong kho sản phẩm.
                     </p>
                 ) : null}
 
                 {activeTab === "products" ? (
                     !canViewProducts ? (
                         <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                            Ban chua co quyen xem danh sach san pham.
+                            Bạn chưa có quyền xem danh sách sản phẩm.
                         </p>
                     ) : (
                         <DataTable
@@ -891,9 +859,9 @@ export function AdminRepositoryPage({
                             columns={productColumns}
                             getRowKey={(product) => String(product.id)}
                             isLoading={isLoading}
-                            emptyMessage="Khong co san pham phu hop bo loc hien tai."
+                            emptyMessage="Không có sản phẩm phù hợp bộ lọc hiện tại."
                             minWidth="1120px"
-                            pagination={{ pageSize: 6, itemLabel: "san pham" }}
+                            pagination={{ pageSize: 6, itemLabel: "sản phẩm" }}
                             rowClassName={(product) =>
                                 drawer?.entity === "products" && drawer.id === String(product.id)
                                     ? "border-l-4 border-primary bg-primary/5"
@@ -909,7 +877,7 @@ export function AdminRepositoryPage({
                         columns={categoryColumns}
                         getRowKey={(category) => String(category.id)}
                         isLoading={isLoading}
-                        emptyMessage="Khong co danh muc phu hop bo loc hien tai."
+                        emptyMessage="Không có danh mục phù hợp bộ lọc hiện tại."
                         minWidth="760px"
                         pagination={{ pageSize: 6, itemLabel: "danh muc" }}
                         rowClassName={(category) =>
@@ -926,7 +894,7 @@ export function AdminRepositoryPage({
                         columns={supplierColumns}
                         getRowKey={(supplier) => String(supplier.id)}
                         isLoading={isLoading}
-                        emptyMessage="Khong co nha cung cap phu hop bo loc hien tai."
+                        emptyMessage="Không có nhà cung cấp phù hợp bộ lọc hiện tại."
                         minWidth="920px"
                         pagination={{ pageSize: 6, itemLabel: "nha cung cap" }}
                         rowClassName={(supplier) =>

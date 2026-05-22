@@ -30,7 +30,7 @@ export function AdminLayout() {
                 <AdminSidebar />
             </div>
 
-            <div className="sticky top-0 z-30 flex items-center justify-between bg-surface/80 px-4 py-4 backdrop-blur-xl lg:hidden">
+            <div className="sticky top-0 z-30 flex items-center justify-between border-b border-outline-variant/10 bg-surface/90 px-4 py-3 backdrop-blur-xl lg:hidden">
                 <div>
                     <p className="text-sm uppercase tracking-widest text-on-surface-variant">
                         Quản trị
@@ -40,7 +40,7 @@ export function AdminLayout() {
                     </h1>
                 </div>
                 <button
-                    className="rounded-full bg-surface-container-low p-2 text-on-surface-variant"
+                    className="rounded-xl bg-surface-container-low p-2 text-on-surface-variant"
                     onClick={() => setSidebarOpen(true)}
                     aria-label="Mở điều hướng quản trị"
                 >
@@ -48,7 +48,7 @@ export function AdminLayout() {
                 </button>
             </div>
 
-            <main className="min-h-screen px-4 py-4 lg:ml-64 lg:px-8 lg:py-8">
+            <main className="min-h-screen px-4 py-5 lg:ml-64 lg:px-10 lg:py-8">
                 <Outlet />
             </main>
         </div>

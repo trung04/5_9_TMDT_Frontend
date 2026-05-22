@@ -5,7 +5,7 @@ import { formatCurrency, formatDate } from "@/shared/lib/format";
 import { deliveryStatusLabels } from "@/shared/lib/labels";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
-import { AdminDrawer, Badge, Button, DataTable, SurfaceCard } from "@/shared/ui";
+import { AdminDrawer, AdminPageHeader, Badge, Button, DataTable, SurfaceCard } from "@/shared/ui";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
 
 function deliveryTone(order: Order): StatusTone {
@@ -116,16 +116,10 @@ export function SupplierProcessingPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Xử lý đơn nhà cung cấp
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Kiểm tra đơn cần chuẩn bị, chuyển sang sẵn sàng giao và xác nhận hoàn tất.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Xử lý đơn nhà cung cấp"
+                description="Kiểm tra đơn cần chuẩn bị, chuyển sang sẵn sàng giao và xác nhận hoàn tất."
+            />
 
             <SurfaceCard className="overflow-hidden p-0">
                 <div className="border-b border-outline-variant/15 px-6 py-5">

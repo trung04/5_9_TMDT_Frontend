@@ -21,20 +21,27 @@ export function StatCard({ metric, className }: StatCardProps) {
     return (
         <article
             className={cn(
-                "flex h-full flex-col rounded-3xl bg-surface-container-lowest p-6 shadow-ambient",
+                "flex h-full flex-col rounded-[1.25rem] border border-outline-variant/10 bg-surface-container-lowest p-5 shadow-[0px_12px_28px_rgba(26,28,28,0.05)]",
                 className,
             )}
         >
-            <div className="flex items-center gap-3">
-                <div className={cn("rounded-2xl p-3", toneMap[metric.tone])}>
+            <div className="flex items-start gap-3">
+                <div className={cn("rounded-xl p-2.5", toneMap[metric.tone])}>
                     <Icon name={metric.icon} className="text-2xl" fill />
                 </div>
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-on-surface">
-                    {metric.label}
-                </p>
+                <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-on-surface">
+                        {metric.label}
+                    </p>
+                    {metric.delta || metric.helperText ? (
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-on-surface-variant">
+                            {metric.delta ?? metric.helperText}
+                        </p>
+                    ) : null}
+                </div>
             </div>
 
-            <div className="flex flex-1 items-center justify-center pt-6 text-center">
+            <div className="flex flex-1 items-end pt-6">
                 <h3 className="font-headline text-3xl font-bold text-on-surface">{metric.value}</h3>
             </div>
         </article>

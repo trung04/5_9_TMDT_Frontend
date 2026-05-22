@@ -16,7 +16,7 @@ import { formatCurrency, formatDate } from "@/shared/lib/format";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import type { MetricCardData } from "@/shared/types/ui";
-import { Button, StatCard, SurfaceCard } from "@/shared/ui";
+import { AdminPageHeader, AdminToolbar, Button, StatCard, SurfaceCard } from "@/shared/ui";
 
 interface DashboardOrderItem {
     id: number;
@@ -65,7 +65,7 @@ interface AdminDashboardResponse {
         filters: {
             date_from: string;
             date_to: string;
-            chart_range: "7d" | "30d" | "this_month" | "custom" | string;
+            chart_range: string;
         };
         recent_orders: DashboardOrderItem[];
         work_queue: Array<{
@@ -413,86 +413,69 @@ export function AdminDashboardPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Tổng quan quản trị
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Theo dõi doanh thu, đơn hàng cần xử lý và các cảnh báo vận hành chính.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Tổng quan quản trị"
+                description="Theo dõi doanh thu, đơn hàng cần xử lý và các cảnh báo vận hành chính."
+            />
 
-            <section className="rounded-[1.75rem] bg-surface-container-low p-4 shadow-sm ring-1 ring-black/5">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-                    {/* <div className="min-w-0 xl:flex-1">
-                        <h1 className="font-headline text-3xl font-bold">Admin Dashboard</h1>
-                        <p className="mt-2 text-sm text-on-surface-variant">
-                            Doanh thu chỉ được ghi nhận khi đơn đã giao thành công và thanh toán thành công.
-                        </p>
-                    </div> */}
-
-                    <div className="flex min-w-0 flex-1 flex-col gap-3 xl:max-w-[74rem]">
-                        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.45fr_1fr_1fr_0.68fr_0.68fr_0.78fr] lg:items-end">
-                            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/80 p-2 shadow-sm">
-                                <Button
-                                    size="sm"
-                                    className="whitespace-nowrap"
-                                    variant={chartRange === "7d" ? "primary" : "secondary"}
-                                    onClick={() => handleChartPreset("7d")}
-                                >
-                                    7 ngày
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    className="whitespace-nowrap"
-                                    variant={chartRange === "30d" ? "primary" : "secondary"}
-                                    onClick={() => handleChartPreset("30d")}
-                                >
-                                    30 ngày
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    className="whitespace-nowrap"
-                                    variant={chartRange === "this_month" ? "primary" : "secondary"}
-                                    onClick={() => handleChartPreset("this_month")}
-                                >
-                                    Tháng này
-                                </Button>
-                            </div>
-
-                            <label className="flex min-w-0 flex-col gap-2 text-sm">
-                                <input
-                                    type="date"
-                                    className="min-w-0 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
-                                    value={dateFrom}
-                                    onChange={(event) => setDateFrom(event.target.value)}
-                                />
-                            </label>
-
-                            <label className="flex min-w-0 flex-col gap-2 text-sm">
-                                <input
-                                    type="date"
-                                    className="min-w-0 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
-                                    value={dateTo}
-                                    onChange={(event) => setDateTo(event.target.value)}
-                                />
-                            </label>
-
-                            <Button size="sm" variant="secondary" className="whitespace-nowrap px-3" onClick={handleApplyDateRange}>
-                                Áp dụng
-                            </Button>
-                            <Button size="sm" variant="secondary" className="whitespace-nowrap px-3" onClick={() => window.location.reload()}>
-                                Tải lại
-                            </Button>
-                            <Button size="sm" className="whitespace-nowrap px-3" onClick={handleExportReport} disabled={!dashboard}>
-                                Xuất báo cáo
-                            </Button>
-                        </div>
+            <AdminToolbar>
+                <div className="grid w-full grid-cols-1 gap-3 lg:grid-cols-[1.45fr_1fr_1fr_0.68fr_0.68fr_0.78fr] lg:items-end">
+                    <div className="grid grid-cols-3 gap-2 rounded-2xl bg-surface p-2 shadow-sm">
+                        <Button
+                            size="sm"
+                            className="whitespace-nowrap"
+                            variant={chartRange === "7d" ? "primary" : "secondary"}
+                            onClick={() => handleChartPreset("7d")}
+                        >
+                            7 ngày
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="whitespace-nowrap"
+                            variant={chartRange === "30d" ? "primary" : "secondary"}
+                            onClick={() => handleChartPreset("30d")}
+                        >
+                            30 ngày
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="whitespace-nowrap"
+                            variant={chartRange === "this_month" ? "primary" : "secondary"}
+                            onClick={() => handleChartPreset("this_month")}
+                        >
+                            Tháng này
+                        </Button>
                     </div>
+
+                    <label className="flex min-w-0 flex-col gap-2 text-sm">
+                        <input
+                            type="date"
+                            className="min-w-0 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                            value={dateFrom}
+                            onChange={(event) => setDateFrom(event.target.value)}
+                        />
+                    </label>
+
+                    <label className="flex min-w-0 flex-col gap-2 text-sm">
+                        <input
+                            type="date"
+                            className="min-w-0 rounded-2xl bg-surface-container-highest px-4 py-3 outline-none"
+                            value={dateTo}
+                            onChange={(event) => setDateTo(event.target.value)}
+                        />
+                    </label>
+
+                    <Button size="sm" variant="secondary" className="whitespace-nowrap px-3" onClick={handleApplyDateRange}>
+                        Áp dụng
+                    </Button>
+                    <Button size="sm" variant="secondary" className="whitespace-nowrap px-3" onClick={() => window.location.reload()}>
+                        Tải lại
+                    </Button>
+                    <Button size="sm" className="whitespace-nowrap px-3" onClick={handleExportReport} disabled={!dashboard}>
+                        Xuất báo cáo
+                    </Button>
                 </div>
-            </section>
+            </AdminToolbar>
 
             {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
 
@@ -606,7 +589,7 @@ export function AdminDashboardPage() {
                                         Các đầu việc admin cần theo dõi trong ngày.
                                     </p>
                                 </div>
-                                <Button variant="secondary" onClick={() => navigate(routes.adminLogistics)}>
+                                <Button variant="secondary" onClick={() => void navigate(routes.adminLogistics)}>
                                     Mở logistics
                                 </Button>
                             </div>
@@ -661,7 +644,7 @@ export function AdminDashboardPage() {
                                                                     </span>
                                                                     <Button
                                                                         variant="secondary"
-                                                                        onClick={() => navigate(routes.adminLogistics)}
+                                                                        onClick={() => void navigate(routes.adminLogistics)}
                                                                     >
                                                                         Xem / Xử lý
                                                                     </Button>

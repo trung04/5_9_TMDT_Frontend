@@ -20,7 +20,17 @@ import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useGhnLocationStore } from "@/shared/lib/store/use-ghn-location-store";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
-import { AdminDrawer, Badge, Button, DataTable, Icon, SurfaceCard, cn } from "@/shared/ui";
+import {
+    ActionIconButton,
+    AdminDrawer,
+    AdminPageHeader,
+    AdminToolbar,
+    Badge,
+    Button,
+    DataTable,
+    SurfaceCard,
+    cn,
+} from "@/shared/ui";
 
 const ORDER_STATUSES = [
     "PENDING",
@@ -146,43 +156,6 @@ function FieldValue({ label, value }: { label: string; value: string | number | 
             <p className="text-xs font-label uppercase tracking-[0.14em] text-on-surface-variant">{label}</p>
             <p className="mt-2 font-medium text-on-surface">{value || "Chua cap nhat"}</p>
         </div>
-    );
-}
-
-function ActionButton({
-    label,
-    icon,
-    disabled,
-    onClick,
-    tone = "neutral",
-}: {
-    label: string;
-    icon: string;
-    disabled?: boolean;
-    onClick: () => void;
-    tone?: "neutral" | "primary" | "danger";
-}) {
-    return (
-        <button
-            type="button"
-            className={cn(
-                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
-                tone === "danger"
-                    ? "text-error hover:bg-error-container/40"
-                    : tone === "primary"
-                      ? "text-primary hover:bg-primary/10"
-                      : "text-on-surface-variant hover:bg-surface-container-low",
-            )}
-            aria-label={label}
-            title={label}
-            disabled={disabled}
-            onClick={(event) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <Icon name={icon} className="text-xl" />
-        </button>
     );
 }
 
@@ -763,7 +736,7 @@ export function AdminLogisticsPage() {
             align: "right",
             render: (order) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton
+                    <ActionIconButton
                         label={`Xem ${order.order_no}`}
                         icon="visibility"
                         tone="primary"
@@ -776,37 +749,31 @@ export function AdminLogisticsPage() {
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Điều phối đơn hàng
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Lọc, xử lý trạng thái và cập nhật thanh toán cho các đơn hàng trong hệ thống.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Điều phối đơn hàng"
+                description="Lọc, xử lý trạng thái và cập nhật thanh toán cho các đơn hàng trong hệ thống."
+            />
 
-            <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+            <AdminToolbar>
                 <input
-                    className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                    placeholder="Loc theo ma don, khach hang, email, ma van don..."
+                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                    placeholder="Lọc theo mã đơn, khách hàng, email, mã vận đơn..."
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                 />
                 <select
-                    className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none"
+                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none"
                     value={statusFilter}
                     onChange={(event) => setStatusFilter(event.target.value)}
                 >
-                    <option value="all">Tat ca trang thai</option>
+                    <option value="all">Tất cả trạng thái</option>
                     {ORDER_STATUSES.map((status) => (
                         <option key={status} value={status}>
                             {labelForStatus(status)}
                         </option>
                     ))}
                 </select>
-            </div>
+            </AdminToolbar>
 
             {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
 

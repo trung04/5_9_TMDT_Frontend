@@ -9,7 +9,18 @@ import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { usePostStore, type PostPayload } from "@/shared/lib/store/use-post-store";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
-import { AdminDrawer, Badge, Button, DataTable, Icon, SurfaceCard, cn } from "@/shared/ui";
+import {
+    ActionIconButton,
+    AdminDrawer,
+    AdminPageHeader,
+    AdminToolbar,
+    Badge,
+    Button,
+    DataTable,
+    Icon,
+    SurfaceCard,
+    cn,
+} from "@/shared/ui";
 
 type CommunityTab = "posts" | "suppliers" | "customers";
 type DrawerMode = "view" | "create" | "edit";
@@ -119,43 +130,6 @@ function FieldValue({ label, value }: { label: string; value: string | number | 
     );
 }
 
-function ActionButton({
-    label,
-    icon,
-    disabled,
-    onClick,
-    tone = "neutral",
-}: {
-    label: string;
-    icon: string;
-    disabled?: boolean;
-    onClick: () => void;
-    tone?: "neutral" | "primary" | "danger";
-}) {
-    return (
-        <button
-            type="button"
-            className={cn(
-                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
-                tone === "danger"
-                    ? "text-error hover:bg-error-container/40"
-                    : tone === "primary"
-                      ? "text-primary hover:bg-primary/10"
-                      : "text-on-surface-variant hover:bg-surface-container-low",
-            )}
-            aria-label={label}
-            title={label}
-            disabled={disabled}
-            onClick={(event) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <Icon name={icon} className="text-xl" />
-        </button>
-    );
-}
-
 function postPayloadFromPost(post: BackendPost, status = post.status): PostPayload {
     return {
         title: post.title,
@@ -250,17 +224,17 @@ export function AdminCommunityPage() {
             [
                 {
                     id: "posts" as const,
-                    label: "Bai viet",
+                    label: "Bài viết",
                     visible: canViewPosts || canCreatePost || canUpdatePost || canDeletePost || canModerateComments,
                 },
                 {
                     id: "suppliers" as const,
-                    label: "Nha cung cap",
+                    label: "Nhà cung cấp",
                     visible: canViewCommunity || canCreateInvitation,
                 },
                 {
                     id: "customers" as const,
-                    label: "Khach hang",
+                    label: "Khách hàng",
                     visible: canViewCommunity,
                 },
             ].filter((item) => item.visible),
@@ -478,17 +452,17 @@ export function AdminCommunityPage() {
         const result = await updateCommentVisibility(commentId, status);
 
         if (!result.success) {
-            pushToast({ tone: "warning", message: result.error ?? "Khong the cap nhat binh luan." });
+            pushToast({ tone: "warning", message: result.error ?? "Không thể cập nhật bình luận." });
             return;
         }
 
-        pushToast({ tone: "success", message: "Da cap nhat trang thai binh luan." });
+        pushToast({ tone: "success", message: "Đã cập nhật trạng thái bình luận." });
     }
 
     const postColumns: TableColumn<BackendPost>[] = [
         {
             key: "post",
-            title: "Bai viet",
+            title: "Bài viết",
             width: "28%",
             render: (post) => (
                 <div>
@@ -499,25 +473,25 @@ export function AdminCommunityPage() {
         },
         {
             key: "author",
-            title: "Tac gia",
+            title: "Tác giả",
             width: "18%",
             render: (post) => (
                 <div>
                     <p className="font-medium">{post.author?.full_name ?? "Admin"}</p>
-                    <p className="mt-1 text-xs text-on-surface-variant">{post.author?.email ?? "Chua co email"}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">{post.author?.email ?? "Chưa có email"}</p>
                 </div>
             ),
         },
         {
             key: "status",
-            title: "Trang thai",
+            title: "Trạng thái",
             width: "12%",
             nowrap: true,
             render: (post) => <Badge tone={postStatusTone(post.status)}>{post.status}</Badge>,
         },
         {
             key: "engagement",
-            title: "Tuong tac",
+            title: "Tương tác",
             width: "14%",
             nowrap: true,
             render: (post) => (
@@ -528,33 +502,33 @@ export function AdminCommunityPage() {
         },
         {
             key: "published",
-            title: "Xuat ban",
+            title: "Xuất bản",
             width: "14%",
             nowrap: true,
             render: (post) => formatAdminDate(post.published_at),
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "14%",
             nowrap: true,
             render: (post) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton
+                    <ActionIconButton
                         label={`Xem ${post.title}`}
                         icon="visibility"
                         tone="primary"
                         onClick={() => openPostDrawer(post, "view")}
                     />
-                    <ActionButton
-                        label={`Sua ${post.title}`}
+                    <ActionIconButton
+                        label={`Sửa ${post.title}`}
                         icon="edit"
                         disabled={!canUpdatePost}
                         onClick={() => openPostDrawer(post, "edit")}
                     />
-                    <ActionButton
-                        label={`Chuyen ${post.title} ve Draft`}
+                    <ActionIconButton
+                        label={`Chuyển ${post.title} về Draft`}
                         icon="visibility_off"
                         tone="danger"
                         disabled={!canDeletePost || post.status !== "PUBLISHED"}
@@ -568,36 +542,36 @@ export function AdminCommunityPage() {
     const supplierColumns: TableColumn<CommunitySupplier>[] = [
         {
             key: "supplier",
-            title: "Nha cung cap",
+            title: "Nhà cung cấp",
             width: "28%",
             render: (supplier) => (
                 <div>
                     <p className="font-semibold text-on-surface">{supplier.name}</p>
-                    <p className="mt-1 text-xs text-on-surface-variant">{supplier.address ?? "Chua co dia chi"}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">{supplier.address ?? "Chưa có địa chỉ"}</p>
                 </div>
             ),
         },
         {
             key: "contact",
-            title: "Lien he",
+            title: "Liên hệ",
             width: "24%",
             render: (supplier) => (
                 <div>
-                    <p className="font-medium">{supplier.contact_name ?? "Chua cap nhat"}</p>
-                    <p className="mt-1 text-xs text-on-surface-variant">{supplier.email ?? "Chua co email"}</p>
+                    <p className="font-medium">{supplier.contact_name ?? "Chưa cập nhật"}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">{supplier.email ?? "Chưa có email"}</p>
                 </div>
             ),
         },
         {
             key: "phone",
-            title: "Dien thoai",
+            title: "Điện thoại",
             width: "14%",
             nowrap: true,
-            render: (supplier) => supplier.phone ?? "Chua cap nhat",
+            render: (supplier) => supplier.phone ?? "Chưa cập nhật",
         },
         {
             key: "products",
-            title: "San pham",
+            title: "Sản phẩm",
             align: "right",
             width: "10%",
             nowrap: true,
@@ -605,19 +579,19 @@ export function AdminCommunityPage() {
         },
         {
             key: "status",
-            title: "Trang thai",
+            title: "Trạng thái",
             width: "14%",
             nowrap: true,
             render: (supplier) => <Badge tone={activeEntityTone(supplier)}>{activeEntityLabel(supplier)}</Badge>,
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "10%",
             nowrap: true,
             render: (supplier) => (
-                <ActionButton
+                <ActionIconButton
                     label={`Xem ${supplier.name}`}
                     icon="visibility"
                     tone="primary"
@@ -630,7 +604,7 @@ export function AdminCommunityPage() {
     const customerColumns: TableColumn<CommunityCustomer>[] = [
         {
             key: "customer",
-            title: "Khach hang",
+            title: "Khách hàng",
             width: "28%",
             render: (customer) => (
                 <div>
@@ -641,14 +615,14 @@ export function AdminCommunityPage() {
         },
         {
             key: "phone",
-            title: "Dien thoai",
+            title: "Điện thoại",
             width: "16%",
             nowrap: true,
-            render: (customer) => customer.phone || "Chua cap nhat",
+            render: (customer) => customer.phone || "Chưa cập nhật",
         },
         {
             key: "orders",
-            title: "Don hang",
+            title: "Đơn hàng",
             align: "right",
             width: "10%",
             nowrap: true,
@@ -656,7 +630,7 @@ export function AdminCommunityPage() {
         },
         {
             key: "spend",
-            title: "Tong chi",
+            title: "Tổng chi",
             align: "right",
             width: "16%",
             nowrap: true,
@@ -664,19 +638,19 @@ export function AdminCommunityPage() {
         },
         {
             key: "status",
-            title: "Trang thai",
+            title: "Trạng thái",
             width: "16%",
             nowrap: true,
             render: (customer) => <Badge tone={activeEntityTone(customer)}>{activeEntityLabel(customer)}</Badge>,
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             width: "14%",
             nowrap: true,
             render: (customer) => (
-                <ActionButton
+                <ActionIconButton
                     label={`Xem ${customer.full_name}`}
                     icon="visibility"
                     tone="primary"
@@ -689,7 +663,7 @@ export function AdminCommunityPage() {
     const invitationColumns: TableColumn<CommunityInvitation>[] = [
         {
             key: "supplier",
-            title: "Nha cung cap",
+            title: "Nhà cung cấp",
             width: "30%",
             render: (invitation) => (
                 <div>
@@ -700,19 +674,19 @@ export function AdminCommunityPage() {
         },
         {
             key: "contact",
-            title: "Nguoi lien he",
+            title: "Người liên hệ",
             width: "20%",
             render: (invitation) => invitation.contact_name,
         },
         {
             key: "categories",
-            title: "Danh muc",
+            title: "Danh mục",
             width: "24%",
-            render: (invitation) => invitation.categories.join(", ") || "Chua chon",
+            render: (invitation) => invitation.categories.join(", ") || "Chưa chọn",
         },
         {
             key: "status",
-            title: "Trang thai",
+            title: "Trạng thái",
             width: "12%",
             nowrap: true,
             render: (invitation) => <Badge tone={communityStatusTone(invitation.status)}>{invitation.status}</Badge>,
@@ -770,10 +744,10 @@ export function AdminCommunityPage() {
                         columns={postColumns}
                         getRowKey={(post) => String(post.id)}
                         isLoading={adminStatus === "loading"}
-                        loadingMessage="Dang tai bai viet..."
-                        emptyMessage="Chua co bai viet phu hop."
+                        loadingMessage="Đang tải bài viết..."
+                        emptyMessage="Chưa có bài viết phù hợp."
                         minWidth="980px"
-                        pagination={{ pageSize: 5, itemLabel: "bai viet" }}
+                        pagination={{ pageSize: 5, itemLabel: "bài viết" }}
                         onRowClick={(post) => openPostDrawer(post, "view")}
                     />
                 )}
@@ -786,8 +760,8 @@ export function AdminCommunityPage() {
             <SurfaceCard className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <h3 className="font-headline text-xl font-semibold text-on-surface">Nha cung cap</h3>
-                        <p className="mt-1 text-sm text-on-surface-variant">{currentRows} dong dang hien thi</p>
+                        <h3 className="font-headline text-xl font-semibold text-on-surface">Nhà cung cấp</h3>
+                        <p className="mt-1 text-sm text-on-surface-variant">{currentRows} dòng đang hiển thị</p>
                     </div>
                     <Button
                         size="sm"
@@ -795,7 +769,7 @@ export function AdminCommunityPage() {
                         onClick={() => setDrawer({ entity: "invite", mode: "create" })}
                         iconLeft={<Icon name="person_add" className="text-lg" />}
                     >
-                        Moi nha cung cap
+                        Mời nhà cung cấp
                     </Button>
                 </div>
                 <DataTable
@@ -803,10 +777,10 @@ export function AdminCommunityPage() {
                     columns={supplierColumns}
                     getRowKey={(supplier) => String(supplier.id)}
                     isLoading={isLoadingCommunity}
-                    loadingMessage="Dang tai nha cung cap..."
-                    emptyMessage="Chua co nha cung cap phu hop."
+                    loadingMessage="Đang tải nhà cung cấp..."
+                    emptyMessage="Chưa có nhà cung cấp phù hợp."
                     minWidth="920px"
-                    pagination={{ pageSize: 6, itemLabel: "nha cung cap" }}
+                    pagination={{ pageSize: 6, itemLabel: "nhà cung cấp" }}
                     onRowClick={(supplier) => setDrawer({ entity: "supplier", mode: "view", id: String(supplier.id) })}
                 />
             </SurfaceCard>
@@ -817,18 +791,18 @@ export function AdminCommunityPage() {
         return (
             <SurfaceCard className="space-y-4">
                 <div>
-                    <h3 className="font-headline text-xl font-semibold text-on-surface">Khach hang</h3>
-                    <p className="mt-1 text-sm text-on-surface-variant">{currentRows} dong dang hien thi</p>
+                    <h3 className="font-headline text-xl font-semibold text-on-surface">Khách hàng</h3>
+                    <p className="mt-1 text-sm text-on-surface-variant">{currentRows} dòng đang hiển thị</p>
                 </div>
                 <DataTable
                     rows={filteredCustomers}
                     columns={customerColumns}
                     getRowKey={(customer) => String(customer.id)}
                     isLoading={isLoadingCommunity}
-                    loadingMessage="Dang tai khach hang..."
-                    emptyMessage="Chua co khach hang phu hop."
+                    loadingMessage="Đang tải khách hàng..."
+                    emptyMessage="Chưa có khách hàng phù hợp."
                     minWidth="920px"
-                    pagination={{ pageSize: 6, itemLabel: "khach hang" }}
+                    pagination={{ pageSize: 6, itemLabel: "khách hàng" }}
                     onRowClick={(customer) => setDrawer({ entity: "customer", mode: "view", id: String(customer.id) })}
                 />
             </SurfaceCard>
@@ -906,17 +880,17 @@ export function AdminCommunityPage() {
                 </div>
 
                 <div className="space-y-3 border-t border-outline-variant/15 pt-5">
-                    <h4 className="font-headline text-lg font-semibold">Binh luan</h4>
+                    <h4 className="font-headline text-lg font-semibold">Bình luận</h4>
                     {activePost.comments.length === 0 ? (
                         <p className="rounded-2xl bg-surface-container-low p-4 text-sm text-on-surface-variant">
-                            Chua co binh luan.
+                            Chưa có bình luận.
                         </p>
                     ) : (
                         activePost.comments.map((comment) => (
                             <div key={comment.id} className="rounded-2xl bg-surface-container-low p-4 text-sm">
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
-                                        <p className="font-semibold">{comment.author?.full_name ?? "Khach hang"}</p>
+                                        <p className="font-semibold">{comment.author?.full_name ?? "Khách hàng"}</p>
                                         <p className="text-xs text-on-surface-variant">
                                             {formatAdminDate(comment.created_at)}
                                         </p>
@@ -990,12 +964,12 @@ export function AdminCommunityPage() {
 
     function drawerTitle() {
         if (!drawer) return "";
-        if (drawer.entity === "invite") return "Moi nha cung cap";
-        if (drawer.entity === "supplier") return activeSupplier?.name ?? "Chi tiet nha cung cap";
-        if (drawer.entity === "customer") return activeCustomer?.full_name ?? "Chi tiet khach hang";
-        if (drawer.mode === "create") return "Tao bai viet";
-        if (drawer.mode === "edit") return activePost?.title ?? "Chinh sua bai viet";
-        return activePost?.title ?? "Chi tiet bai viet";
+        if (drawer.entity === "invite") return "Mời nhà cung cấp";
+        if (drawer.entity === "supplier") return activeSupplier?.name ?? "Chi tiết nhà cung cấp";
+        if (drawer.entity === "customer") return activeCustomer?.full_name ?? "Chi tiết khách hàng";
+        if (drawer.mode === "create") return "Tạo bài viết";
+        if (drawer.mode === "edit") return activePost?.title ?? "Chỉnh sửa bài viết";
+        return activePost?.title ?? "Chi tiết bài viết";
     }
 
     function drawerSubtitle() {
@@ -1085,14 +1059,14 @@ export function AdminCommunityPage() {
                         disabled={!canUpdatePost}
                         onClick={() => openPostDrawer(activePost, "edit")}
                     >
-                        Chinh sua
+                        Chỉnh sửa
                     </Button>
                     <Button
                         variant="outline"
                         disabled={isPostSaving || !canDeletePost || activePost.status !== "PUBLISHED"}
                         onClick={() => void handleMovePostToDraft(activePost)}
                     >
-                        Chuyen Draft
+                        Chuyển Draft
                     </Button>
                 </div>
             );
@@ -1122,16 +1096,11 @@ export function AdminCommunityPage() {
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Cộng đồng
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Quản lý bài viết, lời mời nhà cung cấp và hoạt động cộng đồng.
-                    </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
+            <AdminPageHeader
+                title="Cộng đồng"
+                description="Quản lý bài viết, lời mời nhà cung cấp và hoạt động cộng đồng."
+                actions={
+                    <>
                     <Button
                         variant="secondary"
                         disabled={!canViewCommunity && !canViewPosts}
@@ -1141,33 +1110,34 @@ export function AdminCommunityPage() {
                                 JSON.stringify(exportPayload, null, 2),
                                 "application/json",
                             );
-                            pushToast({ tone: "success", message: "Da xuat du lieu cong dong." });
+                            pushToast({ tone: "success", message: "Đã xuất dữ liệu cộng đồng." });
                         }}
                         iconLeft={<Icon name="download" className="text-lg" />}
                     >
-                        Xuat du lieu
+                        Xuất dữ liệu
                     </Button>
                     <Button
                         disabled={!canCreateInvitation}
                         onClick={() => setDrawer({ entity: "invite", mode: "create" })}
                         iconLeft={<Icon name="person_add" className="text-lg" />}
                     >
-                        Moi nha cung cap
+                        Mời nhà cung cấp
                     </Button>
-                </div>
-            </section>
+                    </>
+                }
+            />
 
             {communityError ? <SurfaceCard className="text-sm text-error">{communityError}</SurfaceCard> : null}
 
             {invitations.length > 0 ? (
                 <SurfaceCard className="space-y-4">
-                    <h3 className="font-headline text-xl font-semibold text-on-surface">Loi moi gan day</h3>
+                    <h3 className="font-headline text-xl font-semibold text-on-surface">Lời mời gần đây</h3>
                     <DataTable
                         rows={invitations.slice(0, 4)}
                         columns={invitationColumns}
                         getRowKey={(invitation) => String(invitation.id)}
                         minWidth="820px"
-                        pagination={{ pageSize: 4, itemLabel: "loi moi" }}
+                        pagination={{ pageSize: 4, itemLabel: "lời mời" }}
                     />
                 </SurfaceCard>
             ) : null}
@@ -1178,10 +1148,10 @@ export function AdminCommunityPage() {
                         type="button"
                         key={item.id}
                         className={cn(
-                            "rounded-full px-4 py-2 text-sm font-medium",
+                            "rounded-xl border border-transparent px-4 py-2 text-sm font-medium transition",
                             tab === item.id
-                                ? "bg-primary text-on-primary"
-                                : "bg-surface-container-low text-on-surface-variant",
+                                ? "border-primary/15 bg-primary text-on-primary"
+                                : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high",
                         )}
                         onClick={() => setTab(item.id)}
                     >
@@ -1190,12 +1160,14 @@ export function AdminCommunityPage() {
                 ))}
             </div>
 
-            <input
-                className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
-                placeholder="Loc theo bai viet, doi tac hoac khach hang..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-            />
+            <AdminToolbar>
+                <input
+                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                    placeholder="Lọc theo bài viết, đối tác hoặc khách hàng..."
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                />
+            </AdminToolbar>
 
             {tab === "posts" ? renderPostTable() : null}
             {tab === "suppliers" ? renderSuppliersTable() : null}

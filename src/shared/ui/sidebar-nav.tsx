@@ -20,20 +20,24 @@ export function SidebarNav({ items, className }: SidebarNavProps) {
                         end={item.to === "/" || item.to === "/admin"}
                         className={({ isActive }) =>
                             cn(
-                                "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all",
+                                "group flex items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-sm font-medium transition-all",
                                 isActive
-                                    ? "border-r-4 border-primary bg-white/75 text-primary shadow-sm"
-                                    : "text-on-surface-variant hover:bg-white/35 hover:text-primary",
+                                    ? "border-primary/15 bg-primary/10 text-primary shadow-sm"
+                                    : "text-on-surface-variant hover:border-outline-variant/10 hover:bg-white/60 hover:text-primary",
                             )
                         }
                     >
-                        <Icon name={item.icon} className="text-xl" fill={item.to !== undefined} />
-                        <span>{item.label}</span>
+                        {({ isActive }) => (
+                            <>
+                                <Icon name={item.icon} className="text-xl" fill={isActive} />
+                                <span className="truncate">{item.label}</span>
+                            </>
+                        )}
                     </NavLink>
                 ) : (
                     <div
                         key={item.label}
-                        className="flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-on-surface-variant/40"
+                        className="flex cursor-not-allowed items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface-variant/40"
                     >
                         <Icon name={item.icon} className="text-xl" />
                         <span>{item.label}</span>

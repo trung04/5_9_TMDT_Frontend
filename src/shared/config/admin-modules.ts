@@ -37,7 +37,7 @@ export interface AdminModule {
 export const adminModules: AdminModule[] = [
     {
         id: "dashboard",
-        label: "Tong quan",
+        label: "Tổng quan",
         to: routes.adminDashboard,
         icon: "dashboard",
         permissions: ["admin.dashboard.view"],
@@ -45,7 +45,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "users",
-        label: "Users",
+        label: "Người dùng",
         to: routes.adminUsers,
         icon: "group",
         permissions: [
@@ -58,7 +58,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "products",
-        label: "Products",
+        label: "Sản phẩm",
         to: routes.adminProducts,
         icon: "inventory_2",
         permissions: [
@@ -71,7 +71,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "categories",
-        label: "Categories",
+        label: "Danh mục",
         to: routes.adminCategories,
         icon: "category",
         permissions: [
@@ -83,7 +83,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "suppliers",
-        label: "Suppliers",
+        label: "Nhà cung cấp",
         to: routes.adminSuppliers,
         icon: "local_shipping",
         permissions: [
@@ -95,7 +95,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "shippingCarriers",
-        label: "Don vi van chuyen",
+        label: "Vận chuyển",
         to: routes.adminShippingCarriers,
         icon: "local_shipping",
         permissions: [
@@ -108,7 +108,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "logistics",
-        label: "Dieu phoi don",
+        label: "Điều phối đơn",
         to: routes.adminLogistics,
         icon: "shopping_cart",
         permissions: [
@@ -121,7 +121,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "community",
-        label: "Cong dong",
+        label: "Cộng đồng",
         to: routes.adminCommunity,
         icon: "group",
         permissions: [
@@ -137,7 +137,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "settings",
-        label: "Cai dat",
+        label: "Cài đặt",
         to: routes.adminSettings,
         icon: "settings",
         permissions: ["admin.settings.view", "admin.settings.update"],
@@ -145,7 +145,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "access",
-        label: "Phan quyen",
+        label: "Phân quyền",
         to: routes.adminAccess,
         icon: "admin_panel_settings",
         permissions: [],
@@ -154,7 +154,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "supplierInventory",
-        label: "Supplier ton kho",
+        label: "Tồn kho NCC",
         to: routes.adminSupplierInventory,
         icon: "inventory_2",
         permissions: ["admin.supplier.inventory.view"],
@@ -162,7 +162,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "supplierRequisitions",
-        label: "Supplier phieu yeu cau",
+        label: "Phiếu NCC",
         to: routes.adminSupplierRequisitions,
         icon: "assignment_turned_in",
         permissions: ["admin.supplier.requisitions.view"],
@@ -170,7 +170,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "supplierProcessing",
-        label: "Supplier xu ly don",
+        label: "Xử lý đơn NCC",
         to: routes.adminSupplierProcessing,
         icon: "package_2",
         permissions: ["admin.supplier.processing.view"],
@@ -178,7 +178,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "supplierOrders",
-        label: "Supplier don hang",
+        label: "Đơn NCC",
         to: routes.adminSupplierOrders,
         icon: "local_shipping",
         permissions: ["admin.supplier.orders.view"],
@@ -186,7 +186,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "supplierHelp",
-        label: "Supplier ho tro",
+        label: "Hỗ trợ NCC",
         to: routes.adminSupplierHelp,
         icon: "help",
         permissions: ["admin.supplier.help.view"],
@@ -194,7 +194,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "warehouseInventory",
-        label: "Kho ton kho",
+        label: "Tồn kho",
         to: routes.adminWarehouseInventory,
         icon: "inventory_2",
         permissions: ["admin.warehouse.inventory.view"],
@@ -202,7 +202,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "warehouseRequisitions",
-        label: "Kho phieu tai nhap",
+        label: "Phiếu tái nhập",
         to: routes.adminWarehouseRequisitions,
         icon: "assignment_turned_in",
         permissions: ["admin.warehouse.requisitions.view"],
@@ -210,7 +210,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "warehouseFulfillment",
-        label: "Kho fulfillment",
+        label: "Fulfillment",
         to: routes.adminWarehouseFulfillment,
         icon: "package_2",
         permissions: ["admin.warehouse.fulfillment.view"],
@@ -218,7 +218,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "warehouseSupplierOrders",
-        label: "Kho don supplier",
+        label: "Đơn NCC tại kho",
         to: routes.adminWarehouseSupplierOrders,
         icon: "local_shipping",
         permissions: ["admin.warehouse.supplier_orders.view"],
@@ -226,7 +226,7 @@ export const adminModules: AdminModule[] = [
     },
     {
         id: "warehouseHelp",
-        label: "Kho ho tro",
+        label: "Hỗ trợ kho",
         to: routes.adminWarehouseHelp,
         icon: "help",
         permissions: ["admin.warehouse.help.view"],

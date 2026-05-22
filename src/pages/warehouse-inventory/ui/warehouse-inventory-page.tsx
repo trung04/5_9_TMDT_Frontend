@@ -6,7 +6,7 @@ import { inventoryHealthLabels, requisitionStatusLabels } from "@/shared/lib/lab
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import { useOperationsDataStore } from "@/shared/lib/store/use-operations-data-store";
 import { useUiStore } from "@/shared/lib/store/use-ui-store";
-import { AdminDrawer, Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
+import { AdminDrawer, AdminPageHeader, AdminToolbar, Button, DataTable, StatCard, SurfaceCard } from "@/shared/ui";
 import type { TableColumn } from "@/shared/types/ui";
 import { RequisitionDrawer } from "@/widgets/requisition-drawer";
 
@@ -133,22 +133,18 @@ export function WarehouseInventoryPage() {
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-wrap items-center justify-between gap-6">
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Tồn kho kho vận
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Kiểm tra sức khỏe tồn kho, mức dự trữ và các SKU cần xử lý trong kho.
-                    </p>
-                </div>
+            <AdminPageHeader
+                title="Tồn kho kho vận"
+                description="Kiểm tra sức khỏe tồn kho, mức dự trữ và các SKU cần xử lý trong kho."
+            />
+            <AdminToolbar>
                 <input
-                    className="w-full max-w-md rounded-full bg-surface-container-low px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
                     placeholder="Tìm theo SKU, tên sản phẩm hoặc nhà cung cấp..."
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                 />
-            </section>
+            </AdminToolbar>
 
             <section className="grid gap-6 md:grid-cols-3">
                 {stats.map((stat) => (

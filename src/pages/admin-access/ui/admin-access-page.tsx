@@ -12,7 +12,7 @@ import {
 } from "@/shared/lib/store/use-admin-access-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { Badge, Button, Icon, Input, Select, SurfaceCard, cn } from "@/shared/ui";
+import { AdminPageHeader, Badge, Button, Icon, Input, Select, SurfaceCard, cn } from "@/shared/ui";
 
 type AccessTab = "roles" | "admins";
 type PermissionDrafts = Record<number, string[]>;
@@ -729,21 +729,15 @@ export function AdminAccessPage() {
 
     return (
         <div className="space-y-8">
-            <section className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Phân quyền admin
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Cấp quyền bằng nháp và kiểm tra các tài khoản admin con.
-                    </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2 rounded-full bg-surface-container-highest/50 p-1.5">
+            <AdminPageHeader
+                title="Phân quyền admin"
+                description="Cấp quyền bằng nháp và kiểm tra các tài khoản admin con."
+                actions={
+                    <div className="flex flex-wrap gap-2 rounded-[1.25rem] bg-surface-container-highest/50 p-1.5">
                     <button
                         type="button"
                         className={cn(
-                            "rounded-full px-5 py-2 text-sm font-semibold transition",
+                            "rounded-xl px-5 py-2 text-sm font-semibold transition",
                             activeTab === "roles"
                                 ? "bg-surface-container-lowest text-primary shadow-sm"
                                 : "text-on-surface-variant hover:text-on-surface",
@@ -755,7 +749,7 @@ export function AdminAccessPage() {
                     <button
                         type="button"
                         className={cn(
-                            "rounded-full px-5 py-2 text-sm font-semibold transition",
+                            "rounded-xl px-5 py-2 text-sm font-semibold transition",
                             activeTab === "admins"
                                 ? "bg-surface-container-lowest text-primary shadow-sm"
                                 : "text-on-surface-variant hover:text-on-surface",
@@ -764,8 +758,9 @@ export function AdminAccessPage() {
                     >
                         Admin con
                     </button>
-                </div>
-            </section>
+                    </div>
+                }
+            />
 
             {isLoading ? (
                 <SurfaceCard className="text-sm text-on-surface-variant">

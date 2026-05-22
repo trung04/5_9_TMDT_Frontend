@@ -9,7 +9,17 @@ import {
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import type { StatusTone, TableColumn } from "@/shared/types/ui";
-import { AdminDrawer, Badge, Button, DataTable, Icon, SurfaceCard, cn } from "@/shared/ui";
+import {
+    ActionIconButton,
+    AdminDrawer,
+    AdminPageHeader,
+    AdminToolbar,
+    Badge,
+    Button,
+    DataTable,
+    Icon,
+    SurfaceCard,
+} from "@/shared/ui";
 
 type DrawerMode = "view" | "create" | "edit";
 
@@ -156,43 +166,6 @@ function FormInput({
     );
 }
 
-function ActionButton({
-    label,
-    icon,
-    disabled,
-    onClick,
-    tone = "neutral",
-}: {
-    label: string;
-    icon: string;
-    disabled?: boolean;
-    onClick: () => void;
-    tone?: "neutral" | "primary" | "danger";
-}) {
-    return (
-        <button
-            type="button"
-            className={cn(
-                "rounded-xl p-2 transition disabled:cursor-not-allowed disabled:opacity-40",
-                tone === "danger"
-                    ? "text-error hover:bg-error-container/40"
-                    : tone === "primary"
-                      ? "text-primary hover:bg-primary/10"
-                      : "text-on-surface-variant hover:bg-surface-container-low",
-            )}
-            aria-label={label}
-            title={label}
-            disabled={disabled}
-            onClick={(event) => {
-                event.stopPropagation();
-                onClick();
-            }}
-        >
-            <Icon name={icon} className="text-xl" />
-        </button>
-    );
-}
-
 export function AdminShippingCarriersPage() {
     const [query, setQuery] = useState("");
     const [drawer, setDrawer] = useState<DrawerState | null>(null);
@@ -321,7 +294,7 @@ export function AdminShippingCarriersPage() {
     const columns: TableColumn<BackendShippingCarrier>[] = [
         {
             key: "carrier",
-            title: "Don vi",
+            title: "Đơn vị",
             render: (carrier) => (
                 <div>
                     <p className="font-semibold text-on-surface">{carrier.name}</p>
@@ -336,7 +309,7 @@ export function AdminShippingCarriersPage() {
         },
         {
             key: "defaults",
-            title: "Mac dinh",
+            title: "Mặc định",
             render: (carrier) => (
                 <div className="text-sm">
                     <p>
@@ -352,50 +325,50 @@ export function AdminShippingCarriersPage() {
         },
         {
             key: "pickup",
-            title: "Kho lay hang",
+            title: "Kho lấy hàng",
             render: (carrier) => (
                 <div>
-                    <p className="font-medium">{carrier.pickup_name ?? "Chua cau hinh"}</p>
-                    <p className="mt-1 text-xs text-on-surface-variant">{carrier.pickup_phone ?? "Chua co SĐT"}</p>
+                    <p className="font-medium">{carrier.pickup_name ?? "Chưa cấu hình"}</p>
+                    <p className="mt-1 text-xs text-on-surface-variant">{carrier.pickup_phone ?? "Chưa có SĐT"}</p>
                 </div>
             ),
         },
         {
             key: "status",
-            title: "Trang thai",
+            title: "Trạng thái",
             render: (carrier) => (
-                <Badge tone={statusTone(carrier)}>{isAvailable(carrier) ? "Dang hoat dong" : "Tam dung"}</Badge>
+                <Badge tone={statusTone(carrier)}>{isAvailable(carrier) ? "Đang hoạt động" : "Tạm dừng"}</Badge>
             ),
         },
         {
             key: "actions",
-            title: "Actions",
+            title: "Thao tác",
             align: "right",
             render: (carrier) => (
                 <div className="flex justify-end gap-1">
-                    <ActionButton
+                    <ActionIconButton
                         label={`Xem ${carrier.name}`}
                         icon="visibility"
                         tone="primary"
                         onClick={() => openRecordDrawer(carrier, "view")}
                     />
-                    <ActionButton
-                        label={`Sua ${carrier.name}`}
+                    <ActionIconButton
+                        label={`Sửa ${carrier.name}`}
                         icon="edit"
                         disabled={!canUpdate}
                         onClick={() => openRecordDrawer(carrier, "edit")}
                     />
                     {isAvailable(carrier) ? (
-                        <ActionButton
-                            label={`An ${carrier.name}`}
+                        <ActionIconButton
+                            label={`Ẩn ${carrier.name}`}
                             icon="block"
                             tone="danger"
                             disabled={!canDelete}
                             onClick={() => void handleDeactivate(carrier)}
                         />
                     ) : (
-                        <ActionButton
-                            label={`Khoi phuc ${carrier.name}`}
+                        <ActionIconButton
+                            label={`Khôi phục ${carrier.name}`}
                             icon="settings_backup_restore"
                             disabled={!canUpdate}
                             onClick={() => void handleRestore(carrier)}
@@ -408,33 +381,30 @@ export function AdminShippingCarriersPage() {
 
     const drawerTitle =
         drawer?.mode === "create"
-            ? "Tao don vi van chuyen"
-            : activeCarrier?.name ?? "Don vi van chuyen";
+            ? "Tạo đơn vị vận chuyển"
+            : activeCarrier?.name ?? "Đơn vị vận chuyển";
 
     return (
         <div className="space-y-8">
-            <section>
-                <div>
-                    <h1 className="mt-3 font-headline text-3xl font-bold text-on-surface">
-                        Đơn vị vận chuyển
-                    </h1>
-                    <p className="mt-2 max-w-2xl text-sm text-on-surface-variant">
-                        Cấu hình GHN và các đơn vị vận chuyển thủ công để tạo vận đơn sau khi xác nhận đơn.
-                    </p>
-                </div>
-            </section>
+            <AdminPageHeader
+                title="Đơn vị vận chuyển"
+                description="Cấu hình GHN và các đơn vị vận chuyển thủ công để tạo vận đơn sau khi xác nhận đơn."
+            />
 
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <AdminToolbar
+                actions={
+                    <Button disabled={!canCreate} iconLeft={<Icon name="add" />} onClick={openCreateDrawer}>
+                        Tạo đơn vị
+                    </Button>
+                }
+            >
                 <input
-                    className="w-full rounded-3xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15 xl:max-w-xl"
-                    placeholder="Loc theo ma, ten, provider, kho lay hang..."
+                    className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/15"
+                    placeholder="Lọc theo mã, tên, provider, kho lấy hàng..."
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                 />
-                <Button disabled={!canCreate} iconLeft={<Icon name="add" />} onClick={openCreateDrawer}>
-                    Tao don vi
-                </Button>
-            </div>
+            </AdminToolbar>
 
             {error ? <SurfaceCard className="text-sm text-error">{error}</SurfaceCard> : null}
 
@@ -471,30 +441,30 @@ export function AdminShippingCarriersPage() {
                 footer={
                     <div className="flex flex-wrap justify-end gap-3">
                         <Button variant="outline" onClick={() => setDrawer(null)}>
-                            Dong
+                            Đóng
                         </Button>
                         {drawer?.mode === "create" ? (
                             <Button disabled={isSaving || !canCreate} onClick={() => void handleCreate()}>
-                                Tao don vi
+                                Tạo đơn vị
                             </Button>
                         ) : null}
                         {drawer?.mode === "edit" ? (
                             <Button disabled={isSaving || !activeCarrier || !canUpdate} onClick={() => void handleUpdate()}>
-                                Luu chinh sua
+                                Lưu chỉnh sửa
                             </Button>
                         ) : null}
                         {drawer?.mode === "view" && activeCarrier ? (
                             <>
                                 <Button variant="secondary" disabled={!canUpdate} onClick={() => setDrawer({ mode: "edit", id: String(activeCarrier.id) })}>
-                                    Sua
+                                    Sửa
                                 </Button>
                                 {isAvailable(activeCarrier) ? (
                                     <Button variant="ghost" disabled={isSaving || !canDelete} onClick={() => void handleDeactivate()}>
-                                        An don vi
+                                        Ẩn đơn vị
                                     </Button>
                                 ) : (
                                     <Button variant="secondary" disabled={isSaving || !canUpdate} onClick={() => void handleRestore()}>
-                                        Khoi phuc
+                                        Khôi phục
                                     </Button>
                                 )}
                             </>
@@ -510,7 +480,7 @@ export function AdminShippingCarriersPage() {
                                 <p className="mt-1 font-mono text-sm text-on-surface-variant">{activeCarrier.code}</p>
                             </div>
                             <Badge tone={statusTone(activeCarrier)}>
-                                {isAvailable(activeCarrier) ? "Dang hoat dong" : "Tam dung"}
+                                {isAvailable(activeCarrier) ? "Đang hoạt động" : "Tạm dừng"}
                             </Badge>
                         </div>
                         <div className="grid gap-4 sm:grid-cols-2">
