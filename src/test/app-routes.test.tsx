@@ -47,7 +47,7 @@ function setBackendCustomerSession() {
     });
 }
 
-function setBackendAdminSession() {
+function setBackendAdminSession(permissions: string[] = []) {
     useAuthStore.setState({
         session: {
             user: {
@@ -61,7 +61,7 @@ function setBackendAdminSession() {
                     slug: "super_admin",
                     isSuper: true,
                 },
-                permissions: [],
+                permissions,
             },
             loggedInAt: "2026-05-21T00:00:00.000Z",
         },
@@ -141,6 +141,26 @@ describe("customer commerce routes", () => {
                 return jsonResponse(createCartResponse(2));
             }
 
+            if (path === "/api/v1/" || path === "/api/v1") {
+                return jsonResponse([
+                    {
+                        code: 1,
+                        name: "Ha Noi",
+                        codename: "ha_noi",
+                        division_type: "thanh pho",
+                        districts: [
+                            {
+                                code: 11,
+                                name: "Ba Dinh",
+                                codename: "ba_dinh",
+                                division_type: "quan",
+                                province_code: 1,
+                            },
+                        ],
+                    },
+                ]);
+            }
+
             throw new Error(`Unexpected request: ${path}`);
         });
 
@@ -152,6 +172,7 @@ describe("customer commerce routes", () => {
 
         const user = userEvent.setup();
         renderApp(routes.checkout);
+        expect(await screen.findByRole("option", { name: "Ha Noi" })).toBeInTheDocument();
 
         expect(await screen.findByText(/Tóm tắt đơn hàng/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /Đăng nhập để đặt hàng/i })).toBeInTheDocument();
@@ -450,6 +471,398 @@ describe("customer commerce routes", () => {
         });
 
         expect(createCall).toBeTruthy();
+    });
+
+    it("loads admin customer order history on the dedicated route", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/admin/users/9")) {
+                return jsonResponse({
+                    message: "Admin user retrieved successfully.",
+                    data: {
+                        id: 9,
+                        full_name: "Customer Managed",
+                        email: "managed@example.com",
+                        phone: "0909000009",
+                        address: "12 Nguyen Trai",
+                        city: "Ha Noi",
+                        favorite_region: "Dong Bac",
+                        avatar_url: null,
+                        newsletter: true,
+                        sms_alerts: false,
+                        order_email: true,
+                        security_alerts: true,
+                        reward_points: 120,
+                        reward_tier: "Silver",
+                        next_tier_points: 1000,
+                        role: "CUSTOMER",
+                        is_active: true,
+                        is_deleted: false,
+                        orders_count: 2,
+                        created_at: "2026-05-22T00:00:00.000000Z",
+                        updated_at: "2026-05-22T00:00:00.000000Z",
+                    },
+                });
+            }
+
+            if (path.endsWith("/api/admin/users/9/orders")) {
+                return jsonResponse({
+                    message: "Orders retrieved successfully.",
+                    data: [
+                        {
+                            id: 101,
+                            order_no: "ORD-HISTORY-101",
+                            payment_method: "BANK_TRANSFER",
+                            status: "CONFIRMED",
+                            subtotal: 250000,
+                            shipping_fee: 0,
+                            discount_amount: 10000,
+                            total_amount: 240000,
+                            item_count: 2,
+                            payment: {
+                                id: 1,
+                                transaction_code: "PAY-101",
+                                payment_method: "BANK_TRANSFER",
+                                payment_status: "SUCCESS",
+                                amount: 240000,
+                                gateway_name: "Manual Bank",
+                                gateway_reference: "REF-101",
+                                paid_at: "2026-05-22T08:00:00.000000Z",
+                            },
+                            shipping_carrier: "GHN",
+                            shipping_code: "GHN-101",
+                            stock_deducted: false,
+                            stock_deducted_at: null,
+                            shipment: null,
+                            created_at: "2026-05-22T08:00:00.000000Z",
+                            updated_at: "2026-05-22T08:30:00.000000Z",
+                        },
+                        {
+                            id: 102,
+                            order_no: "ORD-HISTORY-102",
+                            payment_method: "COD",
+                            status: "DELIVERED",
+                            subtotal: 90000,
+                            shipping_fee: 15000,
+                            discount_amount: 0,
+                            total_amount: 105000,
+                            item_count: 1,
+                            payment: {
+                                id: 2,
+                                transaction_code: "PAY-102",
+                                payment_method: "COD",
+                                payment_status: "SUCCESS",
+                                amount: 105000,
+                                gateway_name: null,
+                                gateway_reference: null,
+                                paid_at: "2026-05-20T11:00:00.000000Z",
+                            },
+                            shipping_carrier: "Manual",
+                            shipping_code: "SHIP-102",
+                            stock_deducted: false,
+                            stock_deducted_at: null,
+                            shipment: null,
+                            created_at: "2026-05-20T08:00:00.000000Z",
+                            updated_at: "2026-05-20T12:00:00.000000Z",
+                        },
+                    ],
+                    current_page: 1,
+                    last_page: 1,
+                    per_page: 5,
+                    total: 2,
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setBackendAdminSession(["admin.users.view", "admin.orders.view"]);
+
+        renderApp(routes.adminUserOrders("9"));
+
+        expect(await screen.findByText("Customer Managed")).toBeInTheDocument();
+        expect(screen.getByText("ORD-HISTORY-101")).toBeInTheDocument();
+        expect(screen.getByText("ORD-HISTORY-102")).toBeInTheDocument();
+    });
+
+    it("loads admin customer order detail on the dedicated route", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/admin/users/9")) {
+                return jsonResponse({
+                    message: "Admin user retrieved successfully.",
+                    data: {
+                        id: 9,
+                        full_name: "Customer Managed",
+                        email: "managed@example.com",
+                        phone: "0909000009",
+                        address: "12 Nguyen Trai",
+                        city: "Ha Noi",
+                        favorite_region: "Dong Bac",
+                        avatar_url: null,
+                        newsletter: true,
+                        sms_alerts: false,
+                        order_email: true,
+                        security_alerts: true,
+                        reward_points: 120,
+                        reward_tier: "Silver",
+                        next_tier_points: 1000,
+                        role: "CUSTOMER",
+                        is_active: true,
+                        is_deleted: false,
+                        orders_count: 2,
+                        created_at: "2026-05-22T00:00:00.000000Z",
+                        updated_at: "2026-05-22T00:00:00.000000Z",
+                    },
+                });
+            }
+
+            if (path.endsWith("/api/admin/orders/101")) {
+                return jsonResponse({
+                    message: "Order retrieved successfully.",
+                    data: {
+                        id: 101,
+                        order_no: "ORD-HISTORY-101",
+                        recipient_name: "Khach Lich Su",
+                        recipient_phone: "0909888777",
+                        shipping_address: "99 Pho Hue, Ha Noi",
+                        shipping_line1: "99 Pho Hue",
+                        shipping_province_id: 1,
+                        shipping_province_name: "Ha Noi",
+                        shipping_district_id: 2,
+                        shipping_district_name: "Hai Ba Trung",
+                        shipping_ward_code: "00001",
+                        shipping_ward_name: "Pham Dinh Ho",
+                        payment_method: "BANK_TRANSFER",
+                        status: "CONFIRMED",
+                        subtotal: 250000,
+                        shipping_fee: 0,
+                        discount_amount: 10000,
+                        total_amount: 240000,
+                        stock_deducted: false,
+                        stock_deducted_at: null,
+                        shipping_carrier: "GHN",
+                        shipping_code: "GHN-101",
+                        shipped_at: null,
+                        delivered_at: null,
+                        cancelled_at: null,
+                        note: "Khach yeu cau giao trong gio hanh chinh",
+                        item_count: 2,
+                        allowed_next_statuses: [],
+                        allowed_payment_statuses: [],
+                        customer: {
+                            id: 9,
+                            full_name: "Customer Managed",
+                            email: "managed@example.com",
+                            phone: "0909000009",
+                            role: "CUSTOMER",
+                            is_active: true,
+                            is_deleted: false,
+                        },
+                        items: [
+                            {
+                                id: 1,
+                                product_id: 201,
+                                product_name_snapshot: "Tra Shan Tuyet",
+                                quantity: 1,
+                                unit_price: 120000,
+                                line_total: 120000,
+                            },
+                        ],
+                        payment: {
+                            id: 1,
+                            transaction_code: "PAY-101",
+                            payment_method: "BANK_TRANSFER",
+                            payment_status: "SUCCESS",
+                            amount: 240000,
+                            gateway_name: "Manual Bank",
+                            gateway_reference: "REF-101",
+                            paid_at: "2026-05-22T08:00:00.000000Z",
+                            raw_payload: {
+                                bank_name: "MB Bank",
+                                account_name: "HERITAGE HARVEST",
+                                account_number: "0123456789",
+                                transfer_content: "ORD-HISTORY-101",
+                                customer_transfer_submitted: true,
+                            },
+                        },
+                        shipment: null,
+                        status_history: [],
+                        payment_status_history: [],
+                        created_at: "2026-05-22T08:00:00.000000Z",
+                        updated_at: "2026-05-22T08:30:00.000000Z",
+                    },
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setBackendAdminSession(["admin.users.view", "admin.orders.view"]);
+
+        renderApp(routes.adminUserOrderDetail("9", "101"));
+
+        expect(await screen.findByText("Tra Shan Tuyet")).toBeInTheDocument();
+        expect(screen.getByText("Khach Lich Su")).toBeInTheDocument();
+    });
+
+    it("shows an empty state on the dedicated admin customer order history route", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/admin/users/10")) {
+                return jsonResponse({
+                    message: "Admin user retrieved successfully.",
+                    data: {
+                        id: 10,
+                        full_name: "Zero Order Customer",
+                        email: "zero@example.com",
+                        phone: "0909000010",
+                        address: null,
+                        city: "Da Nang",
+                        favorite_region: null,
+                        avatar_url: null,
+                        newsletter: false,
+                        sms_alerts: false,
+                        order_email: true,
+                        security_alerts: true,
+                        reward_points: 0,
+                        reward_tier: "Bronze",
+                        next_tier_points: 500,
+                        role: "CUSTOMER",
+                        is_active: true,
+                        is_deleted: false,
+                        orders_count: 0,
+                        created_at: "2026-05-22T00:00:00.000000Z",
+                        updated_at: "2026-05-22T00:00:00.000000Z",
+                    },
+                });
+            }
+
+            if (path.endsWith("/api/admin/users/10/orders")) {
+                return jsonResponse({
+                    message: "Orders retrieved successfully.",
+                    data: [],
+                    current_page: 1,
+                    last_page: 1,
+                    per_page: 5,
+                    total: 0,
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setBackendAdminSession(["admin.users.view", "admin.orders.view"]);
+
+        renderApp(routes.adminUserOrders("10"));
+
+        expect(await screen.findByText(/Customer nay chua co don hang nao/i)).toBeInTheDocument();
+    });
+
+    it("blocks mismatched admin customer order detail data from rendering", async () => {
+        const fetchMock = vi.fn((input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/admin/users/9")) {
+                return jsonResponse({
+                    message: "Admin user retrieved successfully.",
+                    data: {
+                        id: 9,
+                        full_name: "Customer Managed",
+                        email: "managed@example.com",
+                        phone: "0909000009",
+                        address: "12 Nguyen Trai",
+                        city: "Ha Noi",
+                        favorite_region: "Dong Bac",
+                        avatar_url: null,
+                        newsletter: true,
+                        sms_alerts: false,
+                        order_email: true,
+                        security_alerts: true,
+                        reward_points: 120,
+                        reward_tier: "Silver",
+                        next_tier_points: 1000,
+                        role: "CUSTOMER",
+                        is_active: true,
+                        is_deleted: false,
+                        orders_count: 2,
+                        created_at: "2026-05-22T00:00:00.000000Z",
+                        updated_at: "2026-05-22T00:00:00.000000Z",
+                    },
+                });
+            }
+
+            if (path.endsWith("/api/admin/orders/101")) {
+                return jsonResponse({
+                    message: "Order retrieved successfully.",
+                    data: {
+                        id: 101,
+                        order_no: "ORD-HISTORY-101",
+                        recipient_name: "Khach Lich Su",
+                        recipient_phone: "0909888777",
+                        shipping_address: "99 Pho Hue, Ha Noi",
+                        payment_method: "BANK_TRANSFER",
+                        status: "CONFIRMED",
+                        subtotal: 250000,
+                        shipping_fee: 0,
+                        discount_amount: 10000,
+                        total_amount: 240000,
+                        stock_deducted: false,
+                        stock_deducted_at: null,
+                        shipping_carrier: "GHN",
+                        shipping_code: "GHN-101",
+                        shipped_at: null,
+                        delivered_at: null,
+                        cancelled_at: null,
+                        note: "Khach yeu cau giao trong gio hanh chinh",
+                        item_count: 2,
+                        allowed_next_statuses: [],
+                        allowed_payment_statuses: [],
+                        customer: {
+                            id: 10,
+                            full_name: "Another Customer",
+                            email: "other@example.com",
+                            phone: "0909000010",
+                            role: "CUSTOMER",
+                            is_active: true,
+                            is_deleted: false,
+                        },
+                        items: [],
+                        payment: null,
+                        shipment: null,
+                        status_history: [],
+                        payment_status_history: [],
+                        created_at: "2026-05-22T08:00:00.000000Z",
+                        updated_at: "2026-05-22T08:30:00.000000Z",
+                    },
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setBackendAdminSession(["admin.users.view", "admin.orders.view"]);
+
+        renderApp(routes.adminUserOrderDetail("9", "101"));
+
+        await waitFor(() => {
+            expect(
+                fetchMock.mock.calls.some(([input]) =>
+                    getRequestPath(input).endsWith("/api/admin/orders/101"),
+                ),
+            ).toBe(true);
+        });
+
+        expect(screen.getByRole("link", { name: /Quay lai lich su don hang/i })).toBeInTheDocument();
+        expect(screen.queryByText("Khach Lich Su")).not.toBeInTheDocument();
+        expect(screen.queryByText("Another Customer")).not.toBeInTheDocument();
     });
 
     it("shows a connection error on the catalog page when the API is unavailable", async () => {

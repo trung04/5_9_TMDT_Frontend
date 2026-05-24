@@ -749,7 +749,11 @@ export interface BackendBulkOrderStatusResponse {
 export interface BackendOrdersResponse {
     message: string;
     data: BackendOrderSummary[];
-    pagination: {
+    current_page?: number;
+    last_page?: number;
+    per_page?: number;
+    total?: number;
+    pagination?: {
         current_page: number;
         last_page: number;
         per_page: number;
@@ -760,6 +764,7 @@ export interface BackendOrdersResponse {
 export type BackendAdminOrderSummary = BackendOrderSummary;
 export type BackendAdminOrderDetail = BackendOrderDetail;
 export type BackendAdminOrdersResponse = BackendOrdersResponse;
+export type BackendAdminCustomerOrdersResponse = BackendOrdersResponse;
 export type BackendAdminOrderDetailResponse = BackendOrderDetailResponse;
 
 export interface BackendOperationInventoryItem {

@@ -52,6 +52,9 @@ export const routes = {
     adminCommunity: "/admin/community",
     adminRepository: "/admin/repository",
     adminUsers: "/admin/users",
+    adminUserOrders: (userId = ":userId") => `/admin/users/${userId}/orders`,
+    adminUserOrderDetail: (userId = ":userId", orderId = ":orderId") =>
+        `/admin/users/${userId}/orders/${orderId}`,
     adminProducts: "/admin/products",
     adminCategories: "/admin/categories",
     adminSuppliers: "/admin/suppliers",

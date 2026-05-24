@@ -4,6 +4,8 @@ import type {
     BackendAdminCustomer,
     BackendAdminCustomerResponse,
     BackendAdminCustomersResponse,
+    BackendAdminCustomerOrdersResponse,
+    BackendAdminOrderSummary,
 } from "@/shared/api/backend-types";
 import { apiRequest, isUnauthorizedApiError } from "@/shared/api/backend-client";
 import { registerProtectedSessionCleanup } from "@/shared/lib/store/protected-session";
@@ -13,6 +15,13 @@ interface AsyncResult<T = void> {
     success: boolean;
     data?: T;
     error?: string;
+}
+
+export interface AdminCustomerOrdersPagination {
+    currentPage: number;
+    lastPage: number;
+    perPage: number;
+    total: number;
 }
 
 export interface AdminCustomerPayload {
@@ -37,10 +46,20 @@ export interface AdminCustomerPayload {
 
 interface AdminUserState {
     customers: BackendAdminCustomer[];
+    customerOrdersByCustomerId: Record<number, BackendAdminOrderSummary[]>;
+    customerOrdersPaginationByCustomerId: Record<number, AdminCustomerOrdersPagination | null>;
+    customerOrdersLoadingByCustomerId: Record<number, boolean>;
+    customerOrdersErrorByCustomerId: Record<number, string | null>;
     isLoading: boolean;
     isSaving: boolean;
     error: string | null;
     loadCustomers: () => Promise<AsyncResult>;
+    loadCustomer: (customerId: number) => Promise<AsyncResult<BackendAdminCustomer>>;
+    loadCustomerOrders: (
+        customerId: number,
+        page?: number,
+        perPage?: number,
+    ) => Promise<AsyncResult<BackendAdminOrderSummary[]>>;
     createCustomer: (payload: AdminCustomerPayload) => Promise<AsyncResult<BackendAdminCustomer>>;
     updateCustomer: (
         customerId: number,
@@ -52,6 +71,10 @@ interface AdminUserState {
 
 const initialState = {
     customers: [] as BackendAdminCustomer[],
+    customerOrdersByCustomerId: {} as Record<number, BackendAdminOrderSummary[]>,
+    customerOrdersPaginationByCustomerId: {} as Record<number, AdminCustomerOrdersPagination | null>,
+    customerOrdersLoadingByCustomerId: {} as Record<number, boolean>,
+    customerOrdersErrorByCustomerId: {} as Record<number, string | null>,
     isLoading: false,
     isSaving: false,
     error: null as string | null,
@@ -61,6 +84,24 @@ const SESSION_EXPIRED_MESSAGE = "Phien dang nhap da het han. Vui long dang nhap 
 
 function token() {
     return useAuthStore.getState().accessToken;
+}
+
+function paginationFromOrdersResponse(
+    response: BackendAdminCustomerOrdersResponse,
+): AdminCustomerOrdersPagination {
+    const nestedPagination = response.pagination;
+
+    return {
+        currentPage: response.current_page ?? nestedPagination?.current_page ?? 1,
+        lastPage: response.last_page ?? nestedPagination?.last_page ?? 1,
+        perPage: response.per_page ?? nestedPagination?.per_page ?? response.data.length,
+        total: response.total ?? nestedPagination?.total ?? response.data.length,
+    };
+}
+
+function upsertCustomer(customers: BackendAdminCustomer[], nextCustomer: BackendAdminCustomer) {
+    const nextCustomers = customers.filter((customer) => customer.id !== nextCustomer.id);
+    return [nextCustomer, ...nextCustomers];
 }
 
 export const useAdminUserStore = create<AdminUserState>()((set, get) => ({
@@ -93,6 +134,127 @@ export const useAdminUserStore = create<AdminUserState>()((set, get) => ({
 
             const message = error instanceof Error ? error.message : "Khong the tai danh sach users.";
             set({ isLoading: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+    loadCustomer: async (customerId) => {
+        const cached = get().customers.find((customer) => customer.id === customerId);
+
+        if (cached) {
+            return { success: true, data: cached };
+        }
+
+        const accessToken = token();
+
+        if (!accessToken) {
+            return {
+                success: false,
+                error: "Ban can dang nhap admin de xem user nay.",
+            };
+        }
+
+        set({ isLoading: true, error: null });
+
+        try {
+            const response = await apiRequest<BackendAdminCustomerResponse>(`/admin/users/${customerId}`, {
+                token: accessToken,
+            });
+
+            set((state) => ({
+                customers: upsertCustomer(state.customers, response.data),
+                isLoading: false,
+                error: null,
+            }));
+
+            return { success: true, data: response.data };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                set({ isLoading: false, error: SESSION_EXPIRED_MESSAGE });
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the tai user.";
+            set({ isLoading: false, error: message });
+            return { success: false, error: message };
+        }
+    },
+    loadCustomerOrders: async (customerId, page = 1, perPage = 5) => {
+        const accessToken = token();
+
+        if (!accessToken) {
+            return {
+                success: false,
+                error: "Ban can dang nhap admin de xem lich su don hang.",
+            };
+        }
+
+        set((state) => ({
+            customerOrdersLoadingByCustomerId: {
+                ...state.customerOrdersLoadingByCustomerId,
+                [customerId]: true,
+            },
+            customerOrdersErrorByCustomerId: {
+                ...state.customerOrdersErrorByCustomerId,
+                [customerId]: null,
+            },
+        }));
+
+        try {
+            const response = await apiRequest<BackendAdminCustomerOrdersResponse>(
+                `/admin/users/${customerId}/orders?page=${page}&per_page=${perPage}`,
+                { token: accessToken },
+            );
+
+            set((state) => ({
+                customerOrdersByCustomerId: {
+                    ...state.customerOrdersByCustomerId,
+                    [customerId]: response.data,
+                },
+                customerOrdersPaginationByCustomerId: {
+                    ...state.customerOrdersPaginationByCustomerId,
+                    [customerId]: paginationFromOrdersResponse(response),
+                },
+                customerOrdersLoadingByCustomerId: {
+                    ...state.customerOrdersLoadingByCustomerId,
+                    [customerId]: false,
+                },
+                customerOrdersErrorByCustomerId: {
+                    ...state.customerOrdersErrorByCustomerId,
+                    [customerId]: null,
+                },
+            }));
+
+            return { success: true, data: response.data };
+        } catch (error) {
+            if (isUnauthorizedApiError(error)) {
+                useAuthStore.getState().clearSession();
+                set((state) => ({
+                    customerOrdersLoadingByCustomerId: {
+                        ...state.customerOrdersLoadingByCustomerId,
+                        [customerId]: false,
+                    },
+                    customerOrdersErrorByCustomerId: {
+                        ...state.customerOrdersErrorByCustomerId,
+                        [customerId]: SESSION_EXPIRED_MESSAGE,
+                    },
+                }));
+
+                return { success: false, error: SESSION_EXPIRED_MESSAGE };
+            }
+
+            const message = error instanceof Error ? error.message : "Khong the tai lich su don hang.";
+            set((state) => ({
+                customerOrdersLoadingByCustomerId: {
+                    ...state.customerOrdersLoadingByCustomerId,
+                    [customerId]: false,
+                },
+                customerOrdersErrorByCustomerId: {
+                    ...state.customerOrdersErrorByCustomerId,
+                    [customerId]: message,
+                },
+            }));
+
             return { success: false, error: message };
         }
     },
@@ -145,9 +307,7 @@ export const useAdminUserStore = create<AdminUserState>()((set, get) => ({
             );
 
             set((state) => ({
-                customers: state.customers.map((customer) =>
-                    customer.id === customerId ? response.data : customer,
-                ),
+                customers: upsertCustomer(state.customers, response.data),
                 isSaving: false,
                 error: null,
             }));
@@ -180,9 +340,7 @@ export const useAdminUserStore = create<AdminUserState>()((set, get) => ({
             );
 
             set((state) => ({
-                customers: state.customers.map((customer) =>
-                    customer.id === customerId ? response.data : customer,
-                ),
+                customers: upsertCustomer(state.customers, response.data),
                 isSaving: false,
                 error: null,
             }));

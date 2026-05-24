@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AdminModuleGuard } from "@/app/admin-module-guard";
@@ -21,6 +22,8 @@ import { AdminLogisticsPage } from "@/pages/admin-logistics/ui/admin-logistics-p
 import { AdminRepositoryPage } from "@/pages/admin-repository/ui/admin-repository-page";
 import { AdminSettingsPage } from "@/pages/admin-settings/ui/admin-settings-page";
 import { AdminShippingCarriersPage } from "@/pages/admin-shipping-carriers/ui/admin-shipping-carriers-page";
+import { AdminUserOrderDetailPage } from "@/pages/admin-user-order-detail/ui/admin-user-order-detail-page";
+import { AdminUserOrdersPage } from "@/pages/admin-user-orders/ui/admin-user-orders-page";
 import { AdminUsersPage } from "@/pages/admin-users/ui/admin-users-page";
 import { ProductCatalogPage } from "@/pages/catalog/ui/product-catalog-page";
 import { CheckoutPage } from "@/pages/checkout/ui/checkout-page";
@@ -44,6 +47,7 @@ import { WarehouseRequisitionsPage } from "@/pages/warehouse-requisitions/ui/war
 import { WarehouseSupplierOrdersPage } from "@/pages/warehouse-supplier-orders/ui/warehouse-supplier-orders-page";
 import { getFirstAccessibleAdminModule } from "@/shared/config/admin-modules";
 import { routes as appRoutes } from "@/shared/config/routes";
+import { hasAdminPermission } from "@/shared/lib/auth";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 
 function AdminIndexRoute() {
@@ -81,6 +85,18 @@ function WarehouseRootRedirect() {
             to={role === "admin" ? appRoutes.adminWarehouseInventory : appRoutes.warehouseInventory}
         />
     );
+}
+
+function AdminUserOrdersGuard({ children }: { children: ReactNode }) {
+    const user = useAuthStore((state) => state.session?.user ?? null);
+    const canViewUsers = hasAdminPermission(user, "admin.users.view");
+    const canViewOrders = hasAdminPermission(user, "admin.orders.view");
+
+    if (!canViewUsers || !canViewOrders) {
+        return <Navigate replace to={appRoutes.unauthorized} />;
+    }
+
+    return <>{children}</>;
 }
 
 export function AppRoutes() {
@@ -158,6 +174,22 @@ export function AppRoutes() {
                         <AdminModuleGuard moduleId="users">
                             <AdminUsersPage />
                         </AdminModuleGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminUserOrders()}
+                    element={
+                        <AdminUserOrdersGuard>
+                            <AdminUserOrdersPage />
+                        </AdminUserOrdersGuard>
+                    }
+                />
+                <Route
+                    path={appRoutes.adminUserOrderDetail()}
+                    element={
+                        <AdminUserOrdersGuard>
+                            <AdminUserOrderDetailPage />
+                        </AdminUserOrdersGuard>
                     }
                 />
                 <Route

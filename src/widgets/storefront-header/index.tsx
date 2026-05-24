@@ -115,7 +115,7 @@ export function StorefrontHeader() {
                             aria-label="Giỏ hàng"
                         >
                             <Icon name="shopping_cart" />
-                            {cartCount > 0 && variant === "catalog" ? (
+                            {cartCount > 0 ? (
                                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-tertiary text-[10px] font-bold text-on-tertiary">
                                     {cartCount}
                                 </span>

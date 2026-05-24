@@ -5,6 +5,7 @@ import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
 import { useCustomerOrdersStore } from "@/shared/lib/store/use-customer-orders-store";
+import { useVietnamLocationStore } from "@/shared/lib/store/use-vietnam-location-store";
 import {
     createBackendUser,
     createCartResponse,
@@ -296,5 +297,130 @@ describe("customer commerce stores", () => {
         const detailResult = await useCustomerOrdersStore.getState().loadOrder("9001");
         expect(detailResult.success).toBe(true);
         expect(useCustomerOrdersStore.getState().orderDetails["9001"]?.items[0]?.quantity).toBe(3);
+    });
+
+    it("reads customer order pagination from top-level paginator fields", async () => {
+        const orderDetail = createOrderDetail({
+            id: 9100,
+            order_no: "ORD-9100",
+        });
+
+        const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+            const path = getRequestPath(input);
+
+            if (path.endsWith("/api/orders") && (!init?.method || init.method === "GET")) {
+                return jsonResponse({
+                    message: "Orders retrieved successfully.",
+                    data: [
+                        {
+                            id: orderDetail.id,
+                            order_no: orderDetail.order_no,
+                            payment_method: orderDetail.payment_method,
+                            status: orderDetail.status,
+                            subtotal: orderDetail.subtotal,
+                            shipping_fee: orderDetail.shipping_fee,
+                            discount_amount: orderDetail.discount_amount,
+                            total_amount: orderDetail.total_amount,
+                            item_count: orderDetail.item_count,
+                            payment: orderDetail.payment,
+                            stock_deducted: orderDetail.stock_deducted,
+                            stock_deducted_at: orderDetail.stock_deducted_at,
+                            shipping_carrier: orderDetail.shipping_carrier,
+                            shipping_code: orderDetail.shipping_code,
+                            shipped_at: orderDetail.shipped_at,
+                            delivered_at: orderDetail.delivered_at,
+                            cancelled_at: orderDetail.cancelled_at,
+                            created_at: orderDetail.created_at,
+                            updated_at: orderDetail.updated_at,
+                        },
+                    ],
+                    current_page: 1,
+                    last_page: 3,
+                    per_page: 15,
+                    total: 31,
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+        setBackendCustomerSession();
+
+        const result = await useCustomerOrdersStore.getState().loadOrders();
+
+        expect(result.success).toBe(true);
+        expect(useCustomerOrdersStore.getState().pagination).toEqual({
+            currentPage: 1,
+            lastPage: 3,
+            perPage: 15,
+            total: 31,
+        });
+    });
+
+    it("loads vietnam provinces, districts, and wards with cache reuse", async () => {
+        const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+            const path = getRequestPath(input);
+
+            if (path === "/api/v1/" || path === "/api/v1") {
+                return jsonResponse([
+                    {
+                        code: 1,
+                        name: "Ha Noi",
+                        codename: "ha_noi",
+                        division_type: "thanh pho",
+                        districts: [
+                            {
+                                code: 11,
+                                name: "Ba Dinh",
+                                codename: "ba_dinh",
+                                division_type: "quan",
+                                province_code: 1,
+                            },
+                        ],
+                    },
+                ]);
+            }
+
+            if (path === "/api/v1/d/11") {
+                return jsonResponse({
+                    code: 11,
+                    name: "Ba Dinh",
+                    codename: "ba_dinh",
+                    division_type: "quan",
+                    province_code: 1,
+                    wards: [
+                        {
+                            code: 11111,
+                            name: "Phuc Xa",
+                            codename: "phuc_xa",
+                            division_type: "phuong",
+                            district_code: 11,
+                        },
+                    ],
+                });
+            }
+
+            throw new Error(`Unexpected request: ${path}`);
+        });
+
+        vi.stubGlobal("fetch", fetchMock);
+
+        const provincesResult = await useVietnamLocationStore.getState().loadProvinces();
+        const districtsResult = await useVietnamLocationStore.getState().loadDistricts(1);
+        const wardsResult = await useVietnamLocationStore.getState().loadWards(11);
+
+        expect(provincesResult.success).toBe(true);
+        expect(districtsResult.success).toBe(true);
+        expect(wardsResult.success).toBe(true);
+        expect(useVietnamLocationStore.getState().provinces[0]?.name).toBe("Ha Noi");
+        expect(useVietnamLocationStore.getState().districtsByProvince["1"]?.[0]?.name).toBe("Ba Dinh");
+        expect(useVietnamLocationStore.getState().wardsByDistrict["11"]?.[0]?.name).toBe("Phuc Xa");
+
+        await useVietnamLocationStore.getState().loadDistricts(1);
+        await useVietnamLocationStore.getState().loadWards(11);
+
+        expect(fetchMock.mock.calls.filter(([input]) => getRequestPath(input) === "/api/v1/")).toHaveLength(1);
+        expect(fetchMock.mock.calls.filter(([input]) => getRequestPath(input) === "/api/v1/d/11")).toHaveLength(1);
     });
 });

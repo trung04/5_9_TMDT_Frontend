@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAccountStore } from "@/shared/lib/store/use-account-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { useGhnLocationStore } from "@/shared/lib/store/use-ghn-location-store";
+import { useVietnamLocationStore } from "@/shared/lib/store/use-vietnam-location-store";
 import { Button, SurfaceCard } from "@/shared/ui";
 
 const emptyForm = {
@@ -20,6 +20,19 @@ const emptyForm = {
     note: "",
 };
 
+function normalizeVietnamese(value: string) {
+    return value
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/\u0111/g, "d")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/Ä‘/g, "d");
+}
+
+function isSameLocationName(left: string, right: string) {
+    return normalizeVietnamese(left).trim() === normalizeVietnamese(right).trim();
+}
+
 export function AccountAddressesPage() {
     const profile = useAccountStore((state) => state.profile);
     const loadProfile = useAccountStore((state) => state.loadProfile);
@@ -28,16 +41,22 @@ export function AccountAddressesPage() {
     const removeAddress = useAccountStore((state) => state.removeAddress);
     const setDefaultAddress = useAccountStore((state) => state.setDefaultAddress);
     const isSaving = useAccountStore((state) => state.isSaving);
-    const provinces = useGhnLocationStore((state) => state.provinces);
-    const districtsByProvince = useGhnLocationStore((state) => state.districtsByProvince);
-    const wardsByDistrict = useGhnLocationStore((state) => state.wardsByDistrict);
-    const loadProvinces = useGhnLocationStore((state) => state.loadProvinces);
-    const loadDistricts = useGhnLocationStore((state) => state.loadDistricts);
-    const loadWards = useGhnLocationStore((state) => state.loadWards);
+    const provinces = useVietnamLocationStore((state) => state.provinces);
+    const districtsByProvince = useVietnamLocationStore((state) => state.districtsByProvince);
+    const wardsByDistrict = useVietnamLocationStore((state) => state.wardsByDistrict);
+    const loadProvinces = useVietnamLocationStore((state) => state.loadProvinces);
+    const loadDistricts = useVietnamLocationStore((state) => state.loadDistricts);
+    const loadWards = useVietnamLocationStore((state) => state.loadWards);
+    const isLoadingProvinces = useVietnamLocationStore((state) => state.isLoadingProvinces);
+    const isLoadingDistricts = useVietnamLocationStore((state) => state.isLoadingDistricts);
+    const isLoadingWards = useVietnamLocationStore((state) => state.isLoadingWards);
+    const locationError = useVietnamLocationStore((state) => state.error);
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const [form, setForm] = useState(emptyForm);
     const [editingId, setEditingId] = useState("");
     const [message, setMessage] = useState("");
+    const districts = form.ghnProvinceId ? districtsByProvince[form.ghnProvinceId] ?? [] : [];
+    const wards = form.ghnDistrictId ? wardsByDistrict[form.ghnDistrictId] ?? [] : [];
 
     useEffect(() => {
         void loadProfile();
@@ -57,12 +76,77 @@ export function AccountAddressesPage() {
         void loadWards(Number(form.ghnDistrictId));
     }, [form.ghnDistrictId, loadWards]);
 
+    useEffect(() => {
+        if (!form.ghnProvinceName || provinces.length === 0) {
+            return;
+        }
+
+        if (provinces.some((item) => String(item.code) === form.ghnProvinceId)) {
+            return;
+        }
+
+        const matchedProvince = provinces.find((item) => isSameLocationName(item.name, form.ghnProvinceName));
+
+        if (!matchedProvince) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            city: matchedProvince.name,
+            ghnProvinceId: String(matchedProvince.code),
+            ghnProvinceName: matchedProvince.name,
+        }));
+    }, [form.ghnProvinceId, form.ghnProvinceName, provinces]);
+
+    useEffect(() => {
+        if (!form.ghnDistrictName || districts.length === 0) {
+            return;
+        }
+
+        if (districts.some((item) => String(item.code) === form.ghnDistrictId)) {
+            return;
+        }
+
+        const matchedDistrict = districts.find((item) => isSameLocationName(item.name, form.ghnDistrictName));
+
+        if (!matchedDistrict) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            ghnDistrictId: String(matchedDistrict.code),
+            ghnDistrictName: matchedDistrict.name,
+        }));
+    }, [districts, form.ghnDistrictId, form.ghnDistrictName]);
+
+    useEffect(() => {
+        if (!form.ghnWardName || wards.length === 0) {
+            return;
+        }
+
+        if (wards.some((item) => String(item.code) === form.ghnWardCode)) {
+            return;
+        }
+
+        const matchedWard = wards.find((item) => isSameLocationName(item.name, form.ghnWardName));
+
+        if (!matchedWard) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            ghnWardCode: String(matchedWard.code),
+            ghnWardName: matchedWard.name,
+        }));
+    }, [form.ghnWardCode, form.ghnWardName, wards]);
+
     const editingAddress = useMemo(
         () => profile.addresses.find((address) => address.id === editingId),
         [editingId, profile.addresses],
     );
-    const districts = form.ghnProvinceId ? districtsByProvince[form.ghnProvinceId] ?? [] : [];
-    const wards = form.ghnDistrictId ? wardsByDistrict[form.ghnDistrictId] ?? [] : [];
 
     function addressText(address: (typeof profile.addresses)[number]) {
         return [
@@ -102,7 +186,7 @@ export function AccountAddressesPage() {
             !form.ghnDistrictId ||
             !form.ghnWardCode
         ) {
-            setMessage("Vui long dien day du dia chi GHN.");
+            setMessage("Vui long dien day du dia chi.");
             return;
         }
 
@@ -131,7 +215,7 @@ export function AccountAddressesPage() {
                     <div>
                         <h1 className="font-headline text-2xl font-bold">So dia chi nhan hang</h1>
                         <p className="mt-2 text-on-surface-variant">
-                            Quan ly dia chi GHN de tao van don chinh xac sau khi dat hang.
+                            Quan ly dia chi nhan hang de dat hang nhanh hon.
                         </p>
                     </div>
 
@@ -245,17 +329,17 @@ export function AccountAddressesPage() {
                     ))}
 
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Tinh/thanh GHN</span>
+                        <span className="font-medium">Tinh/thanh</span>
                         <select
                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             value={form.ghnProvinceId}
                             onChange={(event) => {
-                                const province = provinces.find((item) => String(item.ProvinceID) === event.target.value);
+                                const province = provinces.find((item) => String(item.code) === event.target.value);
                                 setForm((current) => ({
                                     ...current,
-                                    city: province?.ProvinceName ?? "",
+                                    city: province?.name ?? "",
                                     ghnProvinceId: event.target.value,
-                                    ghnProvinceName: province?.ProvinceName ?? "",
+                                    ghnProvinceName: province?.name ?? "",
                                     ghnDistrictId: "",
                                     ghnDistrictName: "",
                                     ghnWardCode: "",
@@ -263,60 +347,66 @@ export function AccountAddressesPage() {
                                 }));
                             }}
                         >
-                            <option value="">Chon tinh/thanh</option>
+                            <option value="">
+                                {isLoadingProvinces ? "Dang tai tinh/thanh..." : "Chon tinh/thanh"}
+                            </option>
                             {provinces.map((province) => (
-                                <option key={province.ProvinceID} value={province.ProvinceID}>
-                                    {province.ProvinceName}
+                                <option key={province.code} value={province.code}>
+                                    {province.name}
                                 </option>
                             ))}
                         </select>
                     </label>
 
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Quan/huyen GHN</span>
+                        <span className="font-medium">Quan/huyen</span>
                         <select
                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             value={form.ghnDistrictId}
                             disabled={!form.ghnProvinceId}
                             onChange={(event) => {
-                                const district = districts.find((item) => String(item.DistrictID) === event.target.value);
+                                const district = districts.find((item) => String(item.code) === event.target.value);
                                 setForm((current) => ({
                                     ...current,
                                     ghnDistrictId: event.target.value,
-                                    ghnDistrictName: district?.DistrictName ?? "",
+                                    ghnDistrictName: district?.name ?? "",
                                     ghnWardCode: "",
                                     ghnWardName: "",
                                 }));
                             }}
                         >
-                            <option value="">Chon quan/huyen</option>
+                            <option value="">
+                                {isLoadingDistricts ? "Dang tai quan/huyen..." : "Chon quan/huyen"}
+                            </option>
                             {districts.map((district) => (
-                                <option key={district.DistrictID} value={district.DistrictID}>
-                                    {district.DistrictName}
+                                <option key={district.code} value={district.code}>
+                                    {district.name}
                                 </option>
                             ))}
                         </select>
                     </label>
 
                     <label className="block space-y-2 text-sm">
-                        <span className="font-medium">Phuong/xa GHN</span>
+                        <span className="font-medium">Phuong/xa</span>
                         <select
                             className="w-full rounded-2xl bg-surface-container-highest px-4 py-3 outline-none focus:ring-2 focus:ring-primary/15"
                             value={form.ghnWardCode}
                             disabled={!form.ghnDistrictId}
                             onChange={(event) => {
-                                const ward = wards.find((item) => item.WardCode === event.target.value);
+                                const ward = wards.find((item) => String(item.code) === event.target.value);
                                 setForm((current) => ({
                                     ...current,
                                     ghnWardCode: event.target.value,
-                                    ghnWardName: ward?.WardName ?? "",
+                                    ghnWardName: ward?.name ?? "",
                                 }));
                             }}
                         >
-                            <option value="">Chon phuong/xa</option>
+                            <option value="">
+                                {isLoadingWards ? "Dang tai phuong/xa..." : "Chon phuong/xa"}
+                            </option>
                             {wards.map((ward) => (
-                                <option key={ward.WardCode} value={ward.WardCode}>
-                                    {ward.WardName}
+                                <option key={ward.code} value={ward.code}>
+                                    {ward.name}
                                 </option>
                             ))}
                         </select>
@@ -336,6 +426,7 @@ export function AccountAddressesPage() {
                         />
                     </label>
                     {message ? <p className="text-sm text-primary">{message}</p> : null}
+                    {locationError ? <p className="text-sm text-error">{locationError}</p> : null}
                     <div className="flex flex-wrap gap-3">
                         <Button onClick={() => void handleSubmit()} disabled={isSaving}>
                             {isSaving ? "Dang luu..." : editingAddress ? "Luu dia chi" : "Them dia chi"}

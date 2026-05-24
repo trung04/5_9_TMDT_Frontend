@@ -128,12 +128,16 @@ export function ProductDetailPage() {
             ? `Chỉ còn ${currentProduct.stockQuantity} sản phẩm`
             : null;
 
-    function handleAddToCart(redirectToCheckout = false) {
+    async function handleAddToCart(redirectToCheckout = false) {
         if (isOutOfStock) {
             return;
         }
 
-        void addItem(currentProduct.id, quantity);
+        const result = await addItem(currentProduct.id, quantity);
+
+        if (!result.success) {
+            return;
+        }
 
         if (redirectToCheckout) {
             void navigate(routes.checkout);
@@ -290,7 +294,7 @@ export function ProductDetailPage() {
                             <button
                                 type="button"
                                 className="flex-1 rounded-full border border-secondary px-6 py-4 font-bold text-secondary transition-all hover:bg-secondary hover:text-white"
-                                onClick={() => handleAddToCart(false)}
+                                onClick={() => void handleAddToCart(false)}
                             >
                                 Thêm vào giỏ
                             </button>
@@ -298,7 +302,7 @@ export function ProductDetailPage() {
                         <button
                             type="button"
                             className="w-full rounded-full bg-primary-glow px-6 py-4 font-bold text-white shadow-lg shadow-primary/20 transition-transform active:scale-95"
-                            onClick={() => handleAddToCart(true)}
+                            onClick={() => void handleAddToCart(true)}
                         >
                             Mua ngay
                         </button>

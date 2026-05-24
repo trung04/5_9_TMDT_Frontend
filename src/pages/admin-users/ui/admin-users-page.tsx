@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import type { BackendAdminCustomer } from "@/shared/api/backend-types";
+import { routes } from "@/shared/config/routes";
 import { hasAdminPermission } from "@/shared/lib/auth";
 import { downloadTextFile } from "@/shared/lib/download";
+import { useAdminUserStore, type AdminCustomerPayload } from "@/shared/lib/store/use-admin-user-store";
 import {
-    type AdminCustomerPayload,
-    useAdminUserStore,
-} from "@/shared/lib/store/use-admin-user-store";
-import { useAuthStore } from "@/shared/lib/store/use-auth-store";
+    useAuthStore,
+} from "@/shared/lib/store/use-auth-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
 import {
     ActionIconButton,
@@ -80,6 +81,7 @@ function FieldValue({ label, value }: { label: string; value: string | number | 
 }
 
 export function AdminUsersPage() {
+    const navigate = useNavigate();
     const [query, setQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [activeCustomerId, setActiveCustomerId] = useState("");
@@ -100,6 +102,7 @@ export function AdminUsersPage() {
     const canCreateUser = hasAdminPermission(user, "admin.users.create");
     const canUpdateUser = hasAdminPermission(user, "admin.users.update");
     const canDeleteUser = hasAdminPermission(user, "admin.users.delete");
+    const canViewOrderHistory = hasAdminPermission(user, "admin.orders.view");
 
     useEffect(() => {
         if (!canViewUsers) return;
@@ -205,6 +208,15 @@ export function AdminUsersPage() {
 
     function closeDrawer() {
         setDrawerMode(null);
+    }
+
+    function handleOpenOrderHistory() {
+        if (!activeCustomer) {
+            return;
+        }
+
+        closeDrawer();
+        void navigate(routes.adminUserOrders(String(activeCustomer.id)));
     }
 
     function buildPayload(includePassword: boolean): AdminCustomerPayload {
@@ -531,6 +543,27 @@ export function AdminUsersPage() {
                             <FieldValue label="Orders" value={activeCustomer.orders_count} />
                             <FieldValue label="Reward" value={`${activeCustomer.reward_tier} / ${activeCustomer.reward_points} diem`} />
                         </div>
+
+                        {canViewOrderHistory ? (
+                            <div className="rounded-[1.5rem] border border-outline-variant/15 bg-surface-container-low p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <p className="text-sm font-medium text-on-surface">Lich su don hang</p>
+                                        <p className="text-sm text-on-surface-variant">
+                                            Mo trang danh sach don va chi tiet read-only cua customer nay.
+                                        </p>
+                                    </div>
+                                    <Button variant="secondary" onClick={handleOpenOrderHistory}>
+                                        Xem lich su don hang
+                                    </Button>
+                                </div>
+                                {activeCustomer.orders_count === 0 ? (
+                                    <p className="mt-3 text-sm text-on-surface-variant">
+                                        Customer nay chua co don hang nao. Trang lich su se hien thi empty state.
+                                    </p>
+                                ) : null}
+                            </div>
+                        ) : null}
                     </div>
                 ) : null}
 

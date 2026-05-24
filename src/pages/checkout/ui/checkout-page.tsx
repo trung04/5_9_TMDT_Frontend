@@ -9,8 +9,8 @@ import { useAuthStore } from "@/shared/lib/store/use-auth-store";
 import { useCartStore } from "@/shared/lib/store/use-cart-store";
 import { useCustomerOrdersStore } from "@/shared/lib/store/use-customer-orders-store";
 import { useFeedbackStore } from "@/shared/lib/store/use-feedback-store";
-import { useGhnLocationStore } from "@/shared/lib/store/use-ghn-location-store";
 import { useStorefrontCatalogStore } from "@/shared/lib/store/use-storefront-catalog-store";
+import { useVietnamLocationStore } from "@/shared/lib/store/use-vietnam-location-store";
 import { Icon } from "@/shared/ui";
 
 type CheckoutForm = {
@@ -90,8 +90,13 @@ function normalizeVietnamese(value: string) {
     return value
         .toLowerCase()
         .normalize("NFD")
+        .replace(/\u0111/g, "d")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/đ/g, "d");
+}
+
+function isSameLocationName(left: string, right: string) {
+    return normalizeVietnamese(left).trim() === normalizeVietnamese(right).trim();
 }
 
 function calculateShippingFee(subtotal: number, shippingAddress: string) {
@@ -230,12 +235,16 @@ export function CheckoutPage() {
     const pushToast = useFeedbackStore((state) => state.pushToast);
     const products = useStorefrontCatalogStore((state) => state.products);
     const productDetails = useStorefrontCatalogStore((state) => state.productDetails);
-    const provinces = useGhnLocationStore((state) => state.provinces);
-    const districtsByProvince = useGhnLocationStore((state) => state.districtsByProvince);
-    const wardsByDistrict = useGhnLocationStore((state) => state.wardsByDistrict);
-    const loadProvinces = useGhnLocationStore((state) => state.loadProvinces);
-    const loadDistricts = useGhnLocationStore((state) => state.loadDistricts);
-    const loadWards = useGhnLocationStore((state) => state.loadWards);
+    const provinces = useVietnamLocationStore((state) => state.provinces);
+    const districtsByProvince = useVietnamLocationStore((state) => state.districtsByProvince);
+    const wardsByDistrict = useVietnamLocationStore((state) => state.wardsByDistrict);
+    const loadProvinces = useVietnamLocationStore((state) => state.loadProvinces);
+    const loadDistricts = useVietnamLocationStore((state) => state.loadDistricts);
+    const loadWards = useVietnamLocationStore((state) => state.loadWards);
+    const isLoadingProvinces = useVietnamLocationStore((state) => state.isLoadingProvinces);
+    const isLoadingDistricts = useVietnamLocationStore((state) => state.isLoadingDistricts);
+    const isLoadingWards = useVietnamLocationStore((state) => state.isLoadingWards);
+    const locationError = useVietnamLocationStore((state) => state.error);
     const [form, setForm] = useState<CheckoutForm>(() => buildForm(profile));
     const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("COD");
     const [submitError, setSubmitError] = useState("");
@@ -243,6 +252,8 @@ export function CheckoutPage() {
         null,
     );
     const [bankTransferMessage, setBankTransferMessage] = useState("");
+    const districts = form.shippingProvinceId ? districtsByProvince[form.shippingProvinceId] ?? [] : [];
+    const wards = form.shippingDistrictId ? wardsByDistrict[form.shippingDistrictId] ?? [] : [];
 
     useEffect(() => {
         void loadCart();
@@ -266,6 +277,76 @@ export function CheckoutPage() {
         void loadWards(Number(form.shippingDistrictId));
     }, [form.shippingDistrictId, loadWards]);
 
+    useEffect(() => {
+        if (!form.shippingProvinceName || provinces.length === 0) {
+            return;
+        }
+
+        if (provinces.some((item) => String(item.code) === form.shippingProvinceId)) {
+            return;
+        }
+
+        const matchedProvince = provinces.find((item) =>
+            isSameLocationName(item.name, form.shippingProvinceName),
+        );
+
+        if (!matchedProvince) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            shippingProvinceId: String(matchedProvince.code),
+            shippingProvinceName: matchedProvince.name,
+        }));
+    }, [form.shippingProvinceId, form.shippingProvinceName, provinces]);
+
+    useEffect(() => {
+        if (!form.shippingDistrictName || districts.length === 0) {
+            return;
+        }
+
+        if (districts.some((item) => String(item.code) === form.shippingDistrictId)) {
+            return;
+        }
+
+        const matchedDistrict = districts.find((item) =>
+            isSameLocationName(item.name, form.shippingDistrictName),
+        );
+
+        if (!matchedDistrict) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            shippingDistrictId: String(matchedDistrict.code),
+            shippingDistrictName: matchedDistrict.name,
+        }));
+    }, [districts, form.shippingDistrictId, form.shippingDistrictName]);
+
+    useEffect(() => {
+        if (!form.shippingWardName || wards.length === 0) {
+            return;
+        }
+
+        if (wards.some((item) => String(item.code) === form.shippingWardCode)) {
+            return;
+        }
+
+        const matchedWard = wards.find((item) => isSameLocationName(item.name, form.shippingWardName));
+
+        if (!matchedWard) {
+            return;
+        }
+
+        setForm((current) => ({
+            ...current,
+            shippingWardCode: String(matchedWard.code),
+            shippingWardName: matchedWard.name,
+        }));
+    }, [form.shippingWardCode, form.shippingWardName, wards]);
+
     const guestCartItems: CheckoutCartItemView[] = guestItems.map((item) => {
         const product =
             productDetails[item.productId] ?? products.find((entry) => entry.id === item.productId);
@@ -287,8 +368,6 @@ export function CheckoutPage() {
     const subtotal =
         cart?.subtotal ??
         guestCartItems.reduce((totalValue, item) => totalValue + item.unitPrice * item.quantity, 0);
-    const districts = form.shippingProvinceId ? districtsByProvince[form.shippingProvinceId] ?? [] : [];
-    const wards = form.shippingDistrictId ? wardsByDistrict[form.shippingDistrictId] ?? [] : [];
     const fullShippingAddress = [
         form.shippingLine1,
         form.shippingWardName,
@@ -592,12 +671,12 @@ export function CheckoutPage() {
                                             value={form.shippingProvinceId}
                                             onChange={(event) => {
                                                 const province = provinces.find(
-                                                    (item) => String(item.ProvinceID) === event.target.value,
+                                                    (item) => String(item.code) === event.target.value,
                                                 );
                                                 setForm((current) => ({
                                                     ...current,
                                                     shippingProvinceId: event.target.value,
-                                                    shippingProvinceName: province?.ProvinceName ?? "",
+                                                    shippingProvinceName: province?.name ?? "",
                                                     shippingDistrictId: "",
                                                     shippingDistrictName: "",
                                                     shippingWardCode: "",
@@ -605,10 +684,12 @@ export function CheckoutPage() {
                                                 }));
                                             }}
                                         >
-                                            <option value="">Chon tinh/thanh</option>
+                                            <option value="">
+                                                {isLoadingProvinces ? "Dang tai tinh/thanh..." : "Chon tinh/thanh"}
+                                            </option>
                                             {provinces.map((province) => (
-                                                <option key={province.ProvinceID} value={province.ProvinceID}>
-                                                    {province.ProvinceName}
+                                                <option key={province.code} value={province.code}>
+                                                    {province.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -623,21 +704,23 @@ export function CheckoutPage() {
                                             disabled={!form.shippingProvinceId}
                                             onChange={(event) => {
                                                 const district = districts.find(
-                                                    (item) => String(item.DistrictID) === event.target.value,
+                                                    (item) => String(item.code) === event.target.value,
                                                 );
                                                 setForm((current) => ({
                                                     ...current,
                                                     shippingDistrictId: event.target.value,
-                                                    shippingDistrictName: district?.DistrictName ?? "",
+                                                    shippingDistrictName: district?.name ?? "",
                                                     shippingWardCode: "",
                                                     shippingWardName: "",
                                                 }));
                                             }}
                                         >
-                                            <option value="">Chon quan/huyen</option>
+                                            <option value="">
+                                                {isLoadingDistricts ? "Dang tai quan/huyen..." : "Chon quan/huyen"}
+                                            </option>
                                             {districts.map((district) => (
-                                                <option key={district.DistrictID} value={district.DistrictID}>
-                                                    {district.DistrictName}
+                                                <option key={district.code} value={district.code}>
+                                                    {district.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -651,26 +734,29 @@ export function CheckoutPage() {
                                             value={form.shippingWardCode}
                                             disabled={!form.shippingDistrictId}
                                             onChange={(event) => {
-                                                const ward = wards.find((item) => item.WardCode === event.target.value);
+                                                const ward = wards.find((item) => String(item.code) === event.target.value);
                                                 setForm((current) => ({
                                                     ...current,
                                                     shippingWardCode: event.target.value,
-                                                    shippingWardName: ward?.WardName ?? "",
+                                                    shippingWardName: ward?.name ?? "",
                                                 }));
                                             }}
                                         >
-                                            <option value="">Chon phuong/xa</option>
+                                            <option value="">
+                                                {isLoadingWards ? "Dang tai phuong/xa..." : "Chon phuong/xa"}
+                                            </option>
                                             {wards.map((ward) => (
-                                                <option key={ward.WardCode} value={ward.WardCode}>
-                                                    {ward.WardName}
+                                                <option key={ward.code} value={ward.code}>
+                                                    {ward.name}
                                                 </option>
                                             ))}
                                         </select>
                                     </label>
                                 </div>
                                 <div className="rounded-2xl bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
-                                    {fullShippingAddress || "Dia chi day du se hien thi sau khi chon khu vuc GHN."}
+                                    {fullShippingAddress || "Dia chi day du se hien thi sau khi chon khu vuc."}
                                 </div>
+                                {locationError ? <p className="mt-3 text-sm text-error">{locationError}</p> : null}
                             </div>
 
                             <div className="mt-6 space-y-2">

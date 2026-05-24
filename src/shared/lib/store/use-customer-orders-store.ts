@@ -80,6 +80,17 @@ function sessionToken() {
     return useAuthStore.getState().accessToken;
 }
 
+function paginationFromOrdersResponse(response: BackendOrdersResponse): CustomerOrdersPagination {
+    const nestedPagination = response.pagination;
+
+    return {
+        currentPage: response.current_page ?? nestedPagination?.current_page ?? 1,
+        lastPage: response.last_page ?? nestedPagination?.last_page ?? 1,
+        perPage: response.per_page ?? nestedPagination?.per_page ?? response.data.length,
+        total: response.total ?? nestedPagination?.total ?? response.data.length,
+    };
+}
+
 function mergeSummary(detail: CustomerOrderDetailView): CustomerOrderSummaryView {
     return {
         id: detail.id,
@@ -125,15 +136,11 @@ export const useCustomerOrdersStore = create<CustomerOrdersState>()((set, get) =
                 { token },
             );
             const orders = response.data.map(adaptBackendOrderSummary);
+            const pagination = paginationFromOrdersResponse(response);
 
             set({
                 orders,
-                pagination: {
-                    currentPage: response.pagination.current_page,
-                    lastPage: response.pagination.last_page,
-                    perPage: response.pagination.per_page,
-                    total: response.pagination.total,
-                },
+                pagination,
                 isLoading: false,
                 error: null,
             });
