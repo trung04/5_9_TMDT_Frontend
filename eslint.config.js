@@ -2,17 +2,30 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
-import tseslint from "typescript-eslint";
 
-export default tseslint.config(
+const vitestGlobals = {
+    afterAll: "readonly",
+    afterEach: "readonly",
+    beforeAll: "readonly",
+    beforeEach: "readonly",
+    describe: "readonly",
+    expect: "readonly",
+    it: "readonly",
+    vi: "readonly",
+};
+
+export default [
     { ignores: ["dist", "coverage", "node_modules"] },
     {
-        files: ["**/*.{ts,tsx}"],
-        extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
+        ...js.configs.recommended,
+        files: ["**/*.{js,jsx}"],
         languageOptions: {
+            ecmaVersion: "latest",
+            sourceType: "module",
             parserOptions: {
-                project: ["./tsconfig.app.json", "./tsconfig.node.json"],
-                tsconfigRootDir: import.meta.dirname,
+                ecmaFeatures: {
+                    jsx: true,
+                },
             },
             globals: {
                 ...globals.browser,
@@ -26,7 +39,12 @@ export default tseslint.config(
         rules: {
             ...reactHooks.configs.recommended.rules,
             "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-            "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
         },
     },
-);
+    {
+        files: ["src/test/**/*.{js,jsx}"],
+        languageOptions: {
+            globals: vitestGlobals,
+        },
+    },
+];
